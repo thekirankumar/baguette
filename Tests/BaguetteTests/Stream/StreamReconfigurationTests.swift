@@ -7,7 +7,7 @@ import Testing
 
 @Suite("StreamReconfiguration")
 struct StreamReconfigurationTests {
-    @Test func `changing FPS never rewinds presentation timestamps`() {
+    @Test func `should never rewind presentation timestamps when fps changes`() {
         var timeline = H264Timeline()
         let values = [30, 30, 60, 30].map { CMTimeGetSeconds(timeline.next(fps: Int32($0))) }
         #expect(abs(values[0] - 1.0 / 30) < 0.000001)
@@ -17,12 +17,12 @@ struct StreamReconfigurationTests {
         #expect(zip(values, values.dropFirst()).allSatisfy { $0 < $1 })
     }
 
-    @Test func `invalid bitrate cannot be accepted before the codec starts`() {
+    @Test func `should reject a zero bitrate before the encoder starts`() {
         let encoder = H264Encoder(fps: 30)
         #expect(throws: (any Error).self) { try encoder.setBitrate(0) }
     }
 
-    @Test func `a rejected runtime codec property stops the CLI stream`() {
+    @Test func `should stop the CLI stream when the encoder rejects a runtime set_fps`() {
         let stream = RejectedStream()
         let failures = FailureCount()
         let channel = ControlChannel(stream: stream) { _ in failures.increment() }

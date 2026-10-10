@@ -7,7 +7,7 @@ struct FileSystemPluginsTests {
 
     // MARK: - discovery
 
-    @Test func `discovers a plugin directory containing a manifest`() throws {
+    @Test func `should discover a plugin when its directory holds a manifest`() throws {
         let root = try TempRoot()
         try root.install(plugin: "a11y", manifest: Self.manifest(name: "a11y"))
 
@@ -15,7 +15,7 @@ struct FileSystemPluginsTests {
         #expect(plugins.map(\.id) == ["a11y"])
     }
 
-    @Test func `a discovered plugin remembers the directory it came from`() throws {
+    @Test func `should remember the directory a discovered plugin came from`() throws {
         // `root` is the working directory a contributed command runs
         // in, so relative `run` paths resolve against the plugin's own
         // files rather than wherever `baguette serve` was launched.
@@ -26,14 +26,14 @@ struct FileSystemPluginsTests {
         #expect(plugin.root.lastPathComponent == "a11y")
     }
 
-    @Test func `a directory with no manifest is not a plugin`() throws {
+    @Test func `should not treat a directory as a plugin when it holds no manifest`() throws {
         let root = try TempRoot()
         try root.installBareDirectory(named: "not-a-plugin")
 
         #expect(try FileSystemPlugins(roots: [root.url]).all().isEmpty)
     }
 
-    @Test func `a root that does not exist yields nothing`() throws {
+    @Test func `should discover no plugins when the root does not exist`() throws {
         // The per-project and installed roots are both routinely
         // absent. Neither is an error worth failing `serve` over.
         let missing = URL(fileURLWithPath: "/tmp/baguette-does-not-exist-\(UUID().uuidString)")
@@ -42,7 +42,7 @@ struct FileSystemPluginsTests {
 
     // MARK: - one bad plugin doesn't take the rest down
 
-    @Test func `a malformed manifest is skipped and the good plugins still load`() throws {
+    @Test func `should skip a malformed manifest and still load the good plugins`() throws {
         // The toolbar is shared. A plugin with a typo in its manifest
         // must not blank every other plugin's contributions.
         let root = try TempRoot()
@@ -53,7 +53,7 @@ struct FileSystemPluginsTests {
         #expect(plugins.map(\.id) == ["a11y"])
     }
 
-    @Test func `a plugin declaring a newer apiVersion is skipped, not fatal`() throws {
+    @Test func `should skip a plugin without failing when it declares a newer apiVersion`() throws {
         let root = try TempRoot()
         try root.install(plugin: "future", manifest: Data("""
         { "name": "future", "version": "1.0.0", "apiVersion": 99 }
@@ -65,7 +65,7 @@ struct FileSystemPluginsTests {
 
     // MARK: - the bundled root
 
-    @Test func `plugins baguette ships are discovered with no configuration`() throws {
+    @Test func `should discover the plugins baguette ships with no configuration`() throws {
         // The reference a11y plugin ships inside the binary's resource
         // bundle so a fresh `brew install` has something in the
         // toolbar. Without this the plugin system is invisible until
@@ -80,7 +80,7 @@ struct FileSystemPluginsTests {
         #expect(plugins.map(\.id) == ["a11y"])
     }
 
-    @Test func `a user's own build of a bundled plugin wins`() throws {
+    @Test func `should prefer the user's installed build over a bundled plugin of the same name`() throws {
         // The bundled root sorts first precisely so an author can
         // shadow what baguette ships without uninstalling anything.
         let bundled = try TempRoot()
@@ -97,7 +97,7 @@ struct FileSystemPluginsTests {
 
     // MARK: - root precedence
 
-    @Test func `a later root overrides an earlier one with the same plugin name`() throws {
+    @Test func `should let a later root override an earlier one when they share a plugin name`() throws {
         // Roots are ordered installed → per-project → --plugin-dir, so
         // a repo can pin its own build of a plugin and an author can
         // shadow both while iterating locally.
@@ -111,7 +111,7 @@ struct FileSystemPluginsTests {
         #expect(plugins.first?.manifest.version == "2.0.0")
     }
 
-    @Test func `plugins are returned in a stable order`() throws {
+    @Test func `should list plugins in a stable alphabetical order`() throws {
         // The toolbar's button order shouldn't shuffle between runs of
         // `serve` just because the filesystem enumerated differently.
         let root = try TempRoot()

@@ -17,21 +17,21 @@ struct LaunchdJobsTests {
         -\t-9\tcom.apple.Preferences
         """
 
-    @Test func `finds the pid of a running job by label`() {
+    @Test func `should find the pid of a running job by its label`() {
         let jobs = LaunchdJobs.parsing(listing)
         #expect(jobs.pid(of: "com.apple.SpringBoard") == 37293)
         #expect(jobs.pid(of: "com.apple.backboardd") == 42499)
     }
 
-    @Test func `a job that is not running has no pid`() {
+    @Test func `should find no pid when the job is not running`() {
         #expect(LaunchdJobs.parsing(listing).pid(of: "com.apple.coredevice.dthidd") == nil)
     }
 
-    @Test func `an unknown label has no pid`() {
+    @Test func `should find no pid when the label is unknown`() {
         #expect(LaunchdJobs.parsing(listing).pid(of: "com.apple.nothing") == nil)
     }
 
-    @Test func `an empty or missing listing has no jobs`() {
+    @Test func `should find no jobs when the listing is empty or missing`() {
         #expect(LaunchdJobs.parsing(nil).pid(of: "com.apple.SpringBoard") == nil)
         #expect(LaunchdJobs.parsing("").pid(of: "com.apple.SpringBoard") == nil)
     }

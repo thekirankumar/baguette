@@ -6,11 +6,11 @@ import Testing
 /// actually exposes — missing KVC keys must return nil, not trap.
 @Suite("PortDefaultSize")
 struct PortDefaultSizeTests {
-    @Test func returnsNilWhenPortExposesNoSizeAccessors() {
+    @Test func `should find no default size when the framebuffer port exposes none`() {
         #expect(PortDefaultSize.read(from: NSObject()) == nil)
     }
 
-    @Test func readsDefaultWidthAndHeightWhenPresent() {
+    @Test func `should read the default width and height when the port has them`() {
         final class FakePort: NSObject {
             @objc var defaultWidth: NSNumber = 800
             @objc var defaultHeight: NSNumber = 480
@@ -18,7 +18,7 @@ struct PortDefaultSizeTests {
         #expect(PortDefaultSize.read(from: FakePort()) == Size(width: 800, height: 480))
     }
 
-    @Test func fallsBackToWidthAndHeightKeys() {
+    @Test func `should fall back to plain width and height when the port has no default size`() {
         final class FakePort: NSObject {
             @objc var width: NSNumber = 390
             @objc var height: NSNumber = 844

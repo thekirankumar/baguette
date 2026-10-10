@@ -11,15 +11,15 @@ import Testing
 @Suite("InputTeardown")
 struct InputTeardownTests {
 
-    @Test func `a carPlay session leaves the external digitizer registered`() {
+    @Test func `should leave the external digitizer registered when a CarPlay session ends`() {
         #expect(InputTeardown.forPlane(.carPlay).releasesExternalDigitizer == false)
     }
 
-    @Test func `a phone session has no external digitizer to release`() {
+    @Test func `should have no external digitizer to release when a phone session ends`() {
         #expect(InputTeardown.forPlane(.phone).releasesExternalDigitizer == false)
     }
 
-    @Test func `every plane returns the pointer service it created`() {
+    @Test func `should release the pointer service it created when any session ends`() {
         #expect(InputTeardown.forPlane(.phone).releasesPointer)
         #expect(InputTeardown.forPlane(.carPlay).releasesPointer)
     }

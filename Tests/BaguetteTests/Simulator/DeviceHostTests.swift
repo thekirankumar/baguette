@@ -13,7 +13,7 @@ import Mockable
 @Suite("DeviceHost port")
 struct DeviceHostTests {
 
-    @Test func `DeviceHost can be mocked and returns a stub device`() {
+    @Test func `should resolve a device by its udid on a stand-in host`() {
         let host = MockDeviceHost()
         let stub = NSObject()
         given(host).resolveDevice(udid: .value("u1")).willReturn(stub)
@@ -22,14 +22,14 @@ struct DeviceHostTests {
         verify(host).resolveDevice(udid: .value("u1")).called(1)
     }
 
-    @Test func `DeviceHost returns nil for an unknown UDID`() {
+    @Test func `should find no device when the udid is unknown`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
 
         #expect(host.resolveDevice(udid: "ghost") == nil)
     }
 
-    @Test func `CoreSimulators conforms to DeviceHost`() {
+    @Test func `should let the live simulator set act as a device host`() {
         // Compile-time witness: a CoreSimulators instance is
         // assignable to `any DeviceHost`. The runtime device set
         // is irrelevant for this test — we don't dereference it.

@@ -16,54 +16,54 @@ struct OrientationEventTests {
         }
     }
 
-    @Test func `buffer is 112 bytes (4-byte aligned, holds 108-byte mach message)`() {
+    @Test func `should build a 112-byte orientation message that holds the 108-byte mach message 4-byte aligned`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(data.count == 112)
     }
 
-    @Test func `mach header carries COPY_SEND bits, 108-byte size, GSEventMachMessageID`() {
+    @Test func `should head the orientation message with copy-send bits, a 108-byte size and the GSEvent message id`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(uint32(in: data, at: 0x00) == 0x13)   // MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0)
         #expect(uint32(in: data, at: 0x04) == 108)    // msgh_size
         #expect(uint32(in: data, at: 0x14) == 0x7B)   // msgh_id = GSEventMachMessageID
     }
 
-    @Test func `msgh_remote_port is zero — caller patches in PurpleWorkspacePort`() {
+    @Test func `should leave the destination port empty until PurpleWorkspacePort is patched in`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(uint32(in: data, at: 0x08) == 0)
     }
 
-    @Test func `GSEvent type at 0x18 is GSEventTypeDeviceOrientationChanged | GSEventHostFlag`() {
+    @Test func `should mark the orientation message as a host-sent device-orientation-changed event`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(uint32(in: data, at: 0x18) == (50 | 0x20000))
     }
 
-    @Test func `record_info_size at 0x48 is 4`() {
+    @Test func `should size the orientation record at four bytes`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(uint32(in: data, at: 0x48) == 4)
     }
 
-    @Test func `portrait writes UIDeviceOrientation 1 at 0x4C`() {
+    @Test func `should encode portrait as device orientation 1`() {
         let data = OrientationEvent.machMessage(orientation: .portrait)
         #expect(uint32(in: data, at: 0x4C) == 1)
     }
 
-    @Test func `portraitUpsideDown writes UIDeviceOrientation 2 at 0x4C`() {
+    @Test func `should encode portrait upside down as device orientation 2`() {
         let data = OrientationEvent.machMessage(orientation: .portraitUpsideDown)
         #expect(uint32(in: data, at: 0x4C) == 2)
     }
 
-    @Test func `landscapeRight writes UIDeviceOrientation 3 at 0x4C`() {
+    @Test func `should encode landscape right as device orientation 3`() {
         let data = OrientationEvent.machMessage(orientation: .landscapeRight)
         #expect(uint32(in: data, at: 0x4C) == 3)
     }
 
-    @Test func `landscapeLeft writes UIDeviceOrientation 4 at 0x4C`() {
+    @Test func `should encode landscape left as device orientation 4`() {
         let data = OrientationEvent.machMessage(orientation: .landscapeLeft)
         #expect(uint32(in: data, at: 0x4C) == 4)
     }
 
-    @Test func `patched writes the looked-up port at offset 0x08 without disturbing the body`() {
+    @Test func `should patch in the destination port without disturbing the rest of the orientation message`() {
         let raw = OrientationEvent.machMessage(orientation: .landscapeRight)
         let patched = OrientationEvent.patched(raw, remotePort: 0xCAFE_BEEF)
 
@@ -88,7 +88,7 @@ struct OrientationEventSendTests {
         }
     }
 
-    @Test func `looks up PurpleWorkspacePort by exact service name`() {
+    @Test func `should look up the PurpleWorkspacePort service by its exact name`() {
         var requestedName: String?
         _ = OrientationEvent.send(
             orientation: .portrait,
@@ -98,7 +98,7 @@ struct OrientationEventSendTests {
         #expect(requestedName == "PurpleWorkspacePort")
     }
 
-    @Test func `delivers a 112-byte buffer with the looked-up port patched at 0x08 and the orientation payload at 0x4C`() {
+    @Test func `should deliver the full orientation message addressed to the looked-up port`() {
         var delivered: Data?
         _ = OrientationEvent.send(
             orientation: .landscapeRight,
@@ -112,7 +112,7 @@ struct OrientationEventSendTests {
         #expect(uint32(in: buf, at: 0x4C) == 3)
     }
 
-    @Test func `returns false (without invoking deliver) when lookup yields nil`() {
+    @Test func `should report failure without delivering when no workspace port is found`() {
         var delivered = false
         let ok = OrientationEvent.send(
             orientation: .portrait,
@@ -123,7 +123,7 @@ struct OrientationEventSendTests {
         #expect(!delivered)
     }
 
-    @Test func `returns false (without invoking deliver) when lookup yields a null port (0)`() {
+    @Test func `should report failure without delivering when the workspace port is null`() {
         var delivered = false
         let ok = OrientationEvent.send(
             orientation: .portrait,
@@ -134,7 +134,7 @@ struct OrientationEventSendTests {
         #expect(!delivered)
     }
 
-    @Test func `returns false when lookup succeeds but deliver fails`() {
+    @Test func `should report failure when the port is found but delivery fails`() {
         let ok = OrientationEvent.send(
             orientation: .portrait,
             lookupPort: { _ in 42 },
@@ -143,7 +143,7 @@ struct OrientationEventSendTests {
         #expect(!ok)
     }
 
-    @Test func `returns true when lookup yields a port and deliver succeeds`() {
+    @Test func `should report success when the port is found and delivery succeeds`() {
         let ok = OrientationEvent.send(
             orientation: .portraitUpsideDown,
             lookupPort: { _ in 42 },

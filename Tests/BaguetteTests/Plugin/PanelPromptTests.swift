@@ -26,7 +26,7 @@ struct PanelPromptTests {
         )
     }
 
-    @Test func `a panel can ask for typed input`() throws {
+    @Test func `should let a panel ask for typed input`() throws {
         let parsed = try body("""
         {"kind":"list","source":"open","rowAction":"run",
          "prompt":{"arg":"url","placeholder":"myapp://path","submit":"Open","filter":true}}
@@ -38,7 +38,7 @@ struct PanelPromptTests {
         )))
     }
 
-    @Test func `a prompt that names no button label offers a plain one`() throws {
+    @Test func `should label the prompt's button Run when it names no label`() throws {
         // The label is chrome, not meaning — a manifest shouldn't have
         // to spell it out to get a usable button.
         let parsed = try body(#"{"kind":"list","source":"open","prompt":{"arg":"url"}}"#)
@@ -50,7 +50,7 @@ struct PanelPromptTests {
         #expect(list.prompt?.filter == false)
     }
 
-    @Test func `a prompt with no arg is refused, because nothing could carry the value`() throws {
+    @Test func `should reject a prompt when it names no arg to carry the typed value`() throws {
         // The arg names the key the typed text arrives under. Without it
         // the field would render and submit into nowhere, which is worse
         // than refusing the manifest — so this is an error at
@@ -63,7 +63,7 @@ struct PanelPromptTests {
         }
     }
 
-    @Test func `a prompt can complete inline and remember what was submitted`() throws {
+    @Test func `should let a prompt complete inline and remember what was submitted`() throws {
         // The two affordances that make a field feel like a URL bar
         // rather than a text box: it finishes the word, and it recalls
         // what you opened last time. Separate flags, because a settings
@@ -79,7 +79,7 @@ struct PanelPromptTests {
         #expect(list.prompt?.history == true)
     }
 
-    @Test func `a prompt neither completes nor remembers unless it says so`() throws {
+    @Test func `should neither complete nor remember when the prompt does not ask to`() throws {
         let parsed = try body(#"{"kind":"list","source":"open","prompt":{"arg":"url"}}"#)
         guard case .list(let list) = parsed else {
             Issue.record("expected a list body"); return
@@ -88,12 +88,12 @@ struct PanelPromptTests {
         #expect(list.prompt?.history == false)
     }
 
-    @Test func `a panel without a prompt is unchanged`() throws {
+    @Test func `should leave a panel as a plain list when it declares no prompt`() throws {
         let parsed = try body(#"{"kind":"list","source":"open","rowAction":"highlight"}"#)
         #expect(parsed == .list(ListBody(source: "open", rowAction: .highlight)))
     }
 
-    @Test func `the browser is told what to draw and which key to submit under`() throws {
+    @Test func `should tell the browser what prompt to draw and which key to submit under`() throws {
         // The page renders the field from this, and posts the typed text
         // as `args[arg]` — so all four have to survive the projection.
         let manifest = try PluginManifest.parsing(json: Data("""
@@ -123,7 +123,7 @@ struct PanelPromptTests {
         #expect(prompt?["filter"] as? Bool == true)
     }
 
-    @Test func `a panel with no prompt projects none, so old panels are byte-identical`() throws {
+    @Test func `should send no prompt for a panel without one so old panels stay byte-identical`() throws {
         let manifest = try PluginManifest.parsing(json: Data("""
         {"name":"a11y","version":"1.0.0",
          "contributes":{

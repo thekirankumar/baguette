@@ -22,7 +22,7 @@ struct RecordingPlanTests {
         )
     }
 
-    @Test func `a square recording grows the phone frame onto a square canvas`() throws {
+    @Test func `should centre the phone frame on a square canvas when recording square`() throws {
         let placement = plan(size: try CaptureSize.parse("square")).placement(source: phone)
 
         #expect(placement.width == 2796)
@@ -33,7 +33,7 @@ struct RecordingPlanTests {
         #expect(placement.drawY == 0)
     }
 
-    @Test func `an App Store size ignores the simulator's own frame size`() throws {
+    @Test func `should use the App Store size regardless of the simulator's own frame size`() throws {
         let placement = plan(size: try CaptureSize.parse("appstore-6.5"))
             .placement(source: RenderDimensions(width: 640, height: 480))
 
@@ -41,7 +41,7 @@ struct RecordingPlanTests {
         #expect(placement.height == 2688)
     }
 
-    @Test func `a native recording keeps the simulator's own frame size`() {
+    @Test func `should keep the simulator's own frame size when recording native`() {
         let placement = plan(size: .native).placement(source: phone)
 
         #expect(placement.width == 1290)
@@ -49,7 +49,7 @@ struct RecordingPlanTests {
         #expect(placement.isIdentity(for: phone))
     }
 
-    @Test func `an odd canvas is grown to even dimensions because H264 chroma planes need both axes even`() {
+    @Test func `should grow an odd canvas to even dimensions so H264 can encode it`() {
         let source = RenderDimensions(width: 1179, height: 2555)
         let placement = plan(size: .native).placement(source: source)
 
@@ -62,7 +62,7 @@ struct RecordingPlanTests {
         #expect(placement.drawY == 0)
     }
 
-    @Test func `an odd contain canvas spends the extra pixel on mat, not on the frame`() throws {
+    @Test func `should spend the extra pixel on the mat, not the frame, when an odd canvas uses contain`() throws {
         // 1000x1001 asked for square → 1001x1001 canvas, grown to 1002x1002.
         let source = RenderDimensions(width: 1000, height: 1001)
         let placement = plan(size: try CaptureSize.parse("square")).placement(source: source)
@@ -75,7 +75,7 @@ struct RecordingPlanTests {
         #expect(placement.drawHeight == 1001)
     }
 
-    @Test func `an odd cover canvas is still fully covered`() throws {
+    @Test func `should still fully cover an odd canvas when using cover`() throws {
         let source = RenderDimensions(width: 1000, height: 1001)
         let placement = plan(size: try CaptureSize.parse("4:3"), fit: .cover)
             .placement(source: source)
@@ -90,7 +90,7 @@ struct RecordingPlanTests {
         #expect(placement.drawY + placement.drawHeight >= placement.height)
     }
 
-    @Test func `an odd stretch canvas is filled exactly`() throws {
+    @Test func `should fill an odd canvas exactly when using stretch`() throws {
         let source = RenderDimensions(width: 1000, height: 1001)
         let placement = plan(size: try CaptureSize.parse("4:3"), fit: .stretch)
             .placement(source: source)
@@ -101,12 +101,12 @@ struct RecordingPlanTests {
         #expect(placement.drawHeight == placement.height)
     }
 
-    @Test func `a recording without a duration runs until the user stops it`() {
+    @Test func `should run until the user stops it when no duration is given`() {
         #expect(plan(size: .native, duration: nil).duration == nil)
         #expect(plan(size: .native, duration: 5).duration == 5)
     }
 
-    @Test func `a plan clamps a nonsensical frame rate into a recordable one`() {
+    @Test func `should clamp a nonsensical frame rate into a recordable one`() {
         #expect(plan(size: .native, fps: 0).fps == 1)
         #expect(plan(size: .native, fps: -4).fps == 1)
         #expect(plan(size: .native, fps: 240).fps == 120)

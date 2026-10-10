@@ -12,7 +12,7 @@ private let deviceKitAvailable: Bool =
 @Suite("Chrome integration", .enabled(if: deviceKitAvailable))
 struct ChromeIntegrationTests {
 
-    @Test func `loads phone11 chrome from disk and rasterizes the composite`() throws {
+    @Test func `should load the iPhone 17 Pro bezel from its baked composite`() throws {
         // phone11 ships with iPhone 17 Pro on Xcode 26. The composite
         // path (vs. the 9-slice path covered below) — same chain, just
         // a different branch through LiveChromes.loadComposite.
@@ -24,30 +24,30 @@ struct ChromeIntegrationTests {
     // every slice the LiveChromes path can take. iPhone 17e (phone13)
     // is the iPhone-shaped 9-slice case.
 
-    @Test func `loads tablet5 (iPad Pro M4) via 9-slice composition`() throws {
+    @Test func `should compose the iPad Pro M4 bezel from nine slices`() throws {
         try expectLoadable(deviceName: "iPad Pro 11-inch (M4)", chromeID: "tablet5")
     }
 
-    @Test func `loads tablet4 (iPad Air M2) via 9-slice composition`() throws {
+    @Test func `should compose the iPad Air M2 bezel from nine slices`() throws {
         try expectLoadable(deviceName: "iPad Air 11-inch (M2)", chromeID: "tablet4")
     }
 
-    @Test func `loads tablet3 (iPad mini A17 Pro) via 9-slice composition`() throws {
+    @Test func `should compose the iPad mini A17 Pro bezel from nine slices`() throws {
         try expectLoadable(deviceName: "iPad mini (A17 Pro)", chromeID: "tablet3")
     }
 
-    @Test func `loads tablet2 (iPad Pro 11) via 9-slice composition`() throws {
+    @Test func `should compose the iPad Pro 11 bezel from nine slices`() throws {
         try expectLoadable(
             deviceName: "iPad Pro (11-inch) (4th generation)",
             chromeID: "tablet2"
         )
     }
 
-    @Test func `loads tablet (classic iPad) via 9-slice composition`() throws {
+    @Test func `should compose the classic iPad bezel from nine slices`() throws {
         try expectLoadable(deviceName: "iPad (9th generation)", chromeID: "tablet")
     }
 
-    @Test func `loads phone13 (iPhone 17e) via 9-slice composition`() throws {
+    @Test func `should compose the iPhone 17e bezel from nine slices`() throws {
         try expectLoadable(deviceName: "iPhone 17e", chromeID: "phone13")
     }
 

@@ -7,7 +7,7 @@ import Testing
 
 @Suite("RenderedPacing")
 struct RenderedPacingTests {
-    @Test func `source bursts and camera refresh share one render limit and flush the last frame`() throws {
+    @Test func `should hold source bursts and camera refreshes to one render limit and flush the last frame`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         var receive: (@Sendable (IOSurface) -> Void)?
@@ -33,7 +33,7 @@ struct RenderedPacingTests {
         #expect(last.placement?.sourcePixelSize.width == 21)
     }
 
-    @Test func `both foldable panels and pose refresh share the same render limit`() throws {
+    @Test func `should hold both foldable panels and pose refreshes to the same render limit`() throws {
         let inner = MockScreen()
         let cover = MockScreen()
         let hinge = MockHinge()
@@ -69,7 +69,7 @@ struct RenderedPacingTests {
         #expect(last.placement?.sourcePixelSize.width == 21)
     }
 
-    @Test func `stop cancels pending renders without waiting on a main thread render`() throws {
+    @Test func `should cancel pending renders on stop without waiting on a main thread render`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         let started = DispatchSemaphore(value: 0)

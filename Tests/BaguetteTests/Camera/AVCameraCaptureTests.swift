@@ -26,20 +26,20 @@ struct AVCameraCaptureTests {
 
     private static let webcam = CameraSource.device(uid: "U")
 
-    @Test func `start forwards the device UID into the video collaborator`() async throws {
+    @Test func `should open the chosen webcam when the camera starts`() async throws {
         let (capture, _, cap) = makeCapture()
         try await capture.start(source: Self.webcam) { _ in }
         #expect(cap.startedDeviceUID == "U")
     }
 
-    @Test func `start rejects a file source it can't produce`() async {
+    @Test func `should refuse to start the webcam when the source is a file`() async {
         let (capture, _, _) = makeCapture()
         await #expect(throws: (any Error).self) {
             try await capture.start(source: .image(path: "/tmp/pic.png")) { _ in }
         }
     }
 
-    @Test func `incoming raw frames are converted via BGRAConverter and forwarded`() async throws {
+    @Test func `should deliver each webcam frame as a packed camera frame`() async throws {
         let (capture, _, cap) = makeCapture()
         let received = Recorder<CameraFrame>()
         try await capture.start(source: Self.webcam) { frame in
@@ -65,7 +65,7 @@ struct AVCameraCaptureTests {
         #expect(frames[0].pixels == pixels)
     }
 
-    @Test func `frame sequence monotonically increments across deliveries`() async throws {
+    @Test func `should number webcam frames in increasing sequence`() async throws {
         let (capture, _, cap) = makeCapture()
         let received = Recorder<CameraFrame>()
         try await capture.start(source: Self.webcam) { received.record($0) }
@@ -80,7 +80,7 @@ struct AVCameraCaptureTests {
         #expect(received.values.map(\.sequence) == [1, 2, 3])
     }
 
-    @Test func `stop tears down the video collaborator`() async throws {
+    @Test func `should release the webcam when the camera stops`() async throws {
         let (capture, _, cap) = makeCapture()
         try await capture.start(source: Self.webcam) { _ in }
         await capture.stop()

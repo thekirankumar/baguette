@@ -12,7 +12,7 @@ struct RecordCommandTests {
 
     private let minimum = ["--udid", "U", "--output", "/tmp/demo.mp4"]
 
-    @Test func `record defaults to the simulator's own size at 30 fps`() throws {
+    @Test func `should record at the simulator's own size and 30 fps by default`() throws {
         let cmd = try RecordCommand.parse(minimum)
 
         #expect(cmd.options.udid == "U")
@@ -26,7 +26,7 @@ struct RecordCommandTests {
         #expect(RecordCommand.configuration.commandName == "record")
     }
 
-    @Test func `record takes an App Store size, a fit, and a duration`() throws {
+    @Test func `should take an App Store size, fit, duration, background, fps and bitrate`() throws {
         let cmd = try RecordCommand.parse(minimum + [
             "--size", "appstore-6.9", "--fit", "cover", "--duration", "7.5",
             "--background", "#101820", "--fps", "60", "--bitrate", "12000000",
@@ -40,7 +40,7 @@ struct RecordCommandTests {
         #expect(cmd.bitrate == 12_000_000)
     }
 
-    @Test func `-o is the short spelling of --output`() throws {
+    @Test func `should accept -o as the short spelling of --output`() throws {
         let cmd = try RecordCommand.parse(["--udid", "U", "-o", "/tmp/clip.mov"])
         #expect(cmd.output == "/tmp/clip.mov")
     }
@@ -57,43 +57,43 @@ struct RecordCommandTests {
         }
     }
 
-    @Test func `a size baguette doesn't know names every size it does`() throws {
+    @Test func `should name every known size when --size is unknown`() throws {
         let message = try #require(failure(minimum + ["--size", "nonsense"]))
         #expect(message.contains("Unknown size 'nonsense'"))
         #expect(message.contains("appstore-6.9"))
     }
 
-    @Test func `a container baguette can't write is rejected before the simulator is touched`() throws {
+    @Test func `should reject an unwritable container before the simulator is touched`() throws {
         let message = try #require(
             failure(["--udid", "U", "--output", "/tmp/demo.webm"])
         )
         #expect(message.contains("Unknown recording container 'webm'"))
     }
 
-    @Test func `a transparent background is rejected because video has no alpha`() throws {
+    @Test func `should reject a transparent background because video has no alpha`() throws {
         let message = try #require(failure(minimum + ["--background", "transparent"]))
         #expect(message.contains("--background must be #RRGGBB"))
     }
 
-    @Test func `an unrecordable frame rate is rejected`() {
+    @Test func `should reject an unrecordable --fps`() {
         #expect(failure(minimum + ["--fps", "0"]) != nil)
         #expect(failure(minimum + ["--fps", "240"]) != nil)
         #expect(failure(minimum + ["--fps", "60"]) == nil)
     }
 
-    @Test func `a duration that isn't a length of time is rejected`() {
+    @Test func `should reject a --duration that is not a positive length of time`() {
         #expect(failure(minimum + ["--duration", "0"]) != nil)
         #expect(failure(minimum + ["--duration", "-3"]) != nil)
     }
 
-    @Test func `an unknown fit names the three baguette knows`() throws {
+    @Test func `should name the three known fits when --fit is unknown`() throws {
         let message = try #require(failure(minimum + ["--fit", "squish"]))
         #expect(message.contains("contain"))
         #expect(message.contains("cover"))
         #expect(message.contains("stretch"))
     }
 
-    @Test func `a fit and a background are as case-insensitive as a size is`() throws {
+    @Test func `should accept --fit and --background in any case, as --size is`() throws {
         // `--size SQUARE` already works, because `CaptureSize.parse`
         // lowercases; a sibling flag that rejected `--fit COVER` on the
         // same command line would be arbitrary. `screenshot` normalises
@@ -107,7 +107,7 @@ struct RecordCommandTests {
         #expect(cmd.background == "#aabbcc")
     }
 
-    @Test func `every accepted size, fit and container passes validation`() throws {
+    @Test func `should accept every known size, fit and container`() throws {
         for preset in CaptureSize.presets {
             #expect(failure(minimum + ["--size", preset.spec]) == nil)
         }

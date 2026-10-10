@@ -5,7 +5,7 @@ import Testing
 
 @Suite("SimctlCameraGuest")
 struct SimctlCameraGuestTests {
-    @Test func `camera cleanup queries the actual nested device set selected by CoreSimulator`() throws {
+    @Test func `should check for termination in the nested device set CoreSimulator actually selected`() throws {
         final class DeviceSet: NSObject {
             @objc let availableDevices: [NSObject]
             init(_ devices: [NSObject]) { availableDevices = devices }
@@ -35,7 +35,7 @@ struct SimctlCameraGuestTests {
         #expect(throws: (any Error).self) { try unavailable.hasTerminated(udid: "U", xcrun: script.url) }
     }
 
-    @Test func `only shutdown or absence in a successful device-set listing confirms termination`() throws {
+    @Test func `should confirm termination only when the device is shut down or absent from the listing`() throws {
         let script = try Script()
         defer { script.remove() }
         for state in ["Booted", "Booting", "ShuttingDown", "Creating", "unknown", "Shutdown"] {
@@ -48,7 +48,7 @@ struct SimctlCameraGuestTests {
         #expect(try SimctlCameraGuest.hasTerminated(udid: "U", deviceSetPath: "/custom set", xcrun: script.url))
     }
 
-    @Test func `failed or malformed listings cannot prove deletion`() throws {
+    @Test func `should not confirm termination when the device listing fails or is malformed`() throws {
         let script = try Script()
         defer { script.remove() }
         for output in ["not JSON", "{}", #"{"devices":{"runtime":[{"udid":"U"}]}}"#] {

@@ -25,7 +25,7 @@ struct AXNodeMergeTests {
 
     // MARK: - skip set
 
-    @Test func `contentLeafFrames keeps content leaves but skips childless containers`() {
+    @Test func `should treat content leaves as described but keep empty containers probeable`() {
         let text = node("AXStaticText", label: "5", x: 10, y: 10, w: 40, h: 40)
         let emptyTabBar = node("AXGroup", label: "Tab Bar", x: 0, y: 900, w: 440, h: 80)
         let root = node("AXWindow", x: 0, y: 0, w: 440, h: 956,
@@ -37,7 +37,7 @@ struct AXNodeMergeTests {
 
     // MARK: - grafting
 
-    @Test func `merging grafts a discovery under the deepest container that contains it`() {
+    @Test func `should place a discovered element under the deepest container that holds it`() {
         // A childless tab-bar container the recursive walk couldn't
         // descend into.
         let tabBar = node("AXGroup", label: "Tab Bar", x: 0, y: 873, w: 440, h: 83)
@@ -56,7 +56,7 @@ struct AXNodeMergeTests {
         #expect(hit?.role == "AXRadioButton")
     }
 
-    @Test func `merging attaches to the root when no deeper container contains it`() {
+    @Test func `should attach a discovered element to the root when no container holds it`() {
         // Status bar lives above the app — no app container holds it.
         let root = node("AXWindow", x: 0, y: 60, w: 440, h: 896,
                         children: [node("AXStaticText", label: "Post", x: 0, y: 60, w: 100, h: 40)])
@@ -66,7 +66,7 @@ struct AXNodeMergeTests {
         #expect(merged.children.contains { $0.label == "4:37 PM" })
     }
 
-    @Test func `merging de-duplicates discoveries against the tree and each other`() {
+    @Test func `should add each discovered element only once`() {
         let post = node("AXStaticText", label: "Post", id: "p1", x: 0, y: 60, w: 100, h: 40)
         let root = node("AXWindow", x: 0, y: 0, w: 440, h: 956, children: [post])
         let dupOfExisting = node("AXStaticText", label: "Post", id: "p1", x: 0, y: 60, w: 100, h: 40)
@@ -80,7 +80,7 @@ struct AXNodeMergeTests {
         #expect(countLabel(merged, "Post") == 1)
     }
 
-    @Test func `merging returns self unchanged when nothing is new`() {
+    @Test func `should leave the tree unchanged when nothing new is discovered`() {
         let root = node("AXWindow", x: 0, y: 0, w: 440, h: 956,
                         children: [node("AXButton", id: "b", x: 0, y: 0, w: 10, h: 10)])
         #expect(root.merging(discovered: []) == root)

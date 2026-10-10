@@ -5,7 +5,7 @@ import Testing
 
 @Suite("ScreenshotMetadata")
 struct ScreenshotMetadataTests {
-    @Test func `metadata is written separately from the exact captured image bytes`() throws {
+    @Test func `should write metadata separately from the exact captured image bytes`() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -33,7 +33,7 @@ struct ScreenshotMetadataTests {
         #expect(json["drawRectPixels"] as? [String: Int] == ["x": 0, "y": 30, "width": 40, "height": 20])
     }
 
-    @Test func `a metadata sidecar leaves the image on stdout by default`() throws {
+    @Test func `should keep the image on stdout by default when writing a metadata sidecar`() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -52,7 +52,7 @@ struct ScreenshotMetadataTests {
     }
 
     @Test(arguments: ["same", "symlink", "hardlink"])
-    func `metadata cannot overwrite redirected stdout`(alias: String) throws {
+    func `should refuse to let metadata overwrite redirected stdout`(alias: String) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -74,7 +74,7 @@ struct ScreenshotMetadataTests {
         #expect(try Data(contentsOf: metadata) == original)
     }
 
-    @Test func `image and metadata cannot use the same normalized path`() {
+    @Test func `should reject an image and metadata at the same normalized path`() {
         #expect(throws: (any Error).self) {
             try ScreenshotCommand.parse([
                 "--udid", "test", "--output", "/tmp/frame.png",
@@ -84,7 +84,7 @@ struct ScreenshotMetadataTests {
     }
 
     @Test(arguments: [false, true])
-    func `image and metadata cannot alias one existing file`(hardLink: Bool) throws {
+    func `should reject an image and metadata that alias one existing file`(hardLink: Bool) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }

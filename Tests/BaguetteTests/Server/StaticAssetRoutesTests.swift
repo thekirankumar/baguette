@@ -14,7 +14,7 @@ import Testing
 @Suite("Server static asset routes")
 struct StaticAssetRoutesTests {
 
-    @Test func `every file-bearing web-root subdirectory is routable`() throws {
+    @Test func `should route every web-root subdirectory that holds files`() throws {
         let webRoot = Self.sourceWebRoot()
         let onDisk = try Self.fileBearingSubdirectories(of: webRoot)
         #expect(!onDisk.isEmpty)
@@ -26,7 +26,7 @@ struct StaticAssetRoutesTests {
         }
     }
 
-    @Test func `routable subdirectories all exist on disk`() throws {
+    @Test func `should point every asset subdirectory route at a folder that exists on disk`() throws {
         let webRoot = Self.sourceWebRoot()
         for dir in Server.staticAssetSubdirectories {
             var isDir: ObjCBool = false

@@ -11,7 +11,7 @@ struct ServerBakeryRoutesTests {
 
     // MARK: - preview
 
-    @Test func `preview returns the menu and does not trust the bakery`() async throws {
+    @Test func `should preview a bakery's menu without trusting the bakery`() async throws {
         let env = try Env()
         let outcome = await Server.previewBakery(reference: "acme/tools", install: env.install)
         guard case .ok(let json) = outcome else { Issue.record("expected .ok, got \(outcome)"); return }
@@ -25,7 +25,7 @@ struct ServerBakeryRoutesTests {
         #expect(try env.registry.bakeries().isEmpty)
     }
 
-    @Test func `preview reports a malformed reference`() async throws {
+    @Test func `should fail a preview of a malformed bakery reference`() async throws {
         let env = try Env()
         let outcome = await Server.previewBakery(reference: "not a ref", install: env.install)
         guard case .failed = outcome else { Issue.record("expected .failed, got \(outcome)"); return }
@@ -33,7 +33,7 @@ struct ServerBakeryRoutesTests {
 
     // MARK: - listing
 
-    @Test func `listing answers the trusted bakeries`() async throws {
+    @Test func `should list the trusted bakeries`() async throws {
         let env = try Env()
         _ = try await env.install.install(ref: try BakeryRef.parse("acme/tools"), requested: "hello")
         guard case .ok(let json) = Server.listBakeries(home: env.home, installed: []) else {
@@ -44,7 +44,7 @@ struct ServerBakeryRoutesTests {
         #expect(bakeries.first?["commit"] as? String == "c0ffee")
     }
 
-    @Test func `listing says which of a bakery's plugins are already installed`() async throws {
+    @Test func `should mark which of a bakery's plugins are already installed`() async throws {
         // What the shelf draws an Install button from. Deciding it here
         // rather than in the page keeps one rule for "do I have this",
         // and it isn't the same as "is it in installed.json" — a
@@ -61,7 +61,7 @@ struct ServerBakeryRoutesTests {
         #expect(plugins.first?["installed"] as? Bool == true)
     }
 
-    @Test func `a registry that cannot be read is a failure, not an empty list`() throws {
+    @Test func `should fail rather than list no bakeries when the registry cannot be read`() throws {
         // A corrupt or unreadable `bakeries.json` used to render in the
         // UI as "no bakeries added" — indistinguishable from a fresh
         // install, and the next write would have made it true.
@@ -75,7 +75,7 @@ struct ServerBakeryRoutesTests {
         }
     }
 
-    @Test func `previewing does not install anything`() async throws {
+    @Test func `should install and record nothing when previewing a bakery`() async throws {
         // Preview looks and records nothing — not the source, not a
         // plugin. Installing is a separate route with a gate of its
         // own; reaching it by previewing would make that gate
@@ -95,7 +95,7 @@ struct ServerBakeryRoutesTests {
     // heuristics; naming sources by recorded id is what keeps the blast
     // radius of a wrong one at "a repo you already vetted".
 
-    @Test func `installing puts a trusted bakery's plugin on the machine`() async throws {
+    @Test func `should install a trusted bakery's plugin on the machine`() async throws {
         let env = try Env()
         try env.trust(plugins: ["hello"])
 
@@ -110,7 +110,7 @@ struct ServerBakeryRoutesTests {
         #expect(try env.registry.installed().map(\.name) == ["hello"])
     }
 
-    @Test func `installing from a bakery that was never trusted is refused`() async throws {
+    @Test func `should refuse an install from a bakery that was never trusted`() async throws {
         // The request names an id, so an untrusted one resolves to
         // nothing — no ref is parsed, no remote is contacted, no
         // directory is touched.
@@ -124,7 +124,7 @@ struct ServerBakeryRoutesTests {
         #expect(try env.registry.bakeries().isEmpty)
     }
 
-    @Test func `installing a plugin the bakery does not offer is refused`() async throws {
+    @Test func `should refuse an install of a plugin the bakery does not offer`() async throws {
         // Trusting a source is not trusting an arbitrary path in it.
         let env = try Env()
         try env.trust(plugins: ["hello"])
@@ -137,7 +137,7 @@ struct ServerBakeryRoutesTests {
         #expect(try env.registry.installed().isEmpty)
     }
 
-    @Test func `a refused install never echoes an untrusted id back into the page`() async throws {
+    @Test func `should never echo an untrusted bakery id back into the page when refusing an install`() async throws {
         // The message lands in a modal. It may name what the user
         // already trusted; it must not reflect whatever id was posted.
         let env = try Env()

@@ -6,7 +6,7 @@ import Testing
 
 @Suite("ExistingDisplay")
 struct ExistingDisplayTests {
-    @Test func `explicit input flag disables implicit CarPlay attachment`() throws {
+    @Test func `should not attach CarPlay implicitly when input asks for --require-existing-display`() throws {
         let command = try InputCommand.parse(["--udid", "SIM", "--display", "carplay", "--require-existing-display"])
         #expect(command.requireExistingDisplay)
         let plan = try StreamDisplayPlan.from(
@@ -15,7 +15,7 @@ struct ExistingDisplayTests {
         #expect(!plan.enableCarPlay)
     }
 
-    @Test func `existing display query is strict and does not alter the upstream default`() throws {
+    @Test func `should accept only a single 1 for the existing-display query and keep CarPlay attachment by default`() throws {
         #expect(try !StreamDisplayPlan.requireExistingDisplay(query: []))
         #expect(try StreamDisplayPlan.requireExistingDisplay(query: ["1"]))
         #expect(throws: (any Error).self) { try StreamDisplayPlan.requireExistingDisplay(query: ["true"]) }
@@ -24,7 +24,7 @@ struct ExistingDisplayTests {
         #expect(StreamDisplayPlan.from(query: "carplay").enableCarPlay == true)
     }
 
-    @Test func `an absent required CarPlay screen never opens Simulator menus or substitutes the phone`() throws {
+    @Test func `should fail without opening Simulator menus or substituting the phone when a required CarPlay screen is absent`() throws {
         let sim = MockSimulator()
         let displays = MockDisplays()
         let display = MockDisplay()

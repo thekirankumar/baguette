@@ -35,7 +35,7 @@ struct PanelControlTests {
 
     // MARK: - the manifest side
 
-    @Test func `a panel can declare tickable rows`() throws {
+    @Test func `should let a panel declare tickable rows`() throws {
         let parsed = try body("""
         {"kind":"list","source":"flags",
          "control":{"kind":"checkbox","arg":"enabled","submit":"Apply"}}
@@ -43,19 +43,19 @@ struct PanelControlTests {
         #expect(parsed.control == PanelControl(kind: .checkbox, arg: "enabled", submit: "Apply"))
     }
 
-    @Test func `all three control families are offered`() throws {
+    @Test func `should offer switch, checkbox and radio controls`() throws {
         for kind in ["switch", "checkbox", "radio"] {
             let parsed = try body(#"{"kind":"list","source":"flags","control":{"kind":"\#(kind)","arg":"e"}}"#)
             #expect(parsed.control?.kind.rawValue == kind)
         }
     }
 
-    @Test func `a control that names no button label gets a plain one`() throws {
+    @Test func `should label the submit button Apply when the control names no label`() throws {
         #expect(try body(#"{"kind":"list","source":"flags","control":{"kind":"switch","arg":"e"}}"#)
             .control?.submit == "Apply")
     }
 
-    @Test func `an unknown control family is refused rather than drawn as the nearest one`() throws {
+    @Test func `should reject an unknown control family rather than draw the nearest one`() throws {
         // Unlike an icon, this doesn't degrade. A checkbox silently drawn
         // as a switch would misrepresent whether ticking two at once is
         // allowed — a lie about behaviour, not a substituted picture.
@@ -64,7 +64,7 @@ struct PanelControlTests {
         }
     }
 
-    @Test func `a control with no arg is refused, because ticks could not be submitted`() throws {
+    @Test func `should reject a control when it names no arg to submit ticks under`() throws {
         #expect(throws: PluginManifestError.missingControlArg) {
             _ = try body(#"{"kind":"list","source":"flags","control":{"kind":"switch"}}"#)
         }
@@ -73,22 +73,22 @@ struct PanelControlTests {
         }
     }
 
-    @Test func `a panel without a control is a plain list, exactly as before`() throws {
+    @Test func `should draw a plain list when the panel declares no control`() throws {
         #expect(try body(#"{"kind":"list","source":"flags"}"#).control == nil)
     }
 
     // MARK: - the row side
 
-    @Test func `a row reports whether it is on`() throws {
+    @Test func `should report whether a row is on or off`() throws {
         #expect(try row(#"{"title":"Dark Mode","value":"dark","state":"on"}"#).state == .on)
         #expect(try row(#"{"title":"Bold Text","value":"bold","state":"off"}"#).state == .off)
     }
 
-    @Test func `a row carries the value its tick submits`() throws {
+    @Test func `should carry the value a row's tick submits`() throws {
         #expect(try row(#"{"title":"Camera","value":"camera","state":"on"}"#).value == "camera")
     }
 
-    @Test func `a row names the group its radio is exclusive within`() throws {
+    @Test func `should name the group a row's radio is exclusive within`() throws {
         // A settings panel is several independent questions at once —
         // display.py has appearance, contrast and text size. Without
         // groups a radio panel could only ever ask one, because picking
@@ -97,11 +97,11 @@ struct PanelControlTests {
         #expect(row.group == "appearance")
     }
 
-    @Test func `rows naming no group share one, which is the single-question panel`() throws {
+    @Test func `should leave a row ungrouped when it names no group, as in a single-question panel`() throws {
         #expect(try row(#"{"title":"Camera","value":"camera","state":"on"}"#).group == nil)
     }
 
-    @Test func `a row with no state is not a control, so headers still work`() throws {
+    @Test func `should treat a row as a plain header when it has no state`() throws {
         // `display.py` opens each group with a title-only row. Those must
         // keep rendering as plain rows inside a control panel, not turn
         // into unticked checkboxes.
@@ -110,7 +110,7 @@ struct PanelControlTests {
         #expect(plain.value == nil)
     }
 
-    @Test func `an unknown state is refused rather than read as off`() throws {
+    @Test func `should reject an unknown row state rather than read it as off`() throws {
         // Defaulting to "off" would render a switch that says the feature
         // is disabled when the plugin never claimed that.
         #expect(throws: PluginResultError.unknownRowState(name: "maybe", index: 0)) {
@@ -118,7 +118,7 @@ struct PanelControlTests {
         }
     }
 
-    @Test func `a state with no value is refused, because a tick would submit nothing`() throws {
+    @Test func `should reject a row state when it has no value to submit`() throws {
         #expect(throws: PluginResultError.stateWithoutValue(index: 0)) {
             _ = try row(#"{"title":"Dark Mode","state":"on"}"#)
         }
@@ -126,7 +126,7 @@ struct PanelControlTests {
 
     // MARK: - what the browser receives
 
-    @Test func `the browser is told how to draw the control and where to post it`() throws {
+    @Test func `should tell the browser how to draw the control and what to submit`() throws {
         let manifest = try PluginManifest.parsing(json: Data("""
         {"name":"flags","version":"1.0.0",
          "contributes":{
@@ -151,7 +151,7 @@ struct PanelControlTests {
         #expect(control?["submit"] as? String == "Set")
     }
 
-    @Test func `a row's state, value and group reach the browser`() throws {
+    @Test func `should pass a row's state, value and group to the browser`() throws {
         let dict = try row("""
         {"title":"Dark","value":"appearance:dark","state":"on","group":"appearance"}
         """).dictionary
@@ -160,7 +160,7 @@ struct PanelControlTests {
         #expect(dict["group"] as? String == "appearance")
     }
 
-    @Test func `a plain row projects neither, so old panels are byte-identical`() throws {
+    @Test func `should send no state or value for a plain row so old panels stay byte-identical`() throws {
         let dict = try row(#"{"title":"Button has no label"}"#).dictionary
         #expect(dict["state"] == nil)
         #expect(dict["value"] == nil)

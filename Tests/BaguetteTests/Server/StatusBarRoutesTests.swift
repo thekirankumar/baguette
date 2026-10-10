@@ -13,7 +13,7 @@ struct StatusBarRoutesTests {
 
     // MARK: - parse
 
-    @Test func `parseStatusBarOverride reads every field from a JSON body`() {
+    @Test func `should read every status-bar field from a JSON body`() {
         let json = """
         {"time":"9:41","operatorName":"Baguette","dataNetwork":"5g",
          "wifiMode":"active","wifiBars":3,"cellularMode":"active",
@@ -26,22 +26,22 @@ struct StatusBarRoutesTests {
         ))
     }
 
-    @Test func `parseStatusBarOverride returns nil for malformed JSON`() {
+    @Test func `should read no status-bar override from malformed JSON`() {
         #expect(Server.parseStatusBarOverride(json: "not json") == nil)
     }
 
-    @Test func `parseStatusBarOverride returns nil when an enum field is unrecognised`() {
+    @Test func `should read no status-bar override when an enum field is unrecognised`() {
         #expect(Server.parseStatusBarOverride(json: #"{"dataNetwork":"6g"}"#) == nil)
     }
 
-    @Test func `parseStatusBarOverride accepts a partial body`() {
+    @Test func `should accept a partial status-bar body`() {
         #expect(Server.parseStatusBarOverride(json: #"{"batteryLevel":20}"#)
             == StatusBarOverride(batteryLevel: 20))
     }
 
     // MARK: - apply
 
-    @Test func `applyStatusBar dispatches a parsed override to the simulator`() async {
+    @Test func `should override the simulator's status bar with the posted fields`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let statusBar = MockStatusBar()
@@ -56,7 +56,7 @@ struct StatusBarRoutesTests {
         verify(statusBar).override(.value(StatusBarOverride(batteryLevel: 50))).called(1)
     }
 
-    @Test func `applyStatusBar reports unknownDevice when the simulator is missing`() async {
+    @Test func `should report an unknown device when overriding the status bar of a missing simulator`() async {
         let host = MockSimulators()
         given(host).find(udid: .value("ghost")).willReturn(nil)
         let outcome = await Server.applyStatusBar(
@@ -65,7 +65,7 @@ struct StatusBarRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `applyStatusBar reports invalidBody for malformed JSON`() async {
+    @Test func `should report an invalid body when the status-bar override is malformed JSON`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         given(host).find(udid: .value("U")).willReturn(sim)
@@ -73,7 +73,7 @@ struct StatusBarRoutesTests {
         #expect(outcome == .invalidBody)
     }
 
-    @Test func `applyStatusBar reports emptyOverride when no fields are set`() async {
+    @Test func `should report an empty override when no status-bar field is set`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         given(host).find(udid: .value("U")).willReturn(sim)
@@ -81,7 +81,7 @@ struct StatusBarRoutesTests {
         #expect(outcome == .emptyOverride)
     }
 
-    @Test func `applyStatusBar reports dispatchFailed when simctl throws`() async {
+    @Test func `should report a failed dispatch when simctl cannot override the status bar`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let statusBar = MockStatusBar()
@@ -97,7 +97,7 @@ struct StatusBarRoutesTests {
 
     // MARK: - clear
 
-    @Test func `clearStatusBar clears overrides through the simulator`() async {
+    @Test func `should clear the simulator's status-bar overrides`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let statusBar = MockStatusBar()
@@ -109,14 +109,14 @@ struct StatusBarRoutesTests {
         verify(statusBar).clear().called(1)
     }
 
-    @Test func `clearStatusBar reports unknownDevice for an empty udid`() async {
+    @Test func `should report an unknown device when clearing the status bar for an empty udid`() async {
         let host = MockSimulators()
         #expect(await Server.clearStatusBar(udid: "", simulators: host) == .unknownDevice)
     }
 
     // MARK: - read
 
-    @Test func `readStatusBar returns the simulator's current overrides`() async {
+    @Test func `should read the simulator's current status-bar overrides`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let statusBar = MockStatusBar()
@@ -128,12 +128,12 @@ struct StatusBarRoutesTests {
             == .ok(StatusBarOverride(dataNetwork: .wifi, wifiBars: 2)))
     }
 
-    @Test func `readStatusBar reports unknownDevice for an empty udid`() async {
+    @Test func `should report an unknown device when reading the status bar for an empty udid`() async {
         let host = MockSimulators()
         #expect(await Server.readStatusBar(udid: "", simulators: host) == .unknownDevice)
     }
 
-    @Test func `readStatusBar reports failed when the read throws`() async {
+    @Test func `should report a failure when the status bar cannot be read`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let statusBar = MockStatusBar()

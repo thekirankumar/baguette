@@ -51,7 +51,7 @@ struct SimctlPasteboardTests {
         return (SimctlPasteboard(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `setText asks devicectl first with the text on stdin`() async throws {
+    @Test func `should set the pasteboard through devicectl first with the text on stdin`() async throws {
         let (pasteboard, captures) = makePasteboard()
         try await pasteboard.setText("hi")
 
@@ -60,7 +60,7 @@ struct SimctlPasteboardTests {
         #expect(captures.stdin == Data("hi".utf8))
     }
 
-    @Test func `setText falls back to simctl pbcopy when devicectl refuses`() async throws {
+    @Test func `should fall back to simctl pbcopy when devicectl refuses the copy`() async throws {
         // Xcode 26 has no `pasteboard` subcommand (usage error, 64);
         // a device Core Device does not know exits 1. Either way the
         // legacy route gets the same bytes.
@@ -75,20 +75,20 @@ struct SimctlPasteboardTests {
         }
     }
 
-    @Test func `setText reports the pbcopy status when both routes fail`() async throws {
+    @Test func `should report the pbcopy status when both pasteboard routes fail`() async throws {
         let (pasteboard, _) = makePasteboard(exitCode: 3, devicectlExit: 1)
         await #expect(throws: PasteboardError.simctlFailed(status: 3)) {
             try await pasteboard.setText("hi")
         }
     }
 
-    @Test func `setText sends UTF-8 bytes for non-ASCII text`() async throws {
+    @Test func `should send non-ASCII pasteboard text as UTF-8 bytes`() async throws {
         let (pasteboard, captures) = makePasteboard()
         try await pasteboard.setText("héllo 🥖")
         #expect(captures.stdin == Data("héllo 🥖".utf8))
     }
 
-    @Test func `text runs simctl pbpaste and returns the captured stdout`() async throws {
+    @Test func `should read the pasteboard text from simctl pbpaste`() async throws {
         let (pasteboard, captures) = makePasteboard(
             stdout: Data("clip contents".utf8)
         )
@@ -97,21 +97,21 @@ struct SimctlPasteboardTests {
         #expect(text == "clip contents")
     }
 
-    @Test func `syncFromHost spawns simctl pbsync from host to the device`() async throws {
+    @Test func `should sync the host pasteboard onto the device with simctl pbsync`() async throws {
         let (pasteboard, captures) = makePasteboard()
         try await pasteboard.syncFromHost()
         #expect(captures.arguments == ["simctl", "pbsync", "host", "U"])
         #expect(captures.stdin == nil)
     }
 
-    @Test func `syncToHost spawns simctl pbsync from the device to host`() async throws {
+    @Test func `should sync the device pasteboard onto the host with simctl pbsync`() async throws {
         let (pasteboard, captures) = makePasteboard()
         try await pasteboard.syncToHost()
         #expect(captures.arguments == ["simctl", "pbsync", "U", "host"])
         #expect(captures.stdin == nil)
     }
 
-    @Test func `a non-zero simctl exit propagates as a pasteboard failure`() async {
+    @Test func `should fail setting the pasteboard when simctl exits non-zero`() async {
         let (pasteboard, _) = makePasteboard(exitCode: 3)
         var caught: PasteboardError?
         do {

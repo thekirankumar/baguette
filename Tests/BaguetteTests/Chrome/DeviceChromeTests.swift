@@ -7,27 +7,27 @@ struct DeviceChromeTests {
 
     // MARK: - parsing
 
-    @Test func `parsing strips the chromeIdentifier prefix`() throws {
+    @Test func `should strip the reverse-DNS prefix from a chrome's identifier`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         #expect(chrome.identifier == "phone11")
     }
 
-    @Test func `parsing reads sizing into screenInsets`() throws {
+    @Test func `should read the chrome's sizing as the screen insets`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         #expect(chrome.screenInsets == Insets(top: 18, left: 18, bottom: 18, right: 18))
     }
 
-    @Test func `parsing reads simpleOutsideBorder cornerRadiusX as outerCornerRadius`() throws {
+    @Test func `should read the outside border's corner radius as the bezel's outer corner radius`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         #expect(chrome.outerCornerRadius == 80)
     }
 
-    @Test func `parsing reads images_composite as compositeImageName`() throws {
+    @Test func `should read the chrome's composite image name`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         #expect(chrome.compositeImageName == "PhoneComposite")
     }
 
-    @Test func `parsing reads images_devicePadding into devicePadding`() throws {
+    @Test func `should read the chrome's device padding`() throws {
         // Apple ships `devicePadding` on every shipping chrome — the
         // four edge-margins to reserve around the rasterized composite
         // for button overshoot and rollover-animation slack. Sourced
@@ -41,7 +41,7 @@ struct DeviceChromeTests {
         #expect(chrome.devicePadding == Insets(top: 0, left: 0, bottom: 0, right: 11))
     }
 
-    @Test func `parsing defaults devicePadding to zero when absent`() throws {
+    @Test func `should pad the bezel by nothing when the chrome lists no device padding`() throws {
         // Older / hand-rolled fixtures omit the block entirely. The
         // chrome should still parse, with the field at zero so the
         // merged-bezel canvas matches the composite size exactly.
@@ -49,12 +49,12 @@ struct DeviceChromeTests {
         #expect(chrome.devicePadding == Insets(top: 0, left: 0, bottom: 0, right: 0))
     }
 
-    @Test func `compositeImageName is nil when chrome relies on 9-slice only`() throws {
+    @Test func `should find no composite image when the chrome has only slice pieces`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixtureNoComposite)
         #expect(chrome.compositeImageName == nil)
     }
 
-    @Test func `parsing reads images slice piece names`() throws {
+    @Test func `should read the nine slice piece names even when a composite exists`() throws {
         // phone11 ships both `composite` and the 9-slice names; the
         // slice block stays populated regardless of whether a baked
         // composite exists, so 9-slice is always available as a fallback.
@@ -69,26 +69,26 @@ struct DeviceChromeTests {
         ))
     }
 
-    @Test func `slice is populated for 9-slice-only bundles`() throws {
+    @Test func `should read the slice pieces when the chrome has no composite`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixtureSliceOnly)
         #expect(chrome.compositeImageName == nil)
         #expect(chrome.slice?.topLeft == "iPad TL")
         #expect(chrome.slice?.screen == "Screen")
     }
 
-    @Test func `slice is nil when any of the 9 piece names is missing`() throws {
+    @Test func `should offer no slices when any of the nine piece names is missing`() throws {
         // Drop just one key (`top`) to verify we treat the slice as
         // all-or-nothing — partial coverage isn't useful.
         let chrome = try DeviceChrome.parsing(json: Self.fixturePartialSlice)
         #expect(chrome.slice == nil)
     }
 
-    @Test func `parsing collects buttons preserving order`() throws {
+    @Test func `should list the chrome's buttons in order`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         #expect(chrome.buttons.map(\.name) == ["action", "volume-up", "power"])
     }
 
-    @Test func `button parses anchor align imageName and both offsets`() throws {
+    @Test func `should read a button's anchor, alignment, image and both offsets`() throws {
         // chrome.json carries TWO offsets per input — `normal` (at-rest)
         // and `rollover` (hovered, popped out a few pixels). The
         // actionable-bezel UI animates between them, so both must be
@@ -104,7 +104,7 @@ struct DeviceChromeTests {
         #expect(action.rolloverOffset == Point(x: 3, y: 160))
     }
 
-    @Test func `button falls back to identical offsets when only one variant given`() throws {
+    @Test func `should use the same offset at rest and on hover when a button gives only one`() throws {
         // power in the fixture supplies only `normal` (no rollover key).
         // Parser should populate both `normalOffset` and
         // `rolloverOffset` from whichever variant is present so
@@ -116,7 +116,7 @@ struct DeviceChromeTests {
         #expect(power.anchor == .right)
     }
 
-    @Test func `chrome JSON exposes both normal and rollover offsets per button`() throws {
+    @Test func `should publish both the normal and rollover offsets of each button in the layout`() throws {
         let chrome = try DeviceChrome.parsing(json: Self.fixturePhone11)
         let assets = DeviceChromeAssets(
             chrome: chrome,
@@ -136,7 +136,7 @@ struct DeviceChromeTests {
         #expect(rollover["y"] as? Double == 160)
     }
 
-    @Test func `button parses imageDown and imageDownDrawMode when present`() throws {
+    @Test func `should read a button's pressed image and draw mode when the chrome ships them`() throws {
         // Apple's chrome.json (e.g. phone13.devicechrome) ships a
         // depressed sprite per button — `imageDown` plus an
         // `imageDownDrawMode` ("replace" everywhere we've seen).
@@ -148,7 +148,7 @@ struct DeviceChromeTests {
         #expect(action.imageDownDrawMode == "replace")
     }
 
-    @Test func `button leaves imageDown nil when chrome.json omits it`() throws {
+    @Test func `should leave a button's pressed image unset when the chrome omits it`() throws {
         // Older chromes (every fixture below `fixturePhone13Down`)
         // don't ship a depressed variant. The parser must tolerate
         // the absent keys — both fields stay nil so the front end
@@ -159,7 +159,7 @@ struct DeviceChromeTests {
         #expect(action.imageDownDrawMode == nil)
     }
 
-    @Test func `button parses onTop with default false`() throws {
+    @Test func `should draw a button on top only when the chrome says so`() throws {
         // watch4-shaped fixture: digital-crown is `onTop: false` (baked
         // into the composite) and the orange action button is
         // `onTop: true` (must overlay). Bare entries with no `onTop`
@@ -173,14 +173,14 @@ struct DeviceChromeTests {
         #expect(bare.onTop == false)
     }
 
-    @Test func `parsing throws on missing identifier`() {
+    @Test func `should reject a chrome without an identifier`() {
         let bad = Data(#"{"images":{},"paths":{},"inputs":[]}"#.utf8)
         #expect(throws: DeviceChromeParseError.missingIdentifier) {
             _ = try DeviceChrome.parsing(json: bad)
         }
     }
 
-    @Test func `parsing throws on malformed JSON`() {
+    @Test func `should reject a chrome that isn't JSON`() {
         let bad = Data("not-json".utf8)
         #expect(throws: DeviceChromeParseError.self) {
             _ = try DeviceChrome.parsing(json: bad)
@@ -189,7 +189,7 @@ struct DeviceChromeTests {
 
     // Top-level array is valid JSON but not the dict shape the parser
     // requires — must throw `malformedJSON` rather than crash on the cast.
-    @Test func `parsing throws malformedJSON when payload is not a dict`() {
+    @Test func `should reject a chrome as malformed when its top level is not an object`() {
         let bad = Data("[]".utf8)
         #expect(throws: DeviceChromeParseError.malformedJSON) {
             _ = try DeviceChrome.parsing(json: bad)
@@ -199,7 +199,7 @@ struct DeviceChromeTests {
     // Bundles missing every optional section ("images", "paths", "inputs")
     // must still parse — they fall through every `?? [:]` / `?? []` branch
     // and produce a chrome with zeroed insets, zero radius, and no buttons.
-    @Test func `parsing tolerates missing images, paths and inputs`() throws {
+    @Test func `should read a bare chrome when images, paths and inputs are all missing`() throws {
         let bare = Data(#"{"identifier":"phoneN"}"#.utf8)
         let chrome = try DeviceChrome.parsing(json: bare)
         #expect(chrome.identifier == "phoneN")
@@ -209,7 +209,7 @@ struct DeviceChromeTests {
         #expect(chrome.compositeImageName == nil)
     }
 
-    @Test func `button defaults anchor to left and align to leading when absent`() throws {
+    @Test func `should anchor a button to the left, leading edge when the chrome says nothing`() throws {
         let json = Data(#"""
         {
           "identifier": "phoneN",
@@ -226,7 +226,7 @@ struct DeviceChromeTests {
         #expect(naked.offset == Point(x: 0, y: 0))
     }
 
-    @Test func `button skips entries missing required name or image fields`() throws {
+    @Test func `should skip a button that has no name or no image`() throws {
         let json = Data(#"""
         {
           "identifier": "phoneN",
@@ -242,12 +242,12 @@ struct DeviceChromeTests {
 
     // MARK: - rich domain semantics
 
-    @Test func `bezelWidth is the larger of left and top inset`() {
+    @Test func `should take the bezel width as the larger of the left and top insets`() {
         let chrome = Self.makeChrome(insets: Insets(top: 12, left: 18, bottom: 12, right: 18))
         #expect(chrome.bezelWidth == 18)
     }
 
-    @Test func `innerCornerRadius subtracts bezelWidth from outerCornerRadius`() {
+    @Test func `should round the screen by the outer corner radius less the bezel width`() {
         let chrome = Self.makeChrome(
             outerRadius: 80,
             insets: Insets(top: 18, left: 18, bottom: 18, right: 18)
@@ -255,7 +255,7 @@ struct DeviceChromeTests {
         #expect(chrome.innerCornerRadius == 62)
     }
 
-    @Test func `innerCornerRadius clamps to zero when bezel exceeds outer radius`() {
+    @Test func `should leave the screen square when the bezel is wider than the outer radius`() {
         let chrome = Self.makeChrome(
             outerRadius: 5,
             insets: Insets(top: 18, left: 18, bottom: 18, right: 18)
@@ -263,7 +263,7 @@ struct DeviceChromeTests {
         #expect(chrome.innerCornerRadius == 0)
     }
 
-    @Test func `screenRect positions the screen inside a composite size`() {
+    @Test func `should place the screen inside the bezel by its insets`() {
         let chrome = Self.makeChrome(insets: Insets(top: 18, left: 18, bottom: 18, right: 18))
         let rect = chrome.screenRect(in: Size(width: 393, height: 852))
 
@@ -273,7 +273,7 @@ struct DeviceChromeTests {
 
     // MARK: - presentation
 
-    @Test func `layoutJSON matches the HTTP contract`() throws {
+    @Test func `should describe the bezel layout in the shape the HTTP route serves`() throws {
         let chrome = Self.makeChrome(
             identifier: "phone11",
             outerRadius: 80,
@@ -302,7 +302,7 @@ struct DeviceChromeTests {
         #expect(buttons?.first?["anchor"] as? String == "left")
     }
 
-    @Test func `assets layoutJSON shifts screen by buttonMargins but keeps innerCornerRadius`() throws {
+    @Test func `should shift the screen by the buttonMargins but keep the inner corner radius`() throws {
         // The merged bezel.png is 30 px wider than the original
         // composite (button overshoot baked into the canvas). The
         // asset's layoutJSON must:
@@ -343,7 +343,7 @@ struct DeviceChromeTests {
         #expect(screen?["height"] as? Double == 872)
     }
 
-    @Test func `assets layoutJSON with default zero margins keeps the chrome projection geometry`() throws {
+    @Test func `should keep the chrome's own geometry in the layout when there are no button margins`() throws {
         // No buttons → zero margins → composite size, screen rect,
         // and corner radii match the chrome's own projection. The
         // asset version always carries the additive `buttonMargins`
@@ -377,7 +377,7 @@ struct DeviceChromeTests {
 
     // MARK: - imageUrl injection (actionable bezel)
 
-    @Test func `assets layoutJSON omits imageUrl when no prefix is given`() throws {
+    @Test func `should leave out each button's imageUrl when no url prefix is given`() throws {
         // Back-compat: today's callers pass nothing and get exactly the
         // shape they get today. No imageUrl field on any button entry.
         let chrome = Self.makeChromeWithButtons()
@@ -393,7 +393,7 @@ struct DeviceChromeTests {
         #expect(buttons.allSatisfy { $0["imageUrl"] == nil })
     }
 
-    @Test func `assets layoutJSON exposes buttonMargins so the front end can derive bare composite size`() throws {
+    @Test func `should publish the buttonMargins so the page can size the bare bezel`() throws {
         // The actionable-bezel front end fetches `bezel.png?buttons=false`
         // (smaller than the merged composite). To position the screen
         // rect + per-button images against the *bare* bezel it needs
@@ -417,7 +417,7 @@ struct DeviceChromeTests {
         #expect(m["right"]  as? Double == 17)
     }
 
-    @Test func `assets layoutJSON adds imageDownUrl when chrome ships imageDown`() throws {
+    @Test func `should add an imageDownUrl only for buttons that ship a pressed image`() throws {
         // When the parsed chrome carries an `imageDownName`, the
         // injected layout JSON advertises a fetchable URL under
         // `<name>-down.png` so the front end can preload + swap on
@@ -472,7 +472,7 @@ struct DeviceChromeTests {
         #expect(bare["imageDownDrawMode"] == nil)
     }
 
-    @Test func `assets layoutJSON omits imageDownUrl when no prefix is given`() throws {
+    @Test func `should leave out each button's imageDownUrl when no url prefix is given`() throws {
         // Domain-only callers (no URL prefix) still see the parsed
         // imageDownName / drawMode on the value type, but the JSON
         // shape stays free of URL fields — same back-compat rule
@@ -505,7 +505,7 @@ struct DeviceChromeTests {
         #expect(buttons.allSatisfy { $0["imageDownUrl"] == nil })
     }
 
-    @Test func `assets layoutJSON adds imageUrl per button when prefix is given`() throws {
+    @Test func `should give each button an imageUrl under the given url prefix`() throws {
         // The server passes "/simulators/<udid>/chrome-button/" so each
         // button entry advertises a fetchable URL for its rasterized
         // image. The domain stays URL-agnostic — the prefix is the

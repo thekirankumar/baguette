@@ -5,7 +5,7 @@ import Testing
 @Suite("LiveDeviceModels")
 struct LiveDeviceModelsTests {
 
-    @Test func `discovers model bundles and preserves configured root precedence`() throws {
+    @Test func `should discover model bundles and keep configured root precedence`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let overrideRoot = scratch.appending(path: "override")
@@ -20,7 +20,7 @@ struct LiveDeviceModelsTests {
         #expect(found.directoryURL.lastPathComponent == "phone")
     }
 
-    @Test func `ignores root entries that are not model bundles`() throws {
+    @Test func `should ignore root entries that are not model bundles`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let root = scratch.appending(path: "models")
@@ -38,7 +38,7 @@ struct LiveDeviceModelsTests {
         #expect(try models.find(id: "unfinished") == nil)
     }
 
-    @Test func `missing configured roots are empty precedence layers`() throws {
+    @Test func `should treat a missing configured root as an empty precedence layer`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let missing = scratch.appending(path: "not-installed")
@@ -48,7 +48,7 @@ struct LiveDeviceModelsTests {
         #expect(try models.find(id: "phone") == nil)
     }
 
-    @Test func `reports the definition path when an installed bundle is malformed`() throws {
+    @Test func `should report the definition path when an installed bundle is malformed`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let root = scratch.appending(path: "models")
@@ -67,7 +67,7 @@ struct LiveDeviceModelsTests {
         }
     }
 
-    @Test func `matches a physical device by hardware id from an installed bundle`() throws {
+    @Test func `should match a physical device by hardware id from an installed bundle`() throws {
         // The device-twin path end to end at this layer: `deviceModels`
         // written in a bundle's definition.json on disk, discovered,
         // and matched by the companion's hardware identifier.
@@ -85,7 +85,7 @@ struct LiveDeviceModelsTests {
         #expect(try models.match(hardware: "iPhone18,1") == nil)
     }
 
-    @Test func `all lists installed bundles with higher roots shadowing by id`() throws {
+    @Test func `should list installed bundles with higher roots shadowing lower ones by id`() throws {
         // Powers the picker offered when no definition matches a
         // phone's hardware.
         let scratch = try Self.makeScratch()

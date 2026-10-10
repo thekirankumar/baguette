@@ -5,7 +5,7 @@ import Testing
 
 @Suite("SimulatorOrientation")
 struct SimulatorOrientationTests {
-    @Test func `unknown panel configuration cannot fall back to a misleading success`() {
+    @Test func `should reject a rotation when the panel configuration is unknown`() {
         let orientation = SimulatorOrientation(
             isFoldable: { throw HingeError.toolMissing },
             motor: MockHingeMotor(), standard: MockOrientation()
@@ -14,7 +14,7 @@ struct SimulatorOrientationTests {
     }
 
     @Test(arguments: DeviceOrientation.allCases)
-    func `foldable rotation uses the device hinge channel`(_ target: DeviceOrientation) {
+    func `should rotate a foldable through its hinge`(_ target: DeviceOrientation) {
         let motor = MockHingeMotor()
         given(motor).turn(to: .value(target)).willReturn()
         let orientation = SimulatorOrientation(
@@ -23,7 +23,7 @@ struct SimulatorOrientationTests {
         #expect(orientation.set(target) == .delivered)
     }
 
-    @Test func `ordinary devices retain the legacy orientation result`() {
+    @Test func `should report the legacy orientation result when the device is not foldable`() {
         let standard = MockOrientation()
         given(standard).set(.value(.landscapeLeft)).willReturn(.delivered)
         given(standard).set(.value(.portrait)).willReturn(.rejected)
@@ -34,7 +34,7 @@ struct SimulatorOrientationTests {
         #expect(orientation.set(.portrait) == .rejected)
     }
 
-    @Test func `failed foldable dispatch is not replaced by a misleading legacy success`() {
+    @Test func `should reject a rotation when a foldable's hinge fails rather than fall back to the legacy path`() {
         let motor = MockHingeMotor()
         given(motor).turn(to: .any).willThrow(HingeError.toolMissing)
         let orientation = SimulatorOrientation(
@@ -45,7 +45,7 @@ struct SimulatorOrientationTests {
 
     /// The helper was stopped after its deadline: the rotation may have
     /// landed, and will not land later. Neither success nor rejection.
-    @Test func `a foldable helper timeout is unconfirmed rather than rejected`() {
+    @Test func `should leave a foldable rotation unconfirmed rather than rejected when the hinge helper times out`() {
         let motor = MockHingeMotor()
         given(motor).turn(to: .any).willThrow(HingeError.toolTimedOut)
         let orientation = SimulatorOrientation(

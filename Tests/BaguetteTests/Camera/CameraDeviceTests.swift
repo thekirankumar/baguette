@@ -4,7 +4,7 @@ import Foundation
 
 @Suite("CameraDevice")
 struct CameraDeviceTests {
-    @Test func `equality is structural`() {
+    @Test func `should treat two cameras with the same details as the same camera`() {
         let a = CameraDevice(uid: "u-1", name: "FaceTime HD", isDefault: true)
         let b = CameraDevice(uid: "u-1", name: "FaceTime HD", isDefault: true)
         let c = CameraDevice(uid: "u-2", name: "FaceTime HD", isDefault: true)
@@ -12,7 +12,7 @@ struct CameraDeviceTests {
         #expect(a != c)
     }
 
-    @Test func `serializes to wire JSON shape`() {
+    @Test func `should describe a camera on the wire as uid, name and isDefault`() {
         let d = CameraDevice(uid: "u-1", name: "FaceTime HD", isDefault: true)
         #expect(d.wireDictionary as NSDictionary == [
             "uid": "u-1",

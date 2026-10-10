@@ -5,8 +5,8 @@ import Testing
 
 @Suite("DeviceStudioLighting")
 struct DeviceStudioLightingTests {
-    @Test("lights device finishes at a non-clipping exposure")
-    func lightsDeviceFinishesAtNonClippingExposure() {
+    @Test
+    func `should light device finishes at a non-clipping exposure`() {
         let scene = SCNScene()
 
         DeviceStudioLighting.apply(to: scene)
@@ -17,8 +17,8 @@ struct DeviceStudioLightingTests {
         #expect(scene.lightingEnvironment.contents != nil)
     }
 
-    @Test("exposes an engine-neutral equirectangular environment")
-    func exposesEquirectangularEnvironment() {
+    @Test
+    func `should expose an engine-neutral equirectangular environment`() {
         let image = DeviceStudioLighting.equirectangularImage
 
         #expect(image.width == 1024)

@@ -7,7 +7,7 @@ import NIOCore
 @Suite("Server browser security")
 struct ServerSecurityTests {
 
-    @Test func `allows direct loopback requests without an Origin header`() {
+    @Test func `should allow a direct loopback request that carries no Origin header`() {
         let request = Self.request(host: "127.0.0.1:8421")
 
         #expect(Server.isTrustedBrowserRequest(
@@ -15,7 +15,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `allows same-origin browser requests on loopback`() {
+    @Test func `should allow a same-origin browser request on loopback`() {
         let request = Self.request(
             host: "localhost:8421",
             origin: "http://localhost:8421"
@@ -26,7 +26,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `rejects cross-site browser requests to loopback control routes`() {
+    @Test func `should reject a cross-site browser request to a loopback control route`() {
         let request = Self.request(
             host: "127.0.0.1:8421",
             origin: "https://example.test"
@@ -37,7 +37,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `rejects DNS rebind shaped hosts on loopback binds`() {
+    @Test func `should reject a DNS-rebind-shaped host when bound to loopback`() {
         let request = Self.request(
             host: "attacker.test:8421",
             origin: "http://attacker.test:8421"
@@ -48,7 +48,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `rejects Fetch Metadata cross-site requests`() {
+    @Test func `should reject a request that Fetch Metadata marks cross-site`() {
         let request = Self.request(
             host: "127.0.0.1:8421",
             origin: "http://127.0.0.1:8421",
@@ -60,7 +60,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `allows proxied requests whose Host names an allowed host`() {
+    @Test func `should allow a proxied request whose Host names an allowed host`() {
         let request = Self.request(host: "sim.example.test")
 
         #expect(Server.isTrustedBrowserRequest(
@@ -69,7 +69,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `allows browser origins on an allowed host regardless of port`() {
+    @Test func `should allow a browser origin on an allowed host regardless of port`() {
         let request = Self.request(
             host: "sim.example.test",
             origin: "https://sim.example.test"
@@ -81,7 +81,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `matches wildcard allowed hosts against subdomains`() {
+    @Test func `should allow a subdomain when the allowed host is a wildcard`() {
         let request = Self.request(
             host: "device-1.sim.example.test",
             origin: "https://device-1.sim.example.test"
@@ -93,7 +93,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `still rejects hosts outside the allowed list`() {
+    @Test func `should still reject a host outside the allowed list`() {
         let request = Self.request(
             host: "attacker.test:8421",
             origin: "http://attacker.test:8421"
@@ -105,7 +105,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `rejects allowed-host requests with a foreign Origin`() {
+    @Test func `should reject a request to an allowed host when its Origin is foreign`() {
         let request = Self.request(
             host: "sim.example.test",
             origin: "https://attacker.test"
@@ -117,7 +117,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `trusts allowed-host origins on another host`() {
+    @Test func `should trust an allowed-host origin calling another allowed host`() {
         let request = Self.request(
             host: "sim.example.test",
             origin: "https://app.example.test"
@@ -129,7 +129,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `trusts allowed-host origins when the proxy rewrites Host to loopback`() {
+    @Test func `should trust an allowed-host origin when the proxy rewrites Host to loopback`() {
         let request = Self.request(
             host: "localhost:8421",
             origin: "https://sim.example.test"
@@ -141,7 +141,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `trusts allowed-host origins even when Fetch Metadata says cross-site`() {
+    @Test func `should trust an allowed-host origin even when Fetch Metadata says cross-site`() {
         let request = Self.request(
             host: "sim.example.test",
             origin: "https://app.example.test",
@@ -154,7 +154,7 @@ struct ServerSecurityTests {
         ))
     }
 
-    @Test func `reflects allowed origins for CORS`() {
+    @Test func `should echo only an allowed origin back for CORS`() {
         #expect(Server.corsAllowedOrigin(
             "https://app.example.test",
             allowedHosts: ["app.example.test"]
@@ -168,7 +168,7 @@ struct ServerSecurityTests {
         #expect(Server.corsAllowedOrigin(nil, allowedHosts: ["app.example.test"]) == nil)
     }
 
-    @Test func `answers CORS preflights for allowed origins`() {
+    @Test func `should answer a CORS preflight only for an allowed origin`() {
         let head = HTTPRequest(
             method: .options,
             scheme: nil,
@@ -191,7 +191,7 @@ struct ServerSecurityTests {
         #expect(Server.corsPreflightResponse(request, allowedHosts: ["other.test"]) == nil)
     }
 
-    @Test func `static asset responses deny foreign framing`() {
+    @Test func `should forbid foreign sites from framing the served pages`() {
         let csp = HTTPField.Name("Content-Security-Policy")!
 
         for asset in ["sim.html", "farm/farm.html"] {

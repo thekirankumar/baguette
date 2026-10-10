@@ -9,57 +9,57 @@ struct ChromeCommandTests {
 
     // MARK: - command tree
 
-    @Test func `chrome command is named chrome with two leaves`() {
+    @Test func `should offer baguette chrome with two subcommands`() {
         let cfg = ChromeCommand.configuration
         #expect(cfg.commandName == "chrome")
         #expect(cfg.subcommands.count == 2)
     }
 
-    @Test func `layout subcommand is named layout`() {
+    @Test func `should offer a chrome layout subcommand`() {
         #expect(ChromeCommand.Layout.configuration.commandName == "layout")
     }
 
-    @Test func `composite subcommand is named composite`() {
+    @Test func `should offer a chrome composite subcommand`() {
         #expect(ChromeCommand.Composite.configuration.commandName == "composite")
     }
 
     // MARK: - error descriptions
 
-    @Test func `missingTarget describes the expected flag pair`() {
+    @Test func `should ask for --udid or --device-name when no target is given`() {
         let err: ChromeCommandError = .missingTarget
         #expect(String(describing: err) == "expected --udid or --device-name")
     }
 
-    @Test func `simulatorNotFound includes the udid`() {
+    @Test func `should name the udid when no simulator has it`() {
         let err: ChromeCommandError = .simulatorNotFound(udid: "ABC")
         #expect(String(describing: err) == "no simulator with udid ABC")
     }
 
-    @Test func `notFound includes the target label`() {
+    @Test func `should name the target when no chrome bundle covers it`() {
         let err: ChromeCommandError = .notFound(target: "\"iPhone 17 Pro\"")
         #expect(String(describing: err) == #"no chrome bundle covers "iPhone 17 Pro""#)
     }
 
     // MARK: - ChromeTarget label fan-in
 
-    @Test func `label prefers udid when set`() throws {
+    @Test func `should label the target by udid when --udid is set`() throws {
         let target = try ChromeTarget.parse(["--udid", "ABCD-1234"])
         #expect(target.label == "udid ABCD-1234")
     }
 
-    @Test func `label uses device-name when udid is absent`() throws {
+    @Test func `should label the target by device name when --udid is absent`() throws {
         let target = try ChromeTarget.parse(["--device-name", "iPhone 17 Pro"])
         #expect(target.label == "\"iPhone 17 Pro\"")
     }
 
-    @Test func `label is (none) when neither flag was supplied`() throws {
+    @Test func `should label the target as none when neither flag was supplied`() throws {
         let target = try ChromeTarget.parse([])
         #expect(target.label == "(none)")
     }
 
     // MARK: - ChromeTarget.resolveAssets
 
-    @Test func `resolveAssets routes through chromes when device-name is set`() throws {
+    @Test func `should look up the chrome by device name when --device-name is set`() throws {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         let assets = DeviceChromeAssets(
@@ -79,7 +79,7 @@ struct ChromeCommandTests {
     /// unfolded` asks for it by name instead of through the hinge, so a
     /// script can read the open pose's layout on a folded (or unbooted)
     /// device.
-    @Test func `resolveAssets reads the unfolded panel's chrome when --panel unfolded`() throws {
+    @Test func `should read the unfolded panel's chrome when --panel unfolded is given`() throws {
         let chromes = MockChromes()
         let assets = DeviceChromeAssets(
             chrome: Self.fixtureChrome,
@@ -92,7 +92,7 @@ struct ChromeCommandTests {
         #expect(try target.resolveAssets(in: chromes) == assets)
     }
 
-    @Test func `--panel accepts cover and unfolded only`() throws {
+    @Test func `should accept only cover and unfolded for --panel`() throws {
         #expect(try ChromeTarget.parse(["--device-name", "x", "--panel", "cover"]).panel == .primary)
         #expect(try ChromeTarget.parse(["--device-name", "x", "--panel", "unfolded"]).panel == .secondary)
         #expect(try ChromeTarget.parse(["--device-name", "x"]).panel == nil)
@@ -101,7 +101,7 @@ struct ChromeCommandTests {
         }
     }
 
-    @Test func `resolveAssets returns nil when chromes has no bundle for the device`() throws {
+    @Test func `should find no chrome when no bundle covers the device`() throws {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         given(chromes).assets(forDeviceName: .any).willReturn(nil)
@@ -110,7 +110,7 @@ struct ChromeCommandTests {
         #expect(try target.resolveAssets(in: chromes) == nil)
     }
 
-    @Test func `resolveAssets throws missingTarget when neither flag is supplied`() throws {
+    @Test func `should reject a chrome lookup when neither --udid nor --device-name is supplied`() throws {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         let target = try ChromeTarget.parse([])

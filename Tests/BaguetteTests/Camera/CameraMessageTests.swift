@@ -5,12 +5,12 @@ import Foundation
 @Suite("CameraMessage parsing")
 struct CameraMessageTests {
 
-    @Test func `parses camera_list`() throws {
+    @Test func `should read a camera_list message`() throws {
         let msg = try CameraMessage.parse(["type": "camera_list"])
         #expect(msg == .list)
     }
 
-    @Test func `parses camera_start with a webcam device + flags`() throws {
+    @Test func `should read camera_start for a webcam with its fit and mirror flags`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_start",
             "deviceUID": "U-1",
@@ -23,14 +23,14 @@ struct CameraMessageTests {
         ))
     }
 
-    @Test func `an explicit webcam source parses like the default`() throws {
+    @Test func `should read camera_start with an explicit webcam source like the default`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_start", "source": "webcam", "deviceUID": "U-1",
         ])
         #expect(msg == .start(source: .webcam(deviceUID: "U-1"), flags: CameraFlags()))
     }
 
-    @Test func `an image source needs no deviceUID`() throws {
+    @Test func `should read camera_start for an image source without a deviceUID`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_start", "source": "image", "fit": "fill",
         ])
@@ -40,32 +40,32 @@ struct CameraMessageTests {
         ))
     }
 
-    @Test func `a video source needs no deviceUID`() throws {
+    @Test func `should read camera_start for a video source without a deviceUID`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_start", "source": "video",
         ])
         #expect(msg == .start(source: .video, flags: CameraFlags()))
     }
 
-    @Test func `an unknown source kind fails parse`() {
+    @Test func `should reject camera_start when the source kind is unknown`() {
         #expect(throws: (any Error).self) {
             try CameraMessage.parse(["type": "camera_start", "source": "hologram"])
         }
     }
 
-    @Test func `camera_start defaults missing flags to fit + no mirror`() throws {
+    @Test func `should fit without mirroring when camera_start carries no flags`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_start", "deviceUID": "U",
         ])
         #expect(msg == .start(source: .webcam(deviceUID: "U"), flags: CameraFlags()))
     }
 
-    @Test func `parses camera_stop`() throws {
+    @Test func `should read a camera_stop message`() throws {
         let msg = try CameraMessage.parse(["type": "camera_stop"])
         #expect(msg == .stop)
     }
 
-    @Test func `parses camera_set_flags`() throws {
+    @Test func `should read a camera_set_flags message`() throws {
         let msg = try CameraMessage.parse([
             "type": "camera_set_flags",
             "fit": "fit",
@@ -74,13 +74,13 @@ struct CameraMessageTests {
         #expect(msg == .setFlags(CameraFlags(fillGravity: false, mirror: true)))
     }
 
-    @Test func `unknown type fails parse`() {
+    @Test func `should reject a camera message when its type is unknown`() {
         #expect(throws: (any Error).self) {
             try CameraMessage.parse(["type": "camera_wibble"])
         }
     }
 
-    @Test func `missing deviceUID on a webcam camera_start fails parse`() {
+    @Test func `should reject a webcam camera_start when deviceUID is missing`() {
         #expect(throws: (any Error).self) {
             try CameraMessage.parse(["type": "camera_start"])
         }

@@ -13,12 +13,12 @@ struct LocationRoutesTests {
 
     // MARK: - parse
 
-    @Test func `parseLocationRequest reads a single point body`() {
+    @Test func `should read a single-point location body`() {
         #expect(Server.parseLocationRequest(json: #"{"latitude":37.3318,"longitude":-122.0312}"#)
             == .point(Coordinate(latitude: 37.3318, longitude: -122.0312)!))
     }
 
-    @Test func `parseLocationRequest reads a route body with tuning`() {
+    @Test func `should read a route location body with its speed and distance`() {
         let json = """
         {"waypoints":[{"latitude":37.6,"longitude":-122.4},
                       {"latitude":40.6,"longitude":-73.8}],
@@ -33,21 +33,21 @@ struct LocationRoutesTests {
         )!))
     }
 
-    @Test func `parseLocationRequest returns nil for malformed JSON`() {
+    @Test func `should read no location from malformed JSON`() {
         #expect(Server.parseLocationRequest(json: "not json") == nil)
     }
 
-    @Test func `parseLocationRequest returns nil for an out-of-range point`() {
+    @Test func `should reject an out-of-range location point`() {
         #expect(Server.parseLocationRequest(json: #"{"latitude":120,"longitude":0}"#) == nil)
     }
 
-    @Test func `parseLocationRequest returns nil for a one-waypoint route`() {
+    @Test func `should reject a route with only one waypoint`() {
         #expect(Server.parseLocationRequest(json: #"{"waypoints":[{"latitude":1,"longitude":2}]}"#) == nil)
     }
 
     // MARK: - parse (walk)
 
-    @Test func `parseLocationRequest reads a walk body carrying a bearing`() {
+    @Test func `should read a walk body carrying a bearing and speed`() {
         let json = #"{"latitude":37.3349,"longitude":-122.0090,"bearing":90,"speed":1.4}"#
         #expect(Server.parseLocationRequest(json: json) == .walk(LocationWalk(
             origin: Coordinate(latitude: 37.3349, longitude: -122.0090)!,
@@ -56,7 +56,7 @@ struct LocationRoutesTests {
         )!))
     }
 
-    @Test func `parseLocationRequest reads a walk before a point when both could match`() {
+    @Test func `should read a body with a bearing as a walk rather than a point`() {
         // A walk body carries latitude/longitude too, so the bearing has
         // to be what discriminates — otherwise every walk would silently
         // parse as a stationary point and the joystick would never move.
@@ -67,7 +67,7 @@ struct LocationRoutesTests {
         }
     }
 
-    @Test func `parseLocationRequest normalises a walk's out-of-circle bearing`() {
+    @Test func `should normalise a walk's out-of-circle bearing`() {
         let json = #"{"latitude":1,"longitude":2,"bearing":-90,"speed":5}"#
         #expect(Server.parseLocationRequest(json: json) == .walk(LocationWalk(
             origin: Coordinate(latitude: 1, longitude: 2)!,
@@ -76,25 +76,25 @@ struct LocationRoutesTests {
         )!))
     }
 
-    @Test func `parseLocationRequest returns nil for a walk with no speed`() {
+    @Test func `should reject a walk with no speed`() {
         // Fail loud: a bearing with no speed is a half-built joystick
         // message, and defaulting it would send the device somewhere the
         // user never asked for.
         #expect(Server.parseLocationRequest(json: #"{"latitude":1,"longitude":2,"bearing":90}"#) == nil)
     }
 
-    @Test func `parseLocationRequest returns nil for a walk with a non-positive speed`() {
+    @Test func `should reject a walk with a non-positive speed`() {
         #expect(Server.parseLocationRequest(json: #"{"latitude":1,"longitude":2,"bearing":90,"speed":0}"#) == nil)
         #expect(Server.parseLocationRequest(json: #"{"latitude":1,"longitude":2,"bearing":90,"speed":-3}"#) == nil)
     }
 
-    @Test func `parseLocationRequest returns nil for a walk from an out-of-range origin`() {
+    @Test func `should reject a walk from an out-of-range origin`() {
         #expect(Server.parseLocationRequest(json: #"{"latitude":120,"longitude":2,"bearing":90,"speed":5}"#) == nil)
     }
 
     // MARK: - apply
 
-    @Test func `applyLocation sets a single point on the simulator`() async {
+    @Test func `should pin the simulator to a single posted point`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let location = MockLocation()
@@ -109,7 +109,7 @@ struct LocationRoutesTests {
         verify(location).set(.value(Coordinate(latitude: 1.5, longitude: 2.5)!)).called(1)
     }
 
-    @Test func `applyLocation starts a route on the simulator`() async {
+    @Test func `should start a posted route on the simulator`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let location = MockLocation()
@@ -123,7 +123,7 @@ struct LocationRoutesTests {
         verify(location).start(.any).called(1)
     }
 
-    @Test func `applyLocation walks the device along the vector's projected route`() async {
+    @Test func `should walk the device along the projected route rather than pin a point`() async {
         // A walk reaches simctl as a `start` route, never a `set` — that's
         // the whole point of the vector model, since only a travelled
         // route makes locationd derive CLLocation.course.
@@ -147,7 +147,7 @@ struct LocationRoutesTests {
         verify(location).set(.any).called(0)
     }
 
-    @Test func `applyLocation reports dispatchFailed when a walk's simctl throws`() async {
+    @Test func `should report a failed dispatch when simctl cannot start a walk`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let location = MockLocation()
@@ -159,7 +159,7 @@ struct LocationRoutesTests {
         #expect(await Server.applyLocation(udid: "U", body: json, simulators: host) == .dispatchFailed)
     }
 
-    @Test func `applyLocation reports unknownDevice when the simulator is missing`() async {
+    @Test func `should report an unknown device when setting the location of a missing simulator`() async {
         let host = MockSimulators()
         given(host).find(udid: .value("ghost")).willReturn(nil)
         let outcome = await Server.applyLocation(
@@ -168,14 +168,14 @@ struct LocationRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `applyLocation reports invalidBody for malformed JSON`() async {
+    @Test func `should report an invalid body when the location is malformed JSON`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         given(host).find(udid: .value("U")).willReturn(sim)
         #expect(await Server.applyLocation(udid: "U", body: "{", simulators: host) == .invalidBody)
     }
 
-    @Test func `applyLocation reports dispatchFailed when simctl throws`() async {
+    @Test func `should report a failed dispatch when simctl cannot set the location`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let location = MockLocation()
@@ -191,7 +191,7 @@ struct LocationRoutesTests {
 
     // MARK: - clear
 
-    @Test func `clearLocation clears the simulated location`() async {
+    @Test func `should clear the simulated location`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let location = MockLocation()
@@ -203,7 +203,7 @@ struct LocationRoutesTests {
         verify(location).clear().called(1)
     }
 
-    @Test func `clearLocation reports unknownDevice for an empty udid`() async {
+    @Test func `should report an unknown device when clearing the location for an empty udid`() async {
         let host = MockSimulators()
         #expect(await Server.clearLocation(udid: "", simulators: host) == .unknownDevice)
     }

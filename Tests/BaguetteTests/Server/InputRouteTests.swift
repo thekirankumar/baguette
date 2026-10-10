@@ -10,7 +10,7 @@ import Mockable
 @Suite("Server input route")
 struct InputRouteTests {
 
-    @Test func `a key envelope is dispatched to the device's input`() async throws {
+    @Test func `should press a key on the device when a key envelope is posted`() async throws {
         let input = MockInput()
         given(input).key(.any, modifiers: .any, duration: .any).willReturn(true)
 
@@ -24,7 +24,7 @@ struct InputRouteTests {
         verify(input).key(.any, modifiers: .value([.command]), duration: .any).called(1)
     }
 
-    @Test func `a tap envelope reaches the input as a tap`() async throws {
+    @Test func `should tap the device when a tap envelope is posted`() async throws {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
 
@@ -37,7 +37,7 @@ struct InputRouteTests {
         verify(input).tap(at: .value(Point(x: 100, y: 200)), size: .any, duration: .any, edge: .any).called(1)
     }
 
-    @Test func `an unknown device is reported`() async throws {
+    @Test func `should report an unknown device when input is posted to an unknown udid`() async throws {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
         let outcome = await Server.dispatchInput(
@@ -47,7 +47,7 @@ struct InputRouteTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `a malformed envelope comes back as a not-ok ack, not a crash`() async throws {
+    @Test func `should answer a not-ok ack rather than crash when the envelope is malformed`() async throws {
         let input = MockInput()
         let outcome = await Server.dispatchInput(
             udid: "U", body: "not json", simulators: Self.simulators(input: input)

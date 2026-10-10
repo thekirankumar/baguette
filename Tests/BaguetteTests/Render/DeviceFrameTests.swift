@@ -7,7 +7,7 @@ import Testing
 
 @Suite("DeviceFrame")
 struct DeviceFrameTests {
-    @Test func `one packet carries the JPEG and its exact placement`() throws {
+    @Test func `should carry the JPEG and its exact placement in one packet`() throws {
         let placement = Self.placement(width: 100)
         let jpeg = Data([0xff, 0xd8, 7, 0xff, 0xd9])
         let packet = try DeviceFrameEnvelope.encode(frameID: 17, placement: placement, jpeg: jpeg)
@@ -22,7 +22,7 @@ struct DeviceFrameTests {
         #expect(packet.suffix(jpeg.count) == jpeg)
     }
 
-    @Test func `unknown placement stays explicitly null and invalid payloads fail`() throws {
+    @Test func `should send an unknown placement as explicit null and reject invalid payloads`() throws {
         let packet = try DeviceFrameEnvelope.encode(frameID: 1, placement: nil, jpeg: Data([0xff, 0xd8, 0xff, 0xd9]))
         let length = packet.prefix(4).reduce(0) { ($0 << 8) | Int($1) }
         let json = try #require(
@@ -35,7 +35,7 @@ struct DeviceFrameTests {
         }
     }
 
-    @Test func `backpressure drops a metadata packet as a whole instead of preserving its zero prefix`() {
+    @Test func `should drop a whole metadata packet under backpressure rather than keep its zero prefix`() {
         var backlog = FrameBacklog(byteBudget: 5, preservingDescriptions: false)
         let old = Data([0, 0, 0, 1, 11])
         let recent = Data([0, 0, 0, 1, 33])
@@ -45,7 +45,7 @@ struct DeviceFrameTests {
         #expect(backlog.popFirst() == recent)
     }
 
-    @Test func `blocked rendering retains matching geometry and drops intermediate pending frames`() throws {
+    @Test func `should keep matching geometry and drop intermediate pending frames when rendering is blocked`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         let first = try #require(RenderedScreenTests.surface(width: 2, height: 2))
@@ -83,7 +83,7 @@ struct DeviceFrameTests {
         #expect(frames.map { $0.placement?.sourcePixelSize.width } == [2, 4])
     }
 
-    @Test func `metadata is opt in and duplicate or malformed flags fail`() throws {
+    @Test func `should make frameMetadata opt in and reject duplicate or malformed flags`() throws {
         #expect(try !Device3DStreamOptions.parse([:]).frameMetadata)
         #expect(try Device3DStreamOptions.parse(["frameMetadata": ["1"]]).frameMetadata)
         #expect(throws: DeviceModelError.invalidRenderOptions) {
@@ -94,7 +94,7 @@ struct DeviceFrameTests {
         }
     }
 
-    @Test func `foldable snapshots retain the selected panel and source dimensions`() throws {
+    @Test func `should keep the selected panel and source dimensions in foldable snapshots`() throws {
         let unfolded = MockScreen()
         let cover = MockScreen()
         let hinge = MockHinge()
@@ -146,7 +146,7 @@ private final class Frames: @unchecked Sendable {
 
 @Suite("DeviceFrameEncoder")
 struct DeviceFrameEncoderTests {
-    @Test func `encode failure sends no partial frame and stops later delivery`() throws {
+    @Test func `should send no partial frame and stop later delivery when encoding fails`() throws {
         let state = EncodedFrames()
         let encoder = DeviceFrameEncoder(
             encode: { _ in nil }, deliver: { state.add($0) }, onError: { _ in state.fail() })
@@ -158,7 +158,7 @@ struct DeviceFrameEncoderTests {
         #expect(state.failures == 1)
     }
 
-    @Test func `stop during encoding discards pixels and metadata together`() throws {
+    @Test func `should discard pixels and metadata together when stopped during encoding`() throws {
         let started = DispatchSemaphore(value: 0)
         let release = DispatchSemaphore(value: 0)
         let finished = DispatchSemaphore(value: 0)
@@ -183,7 +183,7 @@ struct DeviceFrameEncoderTests {
         #expect(state.failures == 0)
     }
 
-    @Test func `frame numbers advance only with complete packets and rendering failures terminate`() throws {
+    @Test func `should advance frame numbers only with complete packets and end on a rendering failure`() throws {
         let state = EncodedFrames()
         let encoder = DeviceFrameEncoder(
             encode: { _ in Data([0xff, 0xd8, 0xff, 0xd9]) }, deliver: { state.add($0) }, onError: { _ in state.fail() })

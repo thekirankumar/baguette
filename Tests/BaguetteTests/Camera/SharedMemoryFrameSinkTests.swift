@@ -11,7 +11,7 @@ struct SharedMemoryFrameSinkTests {
         return (dir as NSString).appendingPathComponent("baguette-fs-\(UUID().uuidString).bgra")
     }
 
-    @Test func `write lays the header and pixels into the mmapped file`() throws {
+    @Test func `should lay a camera frame's header and pixels into the shared file`() throws {
         let path = tmpPath()
         defer { try? FileManager.default.removeItem(atPath: path) }
         let sink = try SharedMemoryFrameSink(path: path)
@@ -39,14 +39,14 @@ struct SharedMemoryFrameSinkTests {
         #expect(bytes[24..<40] == pixels)
     }
 
-    @Test func `path exposes the on-disk location`() throws {
+    @Test func `should expose where the shared frame file lives on disk`() throws {
         let path = tmpPath()
         defer { try? FileManager.default.removeItem(atPath: path) }
         let sink = try SharedMemoryFrameSink(path: path)
         #expect(sink.path == path)
     }
 
-    @Test func `a second producer cannot overwrite a live camera frame`() throws {
+    @Test func `should stop a second producer from overwriting a live camera frame`() throws {
         let path = tmpPath()
         defer { try? FileManager.default.removeItem(atPath: path) }
         var sink: SharedMemoryFrameSink? = try SharedMemoryFrameSink(path: path)

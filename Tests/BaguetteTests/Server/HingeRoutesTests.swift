@@ -38,7 +38,7 @@ struct HingeRoutesTests {
 
     /// The guest turns the unfolded panel to landscape by itself; the
     /// page did not do it, so it has to be told.
-    @Test func `an open foldable reports its angle, the unfolded panel and its orientation`() {
+    @Test func `should report an open foldable's angle, its unfolded panel and that panel's orientation`() {
         let (simulators, chromes) = wiring(
             deviceType: "iPhone Duo", panels: [.primary, .secondary],
             angle: HingeAngle(degrees: 130), orientation: .landscapeLeft)
@@ -46,7 +46,7 @@ struct HingeRoutesTests {
         #expect(json == #"{"ok":true,"foldable":true,"angleDegrees":130.0,"litPanel":"secondary","orientation":"landscape-left"}"#)
     }
 
-    @Test func `a folded foldable reports the cover`() {
+    @Test func `should report the cover as the lit panel when the foldable is folded`() {
         let (simulators, chromes) = wiring(
             deviceType: "iPhone Duo", panels: [.primary, .secondary],
             angle: HingeAngle(degrees: 3.2), orientation: .portrait)
@@ -56,7 +56,7 @@ struct HingeRoutesTests {
 
     /// A reading that did not arrive is reported as such, and the panel
     /// is the one the device boots with.
-    @Test func `a foldable with no reading reports a null angle and the cover`() {
+    @Test func `should report a null angle and the cover when the foldable has no hinge reading`() {
         let (simulators, chromes) = wiring(
             deviceType: "iPhone Duo", panels: [.primary, .secondary], angle: nil)
         let json = Server.hingeJSON(udid: "U", simulators: simulators, chromes: chromes)
@@ -65,14 +65,14 @@ struct HingeRoutesTests {
 
     /// A phone has nothing to poll; the page reads `foldable:false` and
     /// never asks again. Neither its hinge nor its displays are consulted.
-    @Test func `a single-panel device is not foldable`() {
+    @Test func `should report a single-panel device as not foldable`() {
         let (simulators, chromes) = wiring(
             deviceType: "iPhone 17 Pro", panels: [.primary], angle: nil)
         let json = Server.hingeJSON(udid: "U", simulators: simulators, chromes: chromes)
         #expect(json == #"{"ok":true,"foldable":false,"angleDegrees":null,"litPanel":"primary","orientation":null}"#)
     }
 
-    @Test func `an unknown udid has no hinge`() {
+    @Test func `should find no hinge when the udid is unknown`() {
         let (simulators, chromes) = wiring(
             deviceType: "iPhone Duo", panels: [.primary, .secondary], angle: nil)
         #expect(Server.hingeJSON(udid: "nope", simulators: simulators, chromes: chromes) == nil)
@@ -83,7 +83,7 @@ struct HingeRoutesTests {
 /// the page can draw the fold at the angle the runtime is at.
 @Suite("Server hinge message")
 struct HingeMessageTests {
-    @Test func `a sample is a hinge envelope with its angle`() {
+    @Test func `should push each hinge sample to the page as a hinge envelope with its angle`() {
         #expect(Server.hingeMessage(HingeAngle(degrees: 130)) == #"{"type":"hinge","angleDegrees":130.0}"#)
         #expect(Server.hingeMessage(HingeAngle(degrees: 3.8)) == #"{"type":"hinge","angleDegrees":3.8}"#)
     }
@@ -94,7 +94,7 @@ struct HingeMessageTests {
 /// page's picker, the CLI or a script. Pure dispatch, every branch.
 @Suite("Server hinge drive")
 struct HingeDriveRoutesTests {
-    @Test func `a pose sweeps the hinge over Device Hub's time`() throws {
+    @Test func `should sweep the hinge to a named pose over Device Hub's default duration`() throws {
         let host = MockSimulators(), sim = MockSimulator(), hinge = MockHinge()
         given(host).find(udid: .value("U")).willReturn(sim)
         given(sim).hinge().willReturn(hinge)
@@ -104,7 +104,7 @@ struct HingeDriveRoutesTests {
         verify(hinge).fold(to: .value(130), over: .value(HingeCommand.defaultDuration)).called(1)
     }
 
-    @Test func `a bad request, an unknown device and a device that cannot be driven each say so`() {
+    @Test func `should report a bad pose, an unknown device and an undrivable hinge each as its own outcome`() {
         let host = MockSimulators(), sim = MockSimulator(), hinge = MockHinge()
         given(host).find(udid: .value("U")).willReturn(sim)
         given(host).find(udid: .value("ghost")).willReturn(nil)
@@ -119,7 +119,7 @@ struct HingeDriveRoutesTests {
             == .failed(HingeError.toolMissing))
     }
 
-    @Test func `a helper that timed out leaves the move unconfirmed`() {
+    @Test func `should leave the hinge move unconfirmed when the helper times out`() {
         let host = MockSimulators(), sim = MockSimulator(), hinge = MockHinge()
         given(host).find(udid: .value("U")).willReturn(sim)
         given(sim).hinge().willReturn(hinge)

@@ -5,7 +5,7 @@ import Testing
 @Suite("DeviceModelDefinition")
 struct DeviceModelDefinitionTests {
 
-    @Test func `parses model identity scene and local asset`() throws {
+    @Test func `should read a model's identity, scene and local asset`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         #expect(model.id == DeviceModelID("macbook-pro-14-inch"))
@@ -17,7 +17,7 @@ struct DeviceModelDefinitionTests {
         #expect(model.scene.textureSize == RenderDimensions(width: 3024, height: 1964))
     }
 
-    @Test func `matches a simulator by exact device type or device name`() throws {
+    @Test func `should match a simulator by exact device type or device name`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         #expect(model.matches(deviceType: "com.apple.CoreSimulator.SimDeviceType.MacBook-Pro-14-inch",
@@ -28,7 +28,7 @@ struct DeviceModelDefinitionTests {
                               deviceName: "MacBook Pro 16-inch") == false)
     }
 
-    @Test func `applies defaults and maps public variant ids onto USD selections`() throws {
+    @Test func `should apply variant defaults and map public variant ids onto USD selections`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         let selections = try model.resolveVariants([:])
@@ -43,7 +43,7 @@ struct DeviceModelDefinitionTests {
         ])
     }
 
-    @Test func `explicit variant choice overrides its default`() throws {
+    @Test func `should let an explicit variant choice override its default`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         let selections = try model.resolveVariants(["finish": "silver"])
@@ -51,7 +51,7 @@ struct DeviceModelDefinitionTests {
         #expect(selections.map(\.usdValue) == ["Silver"])
     }
 
-    @Test func `resolves declared material appearance for a public variant`() throws {
+    @Test func `should resolve the declared material appearance for a public variant`() throws {
         let json = Self.macBookJSON.replacingOccurrences(
             of: #""displayName": "Device finish""#,
             with: #"""
@@ -79,7 +79,7 @@ struct DeviceModelDefinitionTests {
         #expect(selection.kind == .materials)
     }
 
-    @Test func `rejects an unknown public variant set`() throws {
+    @Test func `should reject an unknown public variant set`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         #expect(throws: DeviceModelError.unknownVariantSet("keyboard")) {
@@ -87,7 +87,7 @@ struct DeviceModelDefinitionTests {
         }
     }
 
-    @Test func `rejects an unknown public variant choice`() throws {
+    @Test func `should reject an unknown public variant choice`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
 
         #expect(throws: DeviceModelError.unknownVariantChoice(
@@ -97,7 +97,7 @@ struct DeviceModelDefinitionTests {
         }
     }
 
-    @Test func `rejects an unsupported schema version`() {
+    @Test func `should reject an unsupported schema version`() {
         let json = Self.macBookJSON.replacingOccurrences(
             of: #""schemaVersion": 1"#,
             with: #""schemaVersion": 2"#
@@ -108,7 +108,7 @@ struct DeviceModelDefinitionTests {
         }
     }
 
-    @Test func `rejects duplicate variant set ids`() {
+    @Test func `should reject duplicate variant set ids`() {
         let duplicate = Self.macBookJSON.replacingOccurrences(
             of: #""variantSets": ["#,
             with: #"""
@@ -131,7 +131,7 @@ struct DeviceModelDefinitionTests {
         }
     }
 
-    @Test func `rejects a default that is not one of the declared choices`() {
+    @Test func `should reject a variant default that is not one of the declared choices`() {
         let invalid = Self.macBookJSON.replacingOccurrences(
             of: #""default": "space-black""#,
             with: #""default": "gold""#
@@ -142,7 +142,7 @@ struct DeviceModelDefinitionTests {
         }
     }
 
-    @Test func `rejects a downloaded asset without a sha256`() throws {
+    @Test func `should reject a downloaded asset without a sha256`() throws {
         var object = try #require(
             JSONSerialization.jsonObject(with: Self.macBook) as? [String: Any]
         )
@@ -212,7 +212,7 @@ extension DeviceModelDefinitionTests {
 }
 
 extension DeviceModelDefinitionTests {
-    @Test func `matches a physical device by hardware identifier`() throws {
+    @Test func `should match a physical device by hardware identifier`() throws {
         let json = """
         {"schemaVersion":1,"id":"iphone-13-pro-max","displayName":"iPhone 13 Pro Max",
          "matches":{"simulatorDeviceTypes":[],"deviceNames":[],"deviceModels":["iPhone14,3"]},
@@ -227,7 +227,7 @@ extension DeviceModelDefinitionTests {
         #expect(model.matches(hardware: "iPhone17,2") == false)
     }
 
-    @Test func `definitions without deviceModels parse and match no hardware`() throws {
+    @Test func `should match no hardware when a definition declares no deviceModels`() throws {
         let model = try DeviceModelDefinition.parsing(json: Self.macBook)
         #expect(model.matches.deviceModels == [])
         #expect(model.matches(hardware: "iPhone14,3") == false)

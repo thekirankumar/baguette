@@ -7,34 +7,34 @@ struct PluginManifestTests {
 
     // MARK: - identity
 
-    @Test func `parsing reads the plugin name`() throws {
+    @Test func `should read the plugin's name from its manifest`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureOneCommand)
         #expect(manifest.name == "a11y")
     }
 
-    @Test func `parsing reads the plugin version`() throws {
+    @Test func `should read the plugin's version from its manifest`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureOneCommand)
         #expect(manifest.version == "1.0.0")
     }
 
-    @Test func `parsing reads the declared apiVersion`() throws {
+    @Test func `should read the apiVersion the manifest declares`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureOneCommand)
         #expect(manifest.apiVersion == 1)
     }
 
-    @Test func `parsing reads the description`() throws {
+    @Test func `should read the plugin's description from its manifest`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureOneCommand)
         #expect(manifest.description == "Accessibility audit for the current screen")
     }
 
-    @Test func `description is nil when the manifest omits it`() throws {
+    @Test func `should leave the description unset when the manifest omits it`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureMinimal)
         #expect(manifest.description == nil)
     }
 
     // MARK: - the plugin's own icon
 
-    @Test func `parsing reads the icon that stands for the whole plugin`() throws {
+    @Test func `should read the icon that stands for the whole plugin`() throws {
         // A plugin with several panels collapses to one rail entry, so
         // it needs a glyph of its own rather than borrowing whichever
         // panel happens to be listed first.
@@ -42,12 +42,12 @@ struct PluginManifestTests {
         #expect(manifest.icon == .wrench)
     }
 
-    @Test func `a manifest that names no icon of its own has none`() throws {
+    @Test func `should leave the plugin icon unset when the manifest names none`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureMinimal)
         #expect(manifest.icon == nil)
     }
 
-    @Test func `an injection-shaped plugin icon is replaced, never carried`() throws {
+    @Test func `should replace an injection-shaped plugin icon with the fallback glyph and warn`() throws {
         // Same boundary as a panel icon. What matters is that manifest
         // text never survives as an icon — the parsed value is always
         // one of the host's own glyphs, so there is nothing downstream
@@ -61,19 +61,19 @@ struct PluginManifestTests {
 
     // MARK: - commands
 
-    @Test func `parsing reads one contributed command`() throws {
+    @Test func `should read a contributed command's id, title and run argv`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureOneCommand)
         #expect(manifest.commands == [
             PluginCommand(id: "audit", title: "Run audit", run: ["node", "bin/audit.js"])
         ])
     }
 
-    @Test func `commands are empty when the manifest contributes none`() throws {
+    @Test func `should offer no commands when the manifest contributes none`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureMinimal)
         #expect(manifest.commands.isEmpty)
     }
 
-    @Test func `a command with an empty run argv is rejected`() throws {
+    @Test func `should reject a command when its run argv is empty`() throws {
         // `run` is the executable + args. An empty array would spawn
         // nothing, so the manifest is malformed rather than a plugin
         // that silently does nothing on click.
@@ -84,19 +84,19 @@ struct PluginManifestTests {
 
     // MARK: - capabilities
 
-    @Test func `parsing reads the declared capabilities`() throws {
+    @Test func `should read the capabilities the manifest declares`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixtureCapabilities)
         #expect(manifest.capabilities == [.describeUI, .screenshot])
     }
 
-    @Test func `a manifest declaring no capabilities gets none`() throws {
+    @Test func `should grant no capabilities when the manifest declares none`() throws {
         // Least privilege by default: a plugin that says nothing can
         // call nothing on the plugin API.
         let manifest = try PluginManifest.parsing(json: Self.fixtureMinimal)
         #expect(manifest.capabilities.isEmpty)
     }
 
-    @Test func `an unknown capability is rejected`() throws {
+    @Test func `should reject a manifest when it declares an unknown capability`() throws {
         // A typo would otherwise silently grant nothing and fail at
         // runtime with a confusing 403 — catch it at validate time.
         #expect(throws: PluginManifestError.unknownCapability(name: "root")) {
@@ -108,7 +108,7 @@ struct PluginManifestTests {
 
     // MARK: - panels
 
-    @Test func `parsing reads a panel's identity and icon`() throws {
+    @Test func `should read a panel's id, title and icon`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixturePanel)
         let panel = try #require(manifest.panels.first)
         #expect(panel.id == "audit")
@@ -116,29 +116,29 @@ struct PluginManifestTests {
         #expect(panel.icon == .accessibility)
     }
 
-    @Test func `parsing reads a list body bound to a contributed command`() throws {
+    @Test func `should read a list panel bound to a contributed command`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixturePanel)
         let panel = try #require(manifest.panels.first)
         #expect(panel.body == .list(ListBody(source: "audit", rowAction: .highlight)))
     }
 
-    @Test func `a panel's rowAction is nil when the manifest omits it`() throws {
+    @Test func `should leave a panel's row action unset when the manifest omits it`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixturePanelNoRowAction)
         let panel = try #require(manifest.panels.first)
         #expect(panel.body == .list(ListBody(source: "audit")))
     }
 
-    @Test func `parsing reads a panel's when condition`() throws {
+    @Test func `should read the when condition a panel is shown under`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixturePanel)
         #expect(manifest.panels.first?.when == .simulatorBooted)
     }
 
-    @Test func `a panel with no when condition is always shown`() throws {
+    @Test func `should show a panel always when it has no when condition`() throws {
         let manifest = try PluginManifest.parsing(json: Self.fixturePanelNoRowAction)
         #expect(manifest.panels.first?.when == nil)
     }
 
-    @Test func `an injection-shaped panel icon is replaced, never carried`() throws {
+    @Test func `should replace an injection-shaped panel icon with the fallback glyph and warn`() throws {
         // Icons are names resolved against a fixed host set, never
         // markup. A manifest is untrusted input rendered into the very
         // origin `isTrustedBrowserRequest` exists to defend, so an
@@ -152,7 +152,7 @@ struct PluginManifestTests {
         #expect(manifest.warnings == [.unknownIcon(name: "<svg onload=alert(1)>")])
     }
 
-    @Test func `a body kind this build doesn't render is rejected`() throws {
+    @Test func `should reject a panel body kind this build cannot render`() throws {
         // v2's sandboxed-iframe panels will arrive as `"kind":"webview"`
         // behind an apiVersion bump. A v1 build must refuse it outright
         // rather than render an empty card.
@@ -161,7 +161,7 @@ struct PluginManifestTests {
         }
     }
 
-    @Test func `a list body naming an undeclared command is rejected`() throws {
+    @Test func `should reject a list panel when it names an undeclared command`() throws {
         // The panel's rows come from running `source`. If no such
         // command is contributed, the panel could never populate —
         // catch the typo at validate time, not on first click.
@@ -172,7 +172,7 @@ struct PluginManifestTests {
 
     // MARK: - apiVersion gating
 
-    @Test func `a manifest declaring a newer apiVersion is rejected`() throws {
+    @Test func `should reject a manifest when it declares a newer apiVersion`() throws {
         // Forward compatibility runs one way: an old baguette must
         // refuse a manifest written against a contract it doesn't know,
         // rather than silently dropping the contributions it can't parse.
@@ -183,7 +183,7 @@ struct PluginManifestTests {
 
     // MARK: - the version contract
 
-    @Test func `an omitted apiVersion means 1, not whatever this build supports`() throws {
+    @Test func `should assume apiVersion 1 when the manifest omits it, not whatever this build supports`() throws {
         // The default is a statement about what manifests written
         // *before* the field existed meant — it is not a statement about
         // what this build can read. Tying the two together means the day
@@ -197,7 +197,7 @@ struct PluginManifestTests {
 
     // MARK: - icons degrade rather than kill the plugin
 
-    @Test func `an unrecognised icon falls back rather than refusing the manifest`() throws {
+    @Test func `should fall back to the default glyph rather than refuse the manifest when an icon is unrecognised`() throws {
         // Icons are cosmetic and the vocabulary grows. Throwing means a
         // plugin naming a glyph added after this baguette shipped
         // disappears entirely — a disproportionate answer to a picture.
@@ -208,7 +208,7 @@ struct PluginManifestTests {
         #expect(manifest.panels.first?.icon == .puzzle)
     }
 
-    @Test func `a fallen-back icon is still reported so the author hears about a typo`() throws {
+    @Test func `should warn about each unrecognised icon so the author hears about a typo`() throws {
         // Degrading must not mean going quiet: `plugin validate` is the
         // authoring feedback loop, and "wrentch" is a typo, not a glyph
         // from the future.
@@ -219,25 +219,25 @@ struct PluginManifestTests {
         ])
     }
 
-    @Test func `a manifest naming only shipped glyphs warns about nothing`() throws {
+    @Test func `should warn about nothing when the manifest names only shipped glyphs`() throws {
         #expect(try PluginManifest.parsing(json: Self.fixtureOneCommand).warnings.isEmpty)
     }
 
     // MARK: - malformed input
 
-    @Test func `parsing rejects non-JSON bytes`() throws {
+    @Test func `should reject a manifest when its bytes are not JSON`() throws {
         #expect(throws: PluginManifestError.malformedJSON) {
             try PluginManifest.parsing(json: Data("not json".utf8))
         }
     }
 
-    @Test func `parsing rejects a manifest with no name`() throws {
+    @Test func `should reject a manifest when it has no name`() throws {
         #expect(throws: PluginManifestError.missingName) {
             try PluginManifest.parsing(json: Self.fixtureNoName)
         }
     }
 
-    @Test func `parsing rejects a manifest with no version`() throws {
+    @Test func `should reject a manifest when it has no version`() throws {
         // A public ecosystem needs every plugin to state a version —
         // install / update / "which build is this" all rest on it.
         // Defaulting silently would let unversioned plugins into a
@@ -247,7 +247,7 @@ struct PluginManifestTests {
         }
     }
 
-    @Test func `parsing rejects a command with no id`() throws {
+    @Test func `should reject a command when it has no id`() throws {
         // The id is the namespace half of `plugin:command`. An empty
         // one makes `qualifiedCommandIDs` carry a bare "a11y:", which
         // no lookup can ever resolve and every listing renders blank.

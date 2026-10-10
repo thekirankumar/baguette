@@ -20,24 +20,24 @@ struct LocationWalkTests {
     /// Apple Park — the same friendly default the browser panel centres on.
     private let origin = Coordinate(latitude: 37.3349, longitude: -122.0090)!
 
-    @Test func `rejects a non-positive speed`() {
+    @Test func `should refuse a walk when its speed is not positive`() {
         // A standing-still walk isn't a walk — it's a `set`.
         #expect(LocationWalk(origin: origin, bearing: Bearing(degrees: 0), speed: 0) == nil)
         #expect(LocationWalk(origin: origin, bearing: Bearing(degrees: 0), speed: -5) == nil)
     }
 
-    @Test func `accepts a positive speed`() {
+    @Test func `should accept a walk at a positive speed`() {
         #expect(LocationWalk(origin: origin, bearing: Bearing(degrees: 0), speed: 1.4) != nil)
     }
 
-    @Test func `projects into a two-waypoint route starting at the origin`() {
+    @Test func `should plan a two-waypoint route starting at the walk's origin`() {
         let walk = LocationWalk(origin: origin, bearing: Bearing(degrees: 90), speed: 25)!
         let route = walk.route(horizon: 600)
         #expect(route.waypoints.count == 2)
         #expect(route.waypoints.first == origin)
     }
 
-    @Test func `ends the route the walk's distance ahead along its bearing`() {
+    @Test func `should end the route the walk's distance ahead along its bearing`() {
         // Due east at 25 m/s over a 600 s horizon = 15 km of easting.
         let walk = LocationWalk(origin: origin, bearing: Bearing(degrees: 90), speed: 25)!
         let end = walk.route(horizon: 600).waypoints.last!
@@ -45,7 +45,7 @@ struct LocationWalkTests {
         #expect(abs(end.longitude - (-121.839339)) < 1e-5)
     }
 
-    @Test func `sheds the latitude a due-east great circle sheds`() {
+    @Test func `should shed latitude as a great circle does when walking due east`() {
         // Not a rhumb line: a great circle pointed *exactly* east is at
         // its vertex — its northernmost point — so it loses latitude in
         // either direction. Over 15 km from 37°N that's 1.21e-4° ≈ 13 m
@@ -58,12 +58,12 @@ struct LocationWalkTests {
         #expect(abs(end.latitude - 37.334779) < 1e-5)
     }
 
-    @Test func `carries the walk's speed onto the route so locationd derives it`() {
+    @Test func `should carry the walk's speed onto the route so locationd derives it`() {
         let walk = LocationWalk(origin: origin, bearing: Bearing(degrees: 0), speed: 1.4)!
         #expect(walk.route(horizon: 600).speed == 1.4)
     }
 
-    @Test func `dead-reckons its position after a span of travel`() {
+    @Test func `should dead-reckon the walker's position after a span of travel`() {
         // 1 km due north at 10 m/s takes 100 s.
         let walk = LocationWalk(origin: origin, bearing: Bearing(degrees: 0), speed: 10)!
         let after = walk.position(after: 100)
@@ -71,7 +71,7 @@ struct LocationWalkTests {
         #expect(abs(after.longitude - origin.longitude) < 1e-9)
     }
 
-    @Test func `stands still at zero elapsed time`() {
+    @Test func `should stand still at the origin when no time has elapsed`() {
         // Tolerance, not equality: the projection round-trips through
         // radians and `asin(sin(φ))`, so the identity case lands within a
         // ulp or two of the origin rather than bit-exactly on it.
@@ -81,7 +81,7 @@ struct LocationWalkTests {
         #expect(abs(still.longitude - origin.longitude) < 1e-12)
     }
 
-    @Test func `ends the route where it dead-reckons the horizon`() {
+    @Test func `should end the route where the walker is dead-reckoned to be at the horizon`() {
         // The route's far waypoint IS the walk's position at the horizon —
         // the browser's locally dead-reckoned pin and the device's actual
         // interpolated track are the same line, so they can't disagree.
@@ -89,7 +89,7 @@ struct LocationWalkTests {
         #expect(walk.route(horizon: 600).waypoints.last == walk.position(after: 600))
     }
 
-    @Test func `projects the argv simctl consumes for a start route`() {
+    @Test func `should hand simctl a speed flag and two waypoints to start the walk`() {
         let walk = LocationWalk(origin: origin, bearing: Bearing(degrees: 90), speed: 25)!
         let args = walk.route(horizon: 600).startArguments
         #expect(args.first == "--speed=25")

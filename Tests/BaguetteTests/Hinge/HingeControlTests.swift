@@ -12,7 +12,7 @@ struct HingeControlTests {
         .deletingLastPathComponent().deletingLastPathComponent()
         .appending(path: "Injected/HingeControl/Sources")
 
-    @Test func `orientation values, served replies and deadlines follow the host protocol`() throws {
+    @Test func `should follow the host protocol for orientation values, served replies and deadlines`() throws {
         try Self.run(compiling: """
         #import "HingeProtocol.h"
         #include <assert.h>
@@ -63,7 +63,7 @@ struct HingeControlTests {
     }
 
     /// Every case here must exit before the helper creates HID services.
-    @Test func `invalid arguments and late starts exit before creating HID services`() throws {
+    @Test func `should exit before creating HID services when arguments are invalid or the start is late`() throws {
         let scratch = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: scratch) }

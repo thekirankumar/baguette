@@ -43,7 +43,7 @@ struct SimctlPairsTests {
         }
         """
 
-    @Test func `a phone finds the watch on its own side of the pairs table`() {
+    @Test func `should find the watch paired with a phone in the host's pairs table`() {
         let watch = SimctlPairs.watch(pairedWith: "PHONE-2", in: pairsJSON)
 
         #expect(watch == PairedWatch(
@@ -53,30 +53,30 @@ struct SimctlPairsTests {
         ))
     }
 
-    @Test func `a booted watch carries its booted state`() {
+    @Test func `should report a booted watch as booted`() {
         #expect(SimctlPairs.watch(pairedWith: "PHONE-1", in: pairsJSON)?.state == .booted)
     }
 
-    @Test func `a phone that is nobody's pair has no watch`() {
+    @Test func `should find no watch when the phone is not paired`() {
         #expect(SimctlPairs.watch(pairedWith: "PHONE-3", in: pairsJSON) == nil)
     }
 
-    @Test func `an empty pairs table has no watch`() {
+    @Test func `should find no watch when the pairs table is empty`() {
         #expect(SimctlPairs.watch(pairedWith: "PHONE-1", in: #"{"pairs":{}}"#) == nil)
     }
 
-    @Test func `output that isn't JSON has no watch`() {
+    @Test func `should find no watch when the output isn't JSON`() {
         #expect(SimctlPairs.watch(pairedWith: "PHONE-1", in: "xcrun: error: unable to find") == nil)
     }
 
-    @Test func `a pair missing either side is skipped rather than half-read`() {
+    @Test func `should skip a pair that is missing either side`() {
         let partial = """
             {"pairs":{"P":{"phone":{"name":"iPhone 17","udid":"PHONE-1","state":"Booted"}}}}
             """
         #expect(SimctlPairs.watch(pairedWith: "PHONE-1", in: partial) == nil)
     }
 
-    @Test func `a state the host prints but we don't model reads as shutdown`() {
+    @Test func `should read an unrecognised watch state as shutdown`() {
         let odd = """
             {"pairs":{"P":{"phone":{"name":"iPhone","udid":"PHONE-1","state":"Booted"},
              "watch":{"name":"Apple Watch","udid":"WATCH-1","state":"Hibernating"}}}}
@@ -84,7 +84,7 @@ struct SimctlPairsTests {
         #expect(SimctlPairs.watch(pairedWith: "PHONE-1", in: odd)?.state == .shutdown)
     }
 
-    @Test func `every state the host prints round-trips through its description`() {
+    @Test func `should read back every simulator state from its printed name`() {
         for state in [
             SimulatorState.creating, .shutdown, .booting, .booted, .shuttingDown,
         ] {

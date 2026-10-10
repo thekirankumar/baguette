@@ -50,7 +50,7 @@ struct NetworkRoutesTests {
 
     // MARK: - parse
 
-    @Test func `parseNetworkRequest resolves a named preset`() {
+    @Test func `should resolve a named network preset to its figures`() {
         // The browser posts the preset's *name* and Swift resolves the
         // numbers, so NLC's figures live in exactly one place rather than
         // being copied into JavaScript where the two would drift.
@@ -58,7 +58,7 @@ struct NetworkRoutesTests {
                     == NetworkProfile.threeG.condition)
     }
 
-    @Test func `parseNetworkRequest reads explicit numbers`() {
+    @Test func `should read explicit latency, bandwidth and loss figures`() {
         let condition = Server.parseNetworkRequest(
             json: #"{"latencyMs":300,"bandwidthKbps":400,"lossPercent":5}"#)
         #expect(condition?.latencyMs == 300)
@@ -66,15 +66,15 @@ struct NetworkRoutesTests {
         #expect(condition?.lossPercent == 5)
     }
 
-    @Test func `parseNetworkRequest leaves an unnamed bandwidth unmetered`() {
+    @Test func `should leave bandwidth unmetered when the body names none`() {
         #expect(Server.parseNetworkRequest(json: #"{"latencyMs":300}"#)?.bandwidthKbps == nil)
     }
 
-    @Test func `parseNetworkRequest reads offline`() {
+    @Test func `should read an offline network request`() {
         #expect(Server.parseNetworkRequest(json: #"{"offline":true}"#) == .offline)
     }
 
-    @Test func `parseNetworkRequest refuses to mix a preset with anything else`() {
+    @Test func `should refuse a network request that mixes a preset or offline with anything else`() {
         // Same rule the CLI holds: one source of truth per request, so
         // nobody has to remember whether the preset or the field wins.
         #expect(Server.parseNetworkRequest(json: #"{"profile":"3g","lossPercent":20}"#) == nil)
@@ -82,19 +82,19 @@ struct NetworkRoutesTests {
         #expect(Server.parseNetworkRequest(json: #"{"offline":true,"latencyMs":300}"#) == nil)
     }
 
-    @Test func `parseNetworkRequest rejects a body that conditions nothing`() {
+    @Test func `should reject a network body that conditions nothing`() {
         #expect(Server.parseNetworkRequest(json: "{}") == nil)
         #expect(Server.parseNetworkRequest(json: "not json") == nil)
     }
 
-    @Test func `parseNetworkRequest rejects numbers that describe no network`() {
+    @Test func `should reject figures or a preset that describe no network`() {
         #expect(Server.parseNetworkRequest(json: #"{"latencyMs":-1}"#) == nil)
         #expect(Server.parseNetworkRequest(json: #"{"lossPercent":150}"#) == nil)
         #expect(Server.parseNetworkRequest(json: #"{"bandwidthKbps":0}"#) == nil)
         #expect(Server.parseNetworkRequest(json: #"{"profile":"2g"}"#) == nil)
     }
 
-    @Test func `parseNetworkRequest ignores an offline flag that is false`() {
+    @Test func `should ignore an offline flag that is false`() {
         // The browser card posts its whole form, so `offline:false` arrives
         // alongside real numbers on every ordinary request. Treating it as
         // a source would make every such body a conflict.
@@ -106,7 +106,7 @@ struct NetworkRoutesTests {
 
     // MARK: - apply
 
-    @Test func `applyNetwork conditions the simulator`() async {
+    @Test func `should condition the simulator's network with the posted preset`() async {
         let w = makeWiring()
 
         let outcome = await Server.applyNetwork(
@@ -116,7 +116,7 @@ struct NetworkRoutesTests {
         #expect(w.captures.last == NetworkProfile.edge.condition)
     }
 
-    @Test func `applyNetwork reports an unknown device`() async {
+    @Test func `should report an unknown device when conditioning its network`() async {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
 
@@ -126,14 +126,14 @@ struct NetworkRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `applyNetwork reports a malformed body`() async {
+    @Test func `should report an invalid body when the network request is malformed`() async {
         let w = makeWiring()
         let outcome = await Server.applyNetwork(
             udid: "U", body: "not json", simulators: w.simulators)
         #expect(outcome == .invalidBody)
     }
 
-    @Test func `applyNetwork surfaces a build with no dylib`() async {
+    @Test func `should report a failed dispatch when the build has no network dylib`() async {
         // Nothing would read the published condition, so reporting success
         // would leave someone testing against a throttle that was never
         // applied.
@@ -147,7 +147,7 @@ struct NetworkRoutesTests {
 
     // MARK: - clear
 
-    @Test func `clearNetwork stops conditioning`() async {
+    @Test func `should stop conditioning the simulator's network`() async {
         let w = makeWiring()
 
         let outcome = await Server.clearNetwork(udid: "U", simulators: w.simulators)
@@ -156,7 +156,7 @@ struct NetworkRoutesTests {
         verify(w.network).clear(on: .any).called(1)
     }
 
-    @Test func `clearNetwork reports an unknown device`() async {
+    @Test func `should report an unknown device when clearing its network conditioning`() async {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
         #expect(await Server.clearNetwork(udid: "nope", simulators: simulators)
@@ -165,7 +165,7 @@ struct NetworkRoutesTests {
 
     // MARK: - read-back
 
-    @Test func `networkStateJSON reports what the simulator is subject to`() async throws {
+    @Test func `should report the network condition the simulator is subject to`() async throws {
         let w = makeWiring(current: NetworkProfile.threeG.condition)
 
         let json = try await Server.networkStateJSON(udid: "U", simulators: w.simulators) ?? ""
@@ -176,7 +176,7 @@ struct NetworkRoutesTests {
         #expect(json.contains(#""summary":"200 ms latency, 780 kbps""#))
     }
 
-    @Test func `networkStateJSON names the preset when one matches`() async throws {
+    @Test func `should name the preset when the current condition matches one`() async throws {
         // So the card can keep the pill the user pressed lit. It posts a
         // name and gets numbers back; without this it would have to hold
         // NLC's figures itself to recognise them, which is the duplication
@@ -188,7 +188,7 @@ struct NetworkRoutesTests {
         #expect(json.contains(#""profile":"3g""#))
     }
 
-    @Test func `networkStateJSON names no preset for a hand-tuned condition`() async throws {
+    @Test func `should name no preset for a hand-tuned network condition`() async throws {
         let w = makeWiring(
             current: NetworkCondition(latencyMs: 317, bandwidthKbps: 411, lossPercent: 3)!)
 
@@ -197,7 +197,7 @@ struct NetworkRoutesTests {
         #expect(json.contains(#""profile":null"#))
     }
 
-    @Test func `networkStateJSON reports an unconditioned simulator as inactive`() async throws {
+    @Test func `should report an unconditioned simulator as inactive`() async throws {
         let w = makeWiring(current: nil)
 
         let json = try await Server.networkStateJSON(udid: "U", simulators: w.simulators) ?? ""
@@ -205,7 +205,7 @@ struct NetworkRoutesTests {
         #expect(json.contains(#""active":false"#))
     }
 
-    @Test func `networkStateJSON names every preset so the card lists them`() async throws {
+    @Test func `should list every network preset so the card can offer them`() async throws {
         // The browser offers the presets by name and posts the name back.
         // Serving the list means adding a preset appears in the UI without
         // a second edit, and the figures behind each name stay in Swift.
@@ -218,7 +218,7 @@ struct NetworkRoutesTests {
         }
     }
 
-    @Test func `networkStateJSON refuses an unknown device rather than calling it unthrottled`() async throws {
+    @Test func `should find no network state for an unknown device rather than call it unthrottled`() async throws {
         // "This device has no conditioning" and "there is no such device"
         // are different answers, and the first one reads as reassurance.
         // The route turns this nil into a 404, matching motion's read-back.
@@ -228,7 +228,7 @@ struct NetworkRoutesTests {
         #expect(try await Server.networkStateJSON(udid: "nope", simulators: simulators) == nil)
     }
 
-    @Test func `networkStateJSON propagates a failed injection query instead of reporting inactive`() async throws {
+    @Test func `should fail rather than report inactive when the injection query fails`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
         try fixture.output("", stderr: "simulator unavailable", status: 2)

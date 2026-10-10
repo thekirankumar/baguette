@@ -6,7 +6,7 @@ import Mockable
 @Suite("Simulators")
 struct SimulatorsTests {
 
-    @Test func `running returns only booted simulators`() {
+    @Test func `should list only booted simulators as running`() {
         let host = MockSimulators()
         given(host).all.willReturn([
             sim("U1", "iPhone 17 Pro Max", .booted),
@@ -19,7 +19,7 @@ struct SimulatorsTests {
         #expect(running.map(\.udid) == ["U1", "U4"])
     }
 
-    @Test func `available returns everything that isn't booted`() {
+    @Test func `should list every simulator that isn't booted as available`() {
         let host = MockSimulators()
         given(host).all.willReturn([
             sim("U1", "iPhone 17 Pro Max", .booted),
@@ -32,7 +32,7 @@ struct SimulatorsTests {
         #expect(available.map(\.udid) == ["U2", "U3", "U4"])
     }
 
-    @Test func `listJSON splits sections and preserves field shape`() throws {
+    @Test func `should list running and available simulators in separate sections with their fields`() throws {
         let host = MockSimulators()
         given(host).all.willReturn([
             sim("U1", "iPhone 17 Pro Max", .booted,   runtime: "iOS 26.4"),
@@ -56,7 +56,7 @@ struct SimulatorsTests {
         #expect(available?.first?["state"] as? String == "Shutdown")
     }
 
-    @Test func `listJSON renders empty sections as empty arrays`() throws {
+    @Test func `should list empty sections as empty arrays when there are no simulators`() throws {
         let host = MockSimulators()
         given(host).all.willReturn([])
 

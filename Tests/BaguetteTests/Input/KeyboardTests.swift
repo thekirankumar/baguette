@@ -5,21 +5,21 @@ import Mockable
 
 @Suite("KeyboardKey")
 struct KeyboardKeyTests {
-    @Test func `parses lowercase letter wire codes onto HID page 7`() {
+    @Test func `should map letter key codes onto HID page 7`() {
         // KeyA → 0x04, KeyB → 0x05, ..., KeyZ → 0x1D.
         #expect(KeyboardKey.from(wireCode: "KeyA")?.hidUsage == HIDUsage(page: 7, usage: 0x04))
         #expect(KeyboardKey.from(wireCode: "KeyM")?.hidUsage == HIDUsage(page: 7, usage: 0x10))
         #expect(KeyboardKey.from(wireCode: "KeyZ")?.hidUsage == HIDUsage(page: 7, usage: 0x1D))
     }
 
-    @Test func `parses digit wire codes (1-9 then 0)`() {
+    @Test func `should map digit key codes onto HID page 7 with 1 to 9 before 0`() {
         // HID quirk: Digit1 = 0x1E, Digit9 = 0x26, Digit0 = 0x27 (last).
         #expect(KeyboardKey.from(wireCode: "Digit1")?.hidUsage == HIDUsage(page: 7, usage: 0x1E))
         #expect(KeyboardKey.from(wireCode: "Digit9")?.hidUsage == HIDUsage(page: 7, usage: 0x26))
         #expect(KeyboardKey.from(wireCode: "Digit0")?.hidUsage == HIDUsage(page: 7, usage: 0x27))
     }
 
-    @Test func `parses numpad wire codes onto HID keypad usages`() {
+    @Test func `should map numpad key codes onto HID keypad usages`() {
         // Keypad block on HID page 7: 1-9 = 0x59..0x61, 0 = 0x62 (last,
         // like the top-row digit quirk), decimal = 0x63; the operators
         // and Enter (0x54..0x58) sit just below the digits, Equal (0x67)
@@ -39,7 +39,7 @@ struct KeyboardKeyTests {
         }
     }
 
-    @Test func `parses named special keys`() {
+    @Test func `should map named special keys onto HID page 7`() {
         let pairs: [(String, UInt32)] = [
             ("Enter", 0x28), ("Escape", 0x29), ("Backspace", 0x2A),
             ("Tab", 0x2B), ("Space", 0x2C),
@@ -51,7 +51,7 @@ struct KeyboardKeyTests {
         }
     }
 
-    @Test func `unknown wire code resolves to nil`() {
+    @Test func `should recognise no key when the key code is unknown`() {
         #expect(KeyboardKey.from(wireCode: "F13")  == nil)
         #expect(KeyboardKey.from(wireCode: "")     == nil)
         #expect(KeyboardKey.from(wireCode: "keya") == nil)  // case-sensitive on purpose
@@ -60,14 +60,14 @@ struct KeyboardKeyTests {
 
 @Suite("KeyModifier")
 struct KeyModifierTests {
-    @Test func `each modifier carries its HID usage on page 7`() {
+    @Test func `should give each modifier its HID usage on page 7`() {
         #expect(KeyModifier.shift.hidUsage   == HIDUsage(page: 7, usage: 0xE1))
         #expect(KeyModifier.control.hidUsage == HIDUsage(page: 7, usage: 0xE0))
         #expect(KeyModifier.option.hidUsage  == HIDUsage(page: 7, usage: 0xE2))
         #expect(KeyModifier.command.hidUsage == HIDUsage(page: 7, usage: 0xE3))
     }
 
-    @Test func `parses lowercase wire rawValues`() {
+    @Test func `should recognise modifiers by their lowercase wire names`() {
         #expect(KeyModifier(rawValue: "shift")   == .shift)
         #expect(KeyModifier(rawValue: "control") == .control)
         #expect(KeyModifier(rawValue: "option")  == .option)
@@ -78,32 +78,32 @@ struct KeyModifierTests {
 
 @Suite("KeyboardKey.decompose")
 struct KeyboardKeyDecomposeTests {
-    @Test func `lowercase letter has no modifier`() {
+    @Test func `should type a lowercase letter with no modifier`() {
         let s = KeyboardKey.decompose(character: "a")
         #expect(s?.key.hidUsage == HIDUsage(page: 7, usage: 0x04))
         #expect(s?.modifiers == [])
     }
 
-    @Test func `uppercase letter shifts the same key`() {
+    @Test func `should type an uppercase letter as the same key with shift`() {
         let s = KeyboardKey.decompose(character: "A")
         #expect(s?.key.hidUsage == HIDUsage(page: 7, usage: 0x04))
         #expect(s?.modifiers == [.shift])
     }
 
-    @Test func `digit has no modifier; shifted-digit symbols share its key`() {
+    @Test func `should type a digit bare and its shifted symbol as the same key with shift`() {
         #expect(KeyboardKey.decompose(character: "1")?.modifiers == [])
         let bang = KeyboardKey.decompose(character: "!")
         #expect(bang?.key.hidUsage == HIDUsage(page: 7, usage: 0x1E))
         #expect(bang?.modifiers == [.shift])
     }
 
-    @Test func `space is bare key 0x2C`() {
+    @Test func `should type a space as the bare space key`() {
         let s = KeyboardKey.decompose(character: " ")
         #expect(s?.key.hidUsage == HIDUsage(page: 7, usage: 0x2C))
         #expect(s?.modifiers == [])
     }
 
-    @Test func `common punctuation maps to its key plus shift when needed`() {
+    @Test func `should type punctuation as its key plus shift when needed`() {
         // Period unshifted, '>' shifted.
         #expect(KeyboardKey.decompose(character: ".")?.modifiers == [])
         #expect(KeyboardKey.decompose(character: ">")?.modifiers == [.shift])
@@ -111,7 +111,7 @@ struct KeyboardKeyDecomposeTests {
             == KeyboardKey.decompose(character: ".")?.key.hidUsage)
     }
 
-    @Test func `non-ASCII character is unsupported`() {
+    @Test func `should find no key to type when the character is not ASCII`() {
         #expect(KeyboardKey.decompose(character: "é") == nil)
         #expect(KeyboardKey.decompose(character: "中") == nil)
         #expect(KeyboardKey.decompose(character: "🦄") == nil)
@@ -122,36 +122,36 @@ struct KeyboardKeyDecomposeTests {
 
 @Suite("Key")
 struct KeyGestureTests {
-    @Test func `parses code without modifiers`() throws {
+    @Test func `should read a key press with no modifiers and no hold`() throws {
         let g = try Key.parse(["code": "KeyA"])
         #expect(g.key == KeyboardKey.from(wireCode: "KeyA"))
         #expect(g.modifiers == [])
         #expect(g.duration == 0)
     }
 
-    @Test func `parses modifier list`() throws {
+    @Test func `should read a key press's modifiers`() throws {
         let g = try Key.parse(["code": "KeyA", "modifiers": ["shift", "command"]])
         #expect(g.modifiers == Set([.shift, .command]))
     }
 
-    @Test func `parses optional duration`() throws {
+    @Test func `should read a key press's hold duration`() throws {
         let g = try Key.parse(["code": "Enter", "duration": 0.5])
         #expect(g.duration == 0.5)
     }
 
-    @Test func `rejects unknown code`() {
+    @Test func `should reject a key press when the key code is unknown`() {
         #expect(throws: GestureError.self) {
             try Key.parse(["code": "F13"])
         }
     }
 
-    @Test func `rejects unknown modifier`() {
+    @Test func `should reject a key press when a modifier is unknown`() {
         #expect(throws: GestureError.self) {
             try Key.parse(["code": "KeyA", "modifiers": ["meta"]])
         }
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should press the key on the simulator with its modifiers and hold`() {
         let input = MockInput()
         given(input).key(.any, modifiers: .any, duration: .any).willReturn(true)
 
@@ -169,24 +169,24 @@ struct KeyGestureTests {
 
 @Suite("TypeText")
 struct TypeTextGestureTests {
-    @Test func `parses text`() throws {
+    @Test func `should read the text to type`() throws {
         let g = try TypeText.parse(["text": "hi"])
         #expect(g.text == "hi")
     }
 
-    @Test func `rejects missing text`() {
+    @Test func `should reject typing when no text is given`() {
         #expect(throws: GestureError.missingField("text")) {
             try TypeText.parse([:])
         }
     }
 
-    @Test func `rejects text with unsupported characters`() {
+    @Test func `should reject typing when the text has unsupported characters`() {
         #expect(throws: GestureError.self) {
             try TypeText.parse(["text": "hi🦄"])
         }
     }
 
-    @Test func `executes by emitting one key per character`() {
+    @Test func `should type text as one key press per character`() {
         let input = MockInput()
         given(input).key(.any, modifiers: .any, duration: .any).willReturn(true)
 
@@ -201,7 +201,7 @@ struct TypeTextGestureTests {
         ).called(1)
     }
 
-    @Test func `empty text is a no-op that succeeds`() {
+    @Test func `should succeed without pressing anything when the text is empty`() {
         let input = MockInput()
         given(input).key(.any, modifiers: .any, duration: .any).willReturn(true)
 

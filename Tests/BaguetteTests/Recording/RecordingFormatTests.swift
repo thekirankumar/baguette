@@ -7,34 +7,34 @@ import Foundation
 @Suite("RecordingFormat")
 struct RecordingFormatTests {
 
-    @Test func `an mp4 filename records into an MP4 container`() throws {
+    @Test func `should record into an MP4 container when the filename ends in mp4`() throws {
         let format = try RecordingFormat.forFile(URL(fileURLWithPath: "/tmp/demo.mp4"))
         #expect(format == .mp4)
     }
 
-    @Test func `a mov filename records into a QuickTime container`() throws {
+    @Test func `should record into a QuickTime container when the filename ends in mov`() throws {
         let format = try RecordingFormat.forFile(URL(fileURLWithPath: "/tmp/demo.MOV"))
         #expect(format == .mov)
     }
 
-    @Test func `an unknown extension is rejected rather than guessed at`() {
+    @Test func `should reject an unknown extension rather than guess at it`() {
         #expect(throws: RecordingError.unsupportedContainer("webm")) {
             _ = try RecordingFormat.forFile(URL(fileURLWithPath: "/tmp/demo.webm"))
         }
     }
 
-    @Test func `a filename with no extension is rejected`() {
+    @Test func `should reject a filename with no extension`() {
         #expect(throws: RecordingError.unsupportedContainer("")) {
             _ = try RecordingFormat.forFile(URL(fileURLWithPath: "/tmp/demo"))
         }
     }
 
-    @Test func `the rejection message names every container baguette can write`() {
+    @Test func `should name every writable container when rejecting one`() {
         #expect(RecordingError.unsupportedContainer("webm").message
             == "Unknown recording container 'webm'. Expected one of: mp4 | mov")
     }
 
-    @Test func `every container advertises the list users can pick from`() {
+    @Test func `should list the containers users can pick from`() {
         #expect(RecordingFormat.containerList == "mp4 | mov")
     }
 }

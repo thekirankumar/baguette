@@ -4,8 +4,8 @@ import Testing
 
 @Suite("ScreenPlacement")
 struct ScreenPlacementTests {
-    @Test("stretch fills the screen surface without cropping or letterboxing")
-    func stretchIsIdentity() {
+    @Test
+    func `should stretch a frame over the screen without cropping or letterboxing`() {
         let placement = DeviceScreenFit.stretch.placement(
             source: RenderDimensions(width: 200, height: 100),
             target: RenderDimensions(width: 100, height: 100)
@@ -14,8 +14,8 @@ struct ScreenPlacementTests {
         #expect(placement == ScreenPlacement(scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0))
     }
 
-    @Test("cover crops the overflowing width of a wide frame on a square screen")
-    func coverCropsWideSourceHorizontally() {
+    @Test
+    func `should crop the overflowing width of a wide frame on a square screen when covering`() {
         let placement = DeviceScreenFit.cover.placement(
             source: RenderDimensions(width: 200, height: 100),
             target: RenderDimensions(width: 100, height: 100)
@@ -24,8 +24,8 @@ struct ScreenPlacementTests {
         #expect(placement == ScreenPlacement(scaleX: 0.5, scaleY: 1, offsetX: 0.25, offsetY: 0))
     }
 
-    @Test("cover crops the overflowing height of a tall frame on a square screen")
-    func coverCropsTallSourceVertically() {
+    @Test
+    func `should crop the overflowing height of a tall frame on a square screen when covering`() {
         let placement = DeviceScreenFit.cover.placement(
             source: RenderDimensions(width: 100, height: 200),
             target: RenderDimensions(width: 100, height: 100)
@@ -34,8 +34,8 @@ struct ScreenPlacementTests {
         #expect(placement == ScreenPlacement(scaleX: 1, scaleY: 0.5, offsetX: 0, offsetY: 0.25))
     }
 
-    @Test("contain letterboxes a wide frame vertically on a square screen")
-    func containLetterboxesWideSourceVertically() {
+    @Test
+    func `should letterbox a wide frame vertically on a square screen when containing`() {
         let placement = DeviceScreenFit.contain.placement(
             source: RenderDimensions(width: 200, height: 100),
             target: RenderDimensions(width: 100, height: 100)
@@ -44,8 +44,8 @@ struct ScreenPlacementTests {
         #expect(placement == ScreenPlacement(scaleX: 1, scaleY: 2, offsetX: 0, offsetY: -0.5))
     }
 
-    @Test("the feathered content region is the visible window inset by the border")
-    func contentRegionInsetsVisibleWindow() {
+    @Test
+    func `should inset the feathered content region from the visible window by the border`() {
         let identity = ScreenPlacement.identity.contentRegion(
             in: RenderDimensions(width: 100, height: 200),
             inset: 2
@@ -68,8 +68,8 @@ struct ScreenPlacementTests {
         #expect(contain == ContentRegion(x: 2, y: 2, width: 196, height: 96))
     }
 
-    @Test("matching aspect ratios need no adjustment for cover or contain")
-    func matchingAspectIsIdentity() {
+    @Test
+    func `should leave matching aspect ratios unadjusted when covering or containing`() {
         for fit in [DeviceScreenFit.cover, .contain] {
             let placement = fit.placement(
                 source: RenderDimensions(width: 660, height: 1434),

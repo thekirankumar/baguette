@@ -4,7 +4,7 @@ import Testing
 
 @Suite("Device3DCamera")
 struct Device3DCameraTests {
-    @Test func `parses a live camera control envelope`() throws {
+    @Test func `should read a set_3d_camera envelope as a live camera rotation and zoom`() throws {
         let camera = try #require(try Device3DCamera.parsing(json: Data(#"""
         {
           "type": "set_3d_camera",
@@ -19,7 +19,7 @@ struct Device3DCameraTests {
         ))
     }
 
-    @Test func `carries the guest's interface orientation when the page turns a foldable`() throws {
+    @Test func `should carry the guest's interface orientation when the page turns a foldable`() throws {
         // The book stands the way the guest is held; the page names the
         // orientation it asked the guest for, so the lit screen's pieces
         // are ordered as that framebuffer is drawn.
@@ -39,13 +39,13 @@ struct Device3DCameraTests {
         }
     }
 
-    @Test func `ignores envelopes owned by another control`() throws {
+    @Test func `should ignore envelopes owned by another control`() throws {
         #expect(try Device3DCamera.parsing(
             json: Data(#"{"type":"set_fps","fps":30}"#.utf8)
         ) == nil)
     }
 
-    @Test func `rejects unsafe rotation and zoom values`() {
+    @Test func `should reject unsafe camera rotation and zoom values`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try Device3DCamera.parsing(json: Data(#"""
             {

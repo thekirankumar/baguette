@@ -43,7 +43,7 @@ struct DevicectlHingeTests {
         return (hinge, sub, captures)
     }
 
-    @Test func `asks devicectl to monitor this device's hinge`() {
+    @Test func `should ask devicectl to monitor this device's hinge`() {
         let (hinge, _, captures) = makeHinge { c in c.onBytes?(Data(self.sample.utf8)) }
         _ = hinge.angle()
         #expect(captures.executable?.path == "/usr/bin/xcrun")
@@ -51,14 +51,14 @@ struct DevicectlHingeTests {
         #expect(captures.arguments?.contains("duo") == true)
     }
 
-    @Test func `the first sample is the reading`() {
+    @Test func `should read the hinge angle from the first sample`() {
         let (hinge, _, _) = makeHinge { c in c.onBytes?(Data((self.banner + self.sample).utf8)) }
         #expect(hinge.angle() == HingeAngle(degrees: 130))
     }
 
     /// The monitor keeps streaming until its own timeout; one sample is
     /// all that is needed, so the child is stopped as soon as it lands.
-    @Test func `the monitor is terminated once a sample has landed`() {
+    @Test func `should stop the monitor once a sample has landed`() {
         let (hinge, sub, _) = makeHinge { c in c.onBytes?(Data(self.sample.utf8)) }
         _ = hinge.angle()
         verify(sub).terminate().called(1)
@@ -66,7 +66,7 @@ struct DevicectlHingeTests {
 
     /// Output arrives in whatever chunks the pipe delivers; a sample
     /// split across two of them is still one sample.
-    @Test func `a sample split across chunks is reassembled`() {
+    @Test func `should reassemble a sample split across chunks`() {
         let head = String(sample.prefix(30))
         let tail = String(sample.dropFirst(30))
         let (hinge, _, _) = makeHinge { c in
@@ -78,7 +78,7 @@ struct DevicectlHingeTests {
 
     /// A device without a hinge makes devicectl print an error and exit;
     /// that is "no reading", not a crash and not a stale number.
-    @Test func `an exit before any sample is no reading`() {
+    @Test func `should report no reading when the monitor exits before any sample`() {
         let (hinge, _, _) = makeHinge { c in
             c.onBytes?(Data("Error: Hinge angle monitoring is not available on this device.\n".utf8))
             c.onExit?(1)
@@ -88,13 +88,13 @@ struct DevicectlHingeTests {
 
     /// A child that never answers must not hang the caller — this sits
     /// on the path that binds every screen and input on a foldable.
-    @Test func `a silent monitor times out to no reading and is stopped`() {
+    @Test func `should report no reading and stop the monitor when it stays silent past the deadline`() {
         let (hinge, sub, _) = makeHinge { _ in }
         #expect(hinge.angle() == nil)
         verify(sub).terminate().called(1)
     }
 
-    @Test func `a spawn failure is no reading`() {
+    @Test func `should report no reading when the monitor cannot be started`() {
         let sub = MockSubprocess()
         given(sub).run(
             executable: .any, arguments: .any, onBytes: .any, onExit: .any
@@ -108,7 +108,7 @@ struct DevicectlHingeTests {
     /// Device Hub animates a pose change as a 0.5–0.85 s sweep of
     /// samples at 60 Hz (measured: 3.8° → 130° in 0.84 s, ease-out).
     /// A watch hands every sample on, in order, for as long as it runs.
-    @Test func `a watch delivers every sample in order`() {
+    @Test func `should deliver every sample of a watch in order`() {
         final class Seen: @unchecked Sendable { var angles: [Double] = [] }
         let seen = Seen()
         let (hinge, _, captures) = makeHinge { _ in }
@@ -123,7 +123,7 @@ struct DevicectlHingeTests {
 
     /// The monitor is asked for every change, not the default 1° / 1 s
     /// cadence, and for as long as a session could plausibly last.
-    @Test func `a watch asks devicectl for every change for a long time`() {
+    @Test func `should ask devicectl for every change for a long time when watching`() {
         let (hinge, _, captures) = makeHinge { _ in }
         let watch = hinge.watch { _ in }
         let args = captures.arguments ?? []
@@ -138,7 +138,7 @@ struct DevicectlHingeTests {
         watch.cancel()
     }
 
-    @Test func `cancelling a watch terminates the monitor`() {
+    @Test func `should stop the monitor when a watch is cancelled`() {
         let (hinge, sub, _) = makeHinge { _ in }
         let watch = hinge.watch { _ in }
         watch.cancel()
@@ -147,7 +147,7 @@ struct DevicectlHingeTests {
 
     /// Nothing after cancel: a sample the pipe still had buffered must
     /// not reach a caller that has moved on.
-    @Test func `a cancelled watch drops late samples`() {
+    @Test func `should drop late samples when the watch is cancelled`() {
         final class Seen: @unchecked Sendable { var count = 0 }
         let seen = Seen()
         let (hinge, _, captures) = makeHinge { _ in }
@@ -157,7 +157,7 @@ struct DevicectlHingeTests {
         #expect(seen.count == 0)
     }
 
-    @Test func `a watch on a device without a hinge delivers nothing`() {
+    @Test func `should deliver nothing when watching a device without a hinge`() {
         final class Seen: @unchecked Sendable { var count = 0 }
         let seen = Seen()
         let (hinge, _, captures) = makeHinge { _ in }

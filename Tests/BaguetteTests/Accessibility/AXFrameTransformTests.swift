@@ -11,7 +11,7 @@ struct AXFrameTransformTests {
         (.landscapeLeft, CGRect(x: 80, y: 740, width: 48, height: 84)),
         (.landscapeRight, CGRect(x: 274, y: 50, width: 48, height: 84)),
     ])
-    func `noncentral UIKit rectangles and hit tests use native panel coordinates`(
+    func `should place off-centre elements and hit tests in native panel coordinates in every orientation`(
         orientation: DeviceOrientation, expected: CGRect
     ) {
         let transform = AXFrameTransform(

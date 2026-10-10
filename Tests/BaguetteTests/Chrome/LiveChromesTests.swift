@@ -42,7 +42,7 @@ struct LiveChromesTests {
         return try! PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
     }()
 
-    @Test func `a foldable's secondary panel is the unfolded panel's chrome`() throws {
+    @Test func `should dress a foldable's secondary panel in the unfolded panel's chrome`() throws {
         let store = MockChromeStore()
         given(store).framebufferMaskPDF(identifier: .any).willThrow(StubError.notFound)
         let rasterizer = MockPDFRasterizer()
@@ -69,7 +69,7 @@ struct LiveChromesTests {
 
     /// The mask is served with the chrome so the page clips the live
     /// frame to the shape the simulator itself uses.
-    @Test func `a panel's chrome carries its framebuffer mask rasterized`() throws {
+    @Test func `should rasterize a panel's framebuffer mask alongside its chrome`() throws {
         let store = MockChromeStore()
         let rasterizer = MockPDFRasterizer()
         let pdf = Data("PDF-14".utf8), maskPDF = Data("MASK-14".utf8)
@@ -95,7 +95,7 @@ struct LiveChromesTests {
     }
 
     /// A missing mask file must not cost the bezel.
-    @Test func `an unreadable mask leaves the chrome without one`() throws {
+    @Test func `should keep the bezel without a mask when the mask is unreadable`() throws {
         let store = MockChromeStore()
         let rasterizer = MockPDFRasterizer()
         let pdf = Data("PDF-14".utf8)
@@ -116,7 +116,7 @@ struct LiveChromesTests {
         #expect(assets?.screenMask == nil)
     }
 
-    @Test func `a single-panel device has no secondary panel`() {
+    @Test func `should find no secondary panel chrome on a single-panel device`() {
         let store = makeChromeStore()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
         let chromes = LiveChromes(store: store, rasterizer: MockPDFRasterizer())
@@ -125,7 +125,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro", panel: .secondary) == nil)
     }
 
-    @Test func `an unknown device has no panels`() {
+    @Test func `should find no panels when the device is unknown`() {
         let store = makeChromeStore()
         given(store).profilePlistData(deviceName: .any).willThrow(StubError.notFound)
         let chromes = LiveChromes(store: store, rasterizer: MockPDFRasterizer())
@@ -134,7 +134,7 @@ struct LiveChromesTests {
 
     // MARK: - happy path
 
-    @Test func `assets returns parsed chrome and rasterized composite`() throws {
+    @Test func `should load a device's chrome with its rendered bezel`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let pdf = Data("PDF-COMPOSITE".utf8)
@@ -155,7 +155,7 @@ struct LiveChromesTests {
         #expect(assets?.composite == png)
     }
 
-    @Test func `assets caches by chrome identifier across repeated lookups`() throws {
+    @Test func `should render a chrome only once when the same device is looked up repeatedly`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let pdf = Data("X".utf8)
@@ -181,7 +181,7 @@ struct LiveChromesTests {
 
     // MARK: - degraded paths — every step gives nil cleanly
 
-    @Test func `assets returns nil when profile plist is unreadable`() {
+    @Test func `should find no chrome when the device profile is unreadable`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willThrow(StubError.notFound)
@@ -190,7 +190,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro") == nil)
     }
 
-    @Test func `assets returns nil when chrome JSON is unreadable`() {
+    @Test func `should find no chrome when the chrome description is unreadable`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
@@ -200,7 +200,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro") == nil)
     }
 
-    @Test func `assets returns nil when chrome has neither composite nor full slice`() {
+    @Test func `should find no chrome when it has neither a composite nor a full set of slices`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
@@ -213,7 +213,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro") == nil)
     }
 
-    @Test func `assets composes a 9-slice bezel using screen size from plist`() throws {
+    @Test func `should compose a nine-slice bezel around the profile's screen size`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composed = ChromeImage(data: Data("9SLICE-PNG".utf8), size: Size(width: 926, height: 1302))
@@ -257,7 +257,7 @@ struct LiveChromesTests {
         verify(rasterizer).rasterize(pdfData: .any).called(0)
     }
 
-    @Test func `assets returns nil for 9-slice bundle when plist lacks screen size`() {
+    @Test func `should find no nine-slice chrome when the profile has no screen size`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         // chromeIdentifier present but mainScreen* keys missing — the
@@ -273,7 +273,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPad Pro 11-inch (M4)") == nil)
     }
 
-    @Test func `assets returns nil when a 9-slice piece is unreadable`() {
+    @Test func `should find no chrome when a nine-slice piece is unreadable`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
@@ -292,7 +292,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro") == nil)
     }
 
-    @Test func `assets returns nil when composite PDF is unreadable`() {
+    @Test func `should find no chrome when the composite PDF is unreadable`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
@@ -304,7 +304,7 @@ struct LiveChromesTests {
         #expect(chromes.assets(forDeviceName: "iPhone 17 Pro") == nil)
     }
 
-    @Test func `assets returns nil when rasterizer fails`() {
+    @Test func `should find no chrome when the bezel cannot be rendered`() {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         given(store).profilePlistData(deviceName: .any).willReturn(Self.fixturePlist)
@@ -318,7 +318,7 @@ struct LiveChromesTests {
 
     // Drives `assemble` end-to-end with all four button anchors so the
     // anchor switch in computeMargins / buttonTopLeft is fully exercised.
-    @Test func `assets composes a merged bezel for left right top and bottom buttons`() throws {
+    @Test func `should merge buttons on every edge into the bezel with the chrome's device padding`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("composite".utf8), size: Size(width: 100, height: 200))
@@ -367,7 +367,7 @@ struct LiveChromesTests {
     // not the zero an inference formula would compute, and not the
     // accidental `imgW + offX` = -5 → 0 the prior production code
     // would compute.
-    @Test func `assets uses chrome devicePadding as button margins`() throws {
+    @Test func `should take the button margins from the chrome's device padding`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("composite".utf8), size: Size(width: 100, height: 200))
@@ -421,7 +421,7 @@ struct LiveChromesTests {
     //   x = composite.width + (2 * -30 - -25) = 100 - 35 = 65
     //   y = 2 * 160 - 160 = 160  (TOP-edge convention; y delta is
     //                             zero on horizontal-only animations)
-    @Test func `assets positions right-anchor button mirroring rollover delta inward`() throws {
+    @Test func `should rest a right-edge button by mirroring its rollover delta inward`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("c".utf8), size: Size(width: 100, height: 200))
@@ -458,7 +458,7 @@ struct LiveChromesTests {
     // it. Older watch chromes (watch ≤ watch5b/5s) have the same need
     // for the digital crown and side button, so honoring `onTop` fixes
     // every watch family in one go.
-    @Test func `assets layers onTop buttons above the composite`() throws {
+    @Test func `should layer on-top buttons above the bezel and the rest beneath it`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("composite".utf8), size: Size(width: 100, height: 200))
@@ -502,7 +502,7 @@ struct LiveChromesTests {
 
     // When every button image fails to rasterize the merged-canvas path
     // is skipped — assets fall back to the bare composite, no compose call.
-    @Test func `assets falls back to bare composite when every button image fails`() throws {
+    @Test func `should fall back to the bare bezel when every button image fails to render`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("c".utf8), size: Size(width: 100, height: 200))
@@ -535,7 +535,7 @@ struct LiveChromesTests {
     // composite are *retained* on the returned assets, instead of
     // being dropped after the merge.
 
-    @Test func `assets retains the bare composite separate from the merged composite`() throws {
+    @Test func `should keep the bare bezel apart from the merged one`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("composite-bare".utf8), size: Size(width: 100, height: 200))
@@ -564,7 +564,7 @@ struct LiveChromesTests {
         #expect(assets?.bareComposite == composite)
     }
 
-    @Test func `assets retains every button image keyed by name`() throws {
+    @Test func `should keep every button image by name`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let composite = ChromeImage(data: Data("c".utf8), size: Size(width: 100, height: 200))
@@ -596,7 +596,7 @@ struct LiveChromesTests {
         }
     }
 
-    @Test func `assets falls back bareComposite to composite when chrome has no buttons`() throws {
+    @Test func `should use the same image for the bare and merged bezel when the chrome has no buttons`() throws {
         let store = makeChromeStore()
         let rasterizer = MockPDFRasterizer()
         let pdf = Data("pdf".utf8)

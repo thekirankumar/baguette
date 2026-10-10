@@ -43,7 +43,7 @@ struct SharedFileNetworkTests {
 
     private let threeG = NetworkProfile.threeG.condition
 
-    @Test func `publishes to a path that names the simulator`() async throws {
+    @Test func `should publish to a path that names the simulator`() async throws {
         // Every simulator sees the host's `/tmp`, so a single shared file
         // meant conditioning one device replaced what an injected app on
         // another was still reading. Both sides derive this path — the
@@ -53,7 +53,7 @@ struct SharedFileNetworkTests {
         #expect(SharedFileNetwork.path(forUDID: "A") != SharedFileNetwork.path(forUDID: "B"))
     }
 
-    @Test func `apply writes the condition where the dylib reads it`() async throws {
+    @Test func `should write the applied condition where the dylib reads it`() async throws {
         let (network, _, sim, url) = makeNetwork()
 
         try await network.apply(threeG, on: sim)
@@ -65,7 +65,7 @@ struct SharedFileNetworkTests {
         #expect(try NetworkCondition(decoding: written) == threeG)
     }
 
-    @Test func `apply arms the network dylib`() async throws {
+    @Test func `should arm the network dylib when a condition is applied`() async throws {
         let (network, injection, sim, _) = makeNetwork()
 
         try await network.apply(threeG, on: sim)
@@ -73,7 +73,7 @@ struct SharedFileNetworkTests {
         verify(injection).arm(dylibPath: .value(Self.dylib), on: .any).called(1)
     }
 
-    @Test func `apply replaces the previous condition rather than appending`() async throws {
+    @Test func `should replace the previous condition rather than append when applying again`() async throws {
         // The file is a single current value, not a log — a dylib reading a
         // concatenation would fail to parse and condition nothing at all,
         // which looks exactly like the feature being off.
@@ -85,7 +85,7 @@ struct SharedFileNetworkTests {
         #expect(try NetworkCondition(decoding: try Data(contentsOf: url)) == .offline)
     }
 
-    @Test func `clear stops throttling an app that is already running`() async throws {
+    @Test func `should stop throttling an app that is already running when cleared`() async throws {
         // The whole safety argument for this feature. Disarming only stops
         // *future* launches loading the dylib; an app already running still
         // has it loaded and still reads this file. If clearing left the last
@@ -106,7 +106,7 @@ struct SharedFileNetworkTests {
         #expect(left.isUnconditioned)
     }
 
-    @Test func `clear disarms the dylib`() async throws {
+    @Test func `should disarm the network dylib when cleared`() async throws {
         let (network, injection, sim, _) = makeNetwork()
         try await network.apply(threeG, on: sim)
 
@@ -115,7 +115,7 @@ struct SharedFileNetworkTests {
         verify(injection).disarm(dylibPath: .value(Self.dylib), on: .any).called(1)
     }
 
-    @Test func `clear leaves a readable file rather than deleting it`() async throws {
+    @Test func `should leave a readable file rather than delete it when cleared`() async throws {
         // Deleting would leave a live reader with nothing to read, which the
         // dylib would have to interpret — and "no file" meaning "no
         // conditioning" is a rule that only holds if it's never ambiguous.
@@ -128,7 +128,7 @@ struct SharedFileNetworkTests {
         #expect(FileManager.default.fileExists(atPath: url.path))
     }
 
-    @Test func `a failed arm surfaces rather than reporting success`() async {
+    @Test func `should surface a failed arm rather than report success`() async {
         let failure = SimctlCapture.Failure.failed(udid: "U", status: 2, output: "arm failed")
         let (network, _, sim, _) = makeNetwork(
             armError: failure)
@@ -143,7 +143,7 @@ struct SharedFileNetworkTests {
         #expect(threw)
     }
 
-    @Test func `apply reports a missing dylib rather than arming an empty path`() async {
+    @Test func `should report a missing dylib rather than arm an empty path when applying`() async {
         // A build that didn't ship VirtualNetwork.dylib has nothing to arm.
         // Arming an empty entry makes dyld log a load failure for every app
         // launched afterwards, and publishing a condition nothing reads
@@ -161,7 +161,7 @@ struct SharedFileNetworkTests {
         verify(injection).arm(dylibPath: .any, on: .any).called(0)
     }
 
-    @Test func `current reports the condition this simulator is subject to`() async throws {
+    @Test func `should report the condition this simulator is subject to`() async throws {
         let (network, injection, sim, _) = makeNetwork()
         given(injection).armed(dylibPath: .any, on: .any).willReturn(true)
         try await network.apply(threeG, on: sim)
@@ -169,7 +169,7 @@ struct SharedFileNetworkTests {
         #expect(try await network.current(on: sim) == threeG)
     }
 
-    @Test func `current reports nothing for a simulator that is not armed`() async throws {
+    @Test func `should report no condition for a simulator that is not armed`() async throws {
         // The condition file is one per host, so a second simulator sees the
         // same bytes without being subject to them. Reporting "3g applied"
         // there would be a false alarm, and a badge that cries wolf is a
@@ -182,14 +182,14 @@ struct SharedFileNetworkTests {
         #expect(try await network.current(on: sim) == nil)
     }
 
-    @Test func `current reports nothing when nothing has been published`() async throws {
+    @Test func `should report no condition when nothing has been published`() async throws {
         let (network, injection, sim, _) = makeNetwork()
         given(injection).armed(dylibPath: .any, on: .any).willReturn(true)
 
         #expect(try await network.current(on: sim) == nil)
     }
 
-    @Test func `current propagates an unreadable injection state instead of reporting no conditioning`() async throws {
+    @Test func `should surface an unreadable injection state instead of reporting no conditioning`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
         try fixture.output("", stderr: "simulator unavailable", status: 2)
@@ -202,7 +202,7 @@ struct SharedFileNetworkTests {
         }
     }
 
-    @Test func `clearing a build with no dylib does nothing rather than failing`() async throws {
+    @Test func `should do nothing rather than fail when clearing a build with no dylib`() async throws {
         // Nothing was ever armed, so there is nothing to disarm — and a
         // `network clear` that reported failure on such a build would send
         // someone hunting for a problem that isn't there.
@@ -213,7 +213,7 @@ struct SharedFileNetworkTests {
         verify(injection).disarm(dylibPath: .any, on: .any).called(0)
     }
 
-    @Test func `applies into a directory that does not exist yet`() async throws {
+    @Test func `should apply into a directory that does not exist yet`() async throws {
         // The shared path is configurable, and a caller pointing at a fresh
         // directory shouldn't have to create it first.
         let dir = URL(fileURLWithPath: NSTemporaryDirectory())

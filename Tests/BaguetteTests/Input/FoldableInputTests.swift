@@ -25,7 +25,7 @@ struct FoldableInputTests {
         return (FoldableInput(touches: touches, keys: keys), touches, presses)
     }
 
-    @Test func `hardware keys are pressed as Device Hub presses them`() {
+    @Test func `should press a foldable's hardware keys as Device Hub presses them`() {
         let (input, _, presses) = make()
         #expect(input.button(.volumeUp, duration: 0) == true)
         #expect(input.button(.volumeDown, duration: 0) == true)
@@ -41,7 +41,7 @@ struct FoldableInputTests {
         #expect(presses.keys.map(\.1) == [0.25, 0.25, 0.25, 0.25, 2])
     }
 
-    @Test func `touches and buttons the guest has no key for go to the panel`() {
+    @Test func `should send touches and keyless buttons to the panel on a foldable`() {
         let (input, touches, presses) = make()
         given(touches).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
         given(touches).button(.any, duration: .any).willReturn(true)
@@ -51,7 +51,7 @@ struct FoldableInputTests {
         verify(touches).button(.value(.home), duration: .value(0)).called(1)
     }
 
-    @Test func `a key the guest refuses is a failed press`() {
+    @Test func `should fail a press when the guest refuses the key`() {
         let (input, _, _) = make(refusing: true)
         #expect(input.button(.volumeUp, duration: 0) == false)
     }

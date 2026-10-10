@@ -39,7 +39,7 @@ private final class UnbootedFakeDevice: NSObject {
 @Suite("PurpleEventOrientation — unbooted device")
 struct PurpleEventOrientationTests {
 
-    @Test func `set reports failure when the device vends no PurpleWorkspacePort`() {
+    @Test func `should reject a rotation when the device vends no PurpleWorkspacePort`() {
         let host = MockDeviceHost()
         let device = UnbootedFakeDevice(
             error: NSError(domain: "com.apple.CoreSimulator.SimError", code: 405)
@@ -70,7 +70,7 @@ struct PurpleEventOrientationTests {
     /// pinned by extra strong references so a double-release shows up as
     /// a failed expectation instead of taking the test runner down with
     /// it.
-    @Test func `set does not consume the error reference CoreSimulator wrote back`() {
+    @Test func `should not over-release the error CoreSimulator writes back when a rotation fails`() {
         let error = NSError(domain: "com.apple.CoreSimulator.SimError", code: 405)
         let host = MockDeviceHost()
         let device = UnbootedFakeDevice(error: error)

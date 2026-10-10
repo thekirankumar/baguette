@@ -17,7 +17,7 @@ import Foundation
 @Suite("MotionKind")
 struct MotionKindTests {
 
-    @Test func `classifies each of the browser's speed presets as its own label`() {
+    @Test func `should classify each of the browser's speed presets as its own label`() {
         #expect(MotionKind.from(speed: 1.4) == .walking)
         #expect(MotionKind.from(speed: 3.5) == .running)
         #expect(MotionKind.from(speed: 6) == .cycling)
@@ -25,20 +25,20 @@ struct MotionKindTests {
         #expect(MotionKind.from(speed: 29) == .automotive)
     }
 
-    @Test func `reads a standstill as stationary`() {
+    @Test func `should read a standstill as stationary`() {
         // Releasing the joystick pins the device — `location set` reports
         // `speed,-1 course,-1`, and the app should see "not moving".
         #expect(MotionKind.from(speed: 0) == .stationary)
     }
 
-    @Test func `treats a negative speed as unknown, not as a standstill`() {
+    @Test func `should treat a negative speed as unknown, not as a standstill`() {
         // CoreLocation spells "I don't know the speed" as -1. That is not
         // the same claim as "the device is still", and an app that gates on
         // `stationary` deserves the difference.
         #expect(MotionKind.from(speed: -1) == .unknown)
     }
 
-    @Test func `keeps a slow drift stationary rather than calling it a walk`() {
+    @Test func `should keep a slow drift stationary rather than calling it a walk`() {
         // Dead-reckoning jitter around the pin shouldn't read as walking.
         #expect(MotionKind.from(speed: 0.1) == .stationary)
     }
@@ -51,7 +51,7 @@ struct MotionKindTests {
     ///
     /// The enum is not dense: `2` also reads as stationary, and `3` / `7` /
     /// `9` read as no flags at all. Only the values below are trusted.
-    @Test func `carries the measured CLMotionActivity type for each kind`() {
+    @Test func `should carry the measured Core Motion activity type for each kind`() {
         #expect(MotionKind.unknown.coreMotionType == 0)
         #expect(MotionKind.stationary.coreMotionType == 1)
         #expect(MotionKind.walking.coreMotionType == 4)
@@ -60,7 +60,7 @@ struct MotionKindTests {
         #expect(MotionKind.running.coreMotionType == 8)
     }
 
-    @Test func `never maps a kind onto one of the untrusted enum values`() {
+    @Test func `should never map a kind onto one of the untrusted activity type values`() {
         // 2 / 3 / 7 / 9 exist in the enum but either duplicate another
         // state or read as nothing. If a future kind lands on one of them
         // that's a mapping bug, not a new capability.

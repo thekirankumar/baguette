@@ -6,7 +6,7 @@ import Testing
 @Suite("Simulator 3D model")
 struct SimulatorDeviceModelTests {
 
-    @Test func `renamed simulator retains its hardware model`() throws {
+    @Test func `should keep a renamed simulator's hardware model`() throws {
         let simulator = MockSimulator()
         given(simulator).deviceTypeName.willReturn("iPhone 17 Pro")
         given(simulator).name.willReturn("Team QA iPhone")
@@ -16,7 +16,7 @@ struct SimulatorDeviceModelTests {
         #expect(try simulator.deviceModel(in: catalog) == installed)
     }
 
-    @Test func `resolves a model from stable device type and visible name`() throws {
+    @Test func `should resolve a model from the stable device type and visible name`() throws {
         let simulator = MockSimulator()
         let models = MockDeviceModels()
         let installed = Self.installed()

@@ -9,21 +9,21 @@ import Mockable
 @Suite("IndigoHIDTouchTarget")
 struct IndigoHIDTouchTargetTests {
 
-    @Test func `IndigoHIDInput defaults touch target to phone digitizer`() {
+    @Test func `should touch the phone digitizer by default`() {
         let host = MockDeviceHost()
         let input = IndigoHIDInput(udid: "ghost", host: host)
         #expect(input.touchTarget == IndigoHIDTouchTarget.phone)
         #expect(input.touchTarget == 0x32)
     }
 
-    @Test func `IndigoHIDInput retains a custom touch target`() {
+    @Test func `should keep a custom touch target when one is given`() {
         let host = MockDeviceHost()
         let carPlay: UInt32 = 0x4000_0065
         let input = IndigoHIDInput(udid: "ghost", host: host, touchTarget: carPlay)
         #expect(input.touchTarget == carPlay)
     }
 
-    @Test func `IOHIDDigitizerDispatch patch writes the given target into message slots`() {
+    @Test func `should address each touch message to the given target`() {
         let size = 0x110
         guard let buf = malloc(size) else {
             Issue.record("malloc failed")
@@ -39,7 +39,7 @@ struct IndigoHIDTouchTargetTests {
         #expect(buf.load(fromByteOffset: 0x10c, as: UInt32.self) == custom)
     }
 
-    @Test func `IOHIDDigitizerDispatch patch defaults target to phone digitizer`() {
+    @Test func `should address each touch message to the phone digitizer when no target is given`() {
         let size = 0x110
         guard let buf = malloc(size) else {
             Issue.record("malloc failed")

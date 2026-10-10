@@ -36,7 +36,7 @@ struct SimctlInterfaceTests {
 
     // MARK: - reading
 
-    @Test func `reading appearance runs simctl ui appearance with no value`() async throws {
+    @Test func `should read the appearance with simctl ui appearance and no value`() async throws {
         let (interface, captures) = makeInterface(stdout: "dark\n")
         let appearance = try await interface.appearance()
 
@@ -45,19 +45,19 @@ struct SimctlInterfaceTests {
         #expect(appearance == .dark)
     }
 
-    @Test func `reading contrast parses simctl's answer`() async throws {
+    @Test func `should read the contrast setting from simctl's answer`() async throws {
         let (interface, captures) = makeInterface(stdout: "enabled\n")
         #expect(try await interface.increaseContrast() == .enabled)
         #expect(captures.arguments == ["simctl", "ui", "U", "increase_contrast"])
     }
 
-    @Test func `reading content size parses simctl's answer`() async throws {
+    @Test func `should read the content size from simctl's answer`() async throws {
         let (interface, captures) = makeInterface(stdout: "accessibility-large\n")
         #expect(try await interface.contentSize() == .accessibilityLarge)
         #expect(captures.arguments == ["simctl", "ui", "U", "content_size"])
     }
 
-    @Test func `a shut-down device reads as unknown rather than throwing`() async throws {
+    @Test func `should read a shut-down device as unknown rather than fail`() async throws {
         // simctl answers "unknown" and exits 0 for a device that isn't
         // booted. That's a state to show, not an error to raise.
         let (interface, _) = makeInterface(stdout: "unknown\n")
@@ -67,19 +67,19 @@ struct SimctlInterfaceTests {
 
     // MARK: - writing
 
-    @Test func `setting appearance appends the value to the same verb`() async throws {
+    @Test func `should set the appearance by appending the value to the same verb`() async throws {
         let (interface, captures) = makeInterface()
         try await interface.setAppearance(.dark)
         #expect(captures.arguments == ["simctl", "ui", "U", "appearance", "dark"])
     }
 
-    @Test func `setting contrast appends the value`() async throws {
+    @Test func `should set the contrast setting by appending the value`() async throws {
         let (interface, captures) = makeInterface()
         try await interface.setIncreaseContrast(.enabled)
         #expect(captures.arguments == ["simctl", "ui", "U", "increase_contrast", "enabled"])
     }
 
-    @Test func `setting a content size names the category`() async throws {
+    @Test func `should name the category when setting a content size`() async throws {
         let (interface, captures) = makeInterface()
         try await interface.setContentSize(.size(.accessibilityExtraLarge))
         #expect(captures.arguments == [
@@ -87,7 +87,7 @@ struct SimctlInterfaceTests {
         ])
     }
 
-    @Test func `stepping content size passes the relative word through`() async throws {
+    @Test func `should pass the relative word through when stepping the content size`() async throws {
         let (interface, captures) = makeInterface()
         try await interface.setContentSize(.increment)
         #expect(captures.arguments == ["simctl", "ui", "U", "content_size", "increment"])
@@ -95,7 +95,7 @@ struct SimctlInterfaceTests {
 
     // MARK: - refusals and failures
 
-    @Test func `setting a read-only state is refused before anything is spawned`() async throws {
+    @Test func `should refuse to set a read-only appearance before anything is spawned`() async throws {
         // `unknown` is an answer, never an instruction. Catching it here
         // means the error names the real mistake instead of echoing a
         // simctl usage dump.
@@ -106,7 +106,7 @@ struct SimctlInterfaceTests {
         #expect(captures.ran == false)
     }
 
-    @Test func `an unsupported contrast is refused the same way`() async throws {
+    @Test func `should refuse to set an unsupported contrast the same way`() async throws {
         let (interface, captures) = makeInterface()
         await #expect(throws: InterfaceError.notSettable("unsupported")) {
             try await interface.setIncreaseContrast(.unsupported)
@@ -114,7 +114,7 @@ struct SimctlInterfaceTests {
         #expect(captures.ran == false)
     }
 
-    @Test func `a read-only content size is refused rather than applied as large`() async throws {
+    @Test func `should refuse a read-only content size rather than apply it as large`() async throws {
         // The third setter used to fall back to "large" for a state
         // that can only be read, quietly changing the device to a
         // category nobody asked for.
@@ -125,14 +125,14 @@ struct SimctlInterfaceTests {
         #expect(captures.ran == false)
     }
 
-    @Test func `a non-zero exit is reported with its status`() async throws {
+    @Test func `should report a non-zero simctl exit with its status`() async throws {
         let (interface, _) = makeInterface(exitCode: 3)
         await #expect(throws: InterfaceError.simctlFailed(status: 3)) {
             try await interface.setAppearance(.dark)
         }
     }
 
-    @Test func `a spawn that never starts surfaces its own error`() async throws {
+    @Test func `should surface its own error when simctl never starts`() async throws {
         // Distinct from a non-zero exit: the process didn't run at all
         // (missing xcrun, fork failure). The caller shouldn't see this
         // as a device that answered.
@@ -148,7 +148,7 @@ struct SimctlInterfaceTests {
         await #expect(throws: SpawnRefused.self) { try await interface.setAppearance(.dark) }
     }
 
-    @Test func `a failed read is reported rather than read as unknown`() async throws {
+    @Test func `should report a failed read rather than read it as unknown`() async throws {
         // A spawn that failed is a different thing from a device that
         // answered "unknown", and callers should be able to tell them
         // apart.

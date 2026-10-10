@@ -8,7 +8,7 @@ import Mockable
 @Suite("InputSurface")
 struct InputSurfaceTests {
 
-    @Test func `heal leaves an unshadowed surface alone`() async throws {
+    @Test func `should leave an unshadowed input surface alone when healing`() async throws {
         let surface = MockInputSurface()
         let sim = MockSimulator()
         given(surface).shadowed(on: .any).willReturn(false)
@@ -19,7 +19,7 @@ struct InputSurfaceTests {
         verify(surface).reclaim(on: .any).called(0)
     }
 
-    @Test func `heal reclaims a shadowed surface`() async throws {
+    @Test func `should reclaim a shadowed input surface when healing`() async throws {
         let surface = MockInputSurface()
         let sim = MockSimulator()
         given(surface).shadowed(on: .any).willReturn(true)
@@ -31,7 +31,7 @@ struct InputSurfaceTests {
         verify(surface).reclaim(on: .any).called(1)
     }
 
-    @Test func `heal surfaces a failed reclaim`() async {
+    @Test func `should report a failed reclaim when healing`() async {
         let surface = MockInputSurface()
         let sim = MockSimulator()
         given(surface).shadowed(on: .any).willReturn(true)
@@ -42,7 +42,7 @@ struct InputSurfaceTests {
         }
     }
 
-    @Test func `healing after boot waits for the surface to exist first`() async throws {
+    @Test func `should wait for the input surface to be ready when healing after boot`() async throws {
         let surface = MockInputSurface()
         let sim = MockSimulator()
         given(surface).ready(on: .any).willReturn()
@@ -55,7 +55,7 @@ struct InputSurfaceTests {
         verify(surface).ready(on: .any).called(1)
     }
 
-    @Test func `each outcome says what happened in one line`() {
+    @Test func `should summarise each heal outcome in one line`() {
         #expect(HealOutcome.unshadowed.summary.contains("not shadowed"))
         #expect(HealOutcome.reclaimed.summary.contains("reclaimed"))
     }

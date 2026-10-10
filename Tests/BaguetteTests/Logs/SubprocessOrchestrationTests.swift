@@ -53,7 +53,7 @@ struct SimDeviceLogStreamOrchestrationTests {
 
     // MARK: - byte-to-line dispatch
 
-    @Test func `single line in one chunk fires onLine once`() throws {
+    @Test func `should deliver one log line when a single line arrives in one chunk`() throws {
         let (stream, _, captures) = makeStream()
         let lines = Recorder<String>()
         try stream.start(filter: LogFilter(),
@@ -63,7 +63,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(lines.values == ["hello"])
     }
 
-    @Test func `partial line is buffered until newline arrives in a later chunk`() throws {
+    @Test func `should hold a partial log line until its newline arrives in a later chunk`() throws {
         let (stream, _, captures) = makeStream()
         let lines = Recorder<String>()
         try stream.start(filter: LogFilter(),
@@ -75,7 +75,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(lines.values == ["partial line"])
     }
 
-    @Test func `multi-line chunk fires onLine once per line`() throws {
+    @Test func `should deliver each log line when several arrive in one chunk`() throws {
         let (stream, _, captures) = makeStream()
         let lines = Recorder<String>()
         try stream.start(filter: LogFilter(),
@@ -87,7 +87,7 @@ struct SimDeviceLogStreamOrchestrationTests {
 
     // MARK: - termination handling
 
-    @Test func `child exit with code zero fires onTerminate with nil error`() throws {
+    @Test func `should end the log stream cleanly when log stream exits with code zero`() throws {
         let (stream, _, captures) = makeStream()
         let term = Recorder<Error?>()
         try stream.start(filter: LogFilter(),
@@ -98,7 +98,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(term.values.first ?? Optional<Error>.none == nil)
     }
 
-    @Test func `child exit with non-zero code surfaces nonZeroExit`() throws {
+    @Test func `should end the log stream with the exit code when log stream exits non-zero`() throws {
         let (stream, _, captures) = makeStream()
         let term = Recorder<Error?>()
         try stream.start(filter: LogFilter(),
@@ -111,7 +111,7 @@ struct SimDeviceLogStreamOrchestrationTests {
 
     // MARK: - lifecycle
 
-    @Test func `start twice throws alreadyStarted`() throws {
+    @Test func `should refuse to start a log stream that is already running`() throws {
         let (stream, _, _) = makeStream()
         try stream.start(filter: LogFilter(),
                          onLine: { _ in }, onTerminate: { _ in })
@@ -121,7 +121,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         }
     }
 
-    @Test func `stop terminates the subprocess and fires onTerminate with nil error`() throws {
+    @Test func `should stop log stream and end cleanly when stopped`() throws {
         let (stream, sub, _) = makeStream()
         let term = Recorder<Error?>()
         try stream.start(filter: LogFilter(),
@@ -133,7 +133,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(term.values.first ?? Optional<Error>.none == nil)
     }
 
-    @Test func `stop is idempotent — second stop is a no-op`() throws {
+    @Test func `should stop log stream only once when stopped twice`() throws {
         let (stream, sub, _) = makeStream()
         try stream.start(filter: LogFilter(),
                          onLine: { _ in }, onTerminate: { _ in })
@@ -145,7 +145,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         verify(sub).terminate().called(1)
     }
 
-    @Test func `bytes received after stop are dropped silently`() throws {
+    @Test func `should drop log output that arrives after the stream stopped`() throws {
         let (stream, _, captures) = makeStream()
         let lines = Recorder<String>()
         try stream.start(filter: LogFilter(),
@@ -156,7 +156,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(lines.values.isEmpty)
     }
 
-    @Test func `terminate after stop doesn't double-fire onTerminate`() throws {
+    @Test func `should end the log stream only once when the process exits after a stop`() throws {
         let (stream, _, captures) = makeStream()
         let term = Recorder<Error?>()
         try stream.start(filter: LogFilter(),
@@ -169,7 +169,7 @@ struct SimDeviceLogStreamOrchestrationTests {
 
     // MARK: - argv plumbing
 
-    @Test func `start passes /usr/bin/xcrun + simctl-spawn argv to the subprocess`() throws {
+    @Test func `should run xcrun simctl spawn on the device with log stream and the chosen filter`() throws {
         let (stream, _, captures) = makeStream()
         try stream.start(filter: LogFilter(level: .debug, style: .json),
                          onLine: { _ in }, onTerminate: { _ in })
@@ -187,7 +187,7 @@ struct SimDeviceLogStreamOrchestrationTests {
 
     // MARK: - device-resolution gating still applies
 
-    @Test func `start throws simulatorNotBooted before touching the subprocess`() {
+    @Test func `should refuse as not booted before running anything when no device matches the udid`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let sub = MockSubprocess()

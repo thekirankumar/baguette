@@ -124,7 +124,7 @@ struct ScreenRecorderTests {
 
     // MARK: - Sizing
 
-    @Test func `the requested size resolves against the first frame the simulator delivers`() throws {
+    @Test func `should size the video from the first frame the simulator delivers`() throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(size: try CaptureSize.parse("square")),
             readings: [0, 0]
@@ -137,7 +137,7 @@ struct ScreenRecorderTests {
         #expect(captures.placement?.height == 2796)
     }
 
-    @Test func `the reel is opened once no matter how many frames arrive`() throws {
+    @Test func `should open the video once no matter how many frames arrive`() throws {
         let (recorder, captures) = makeRecorder(plan: makePlan(fps: 60), readings: [0, 0, 0.02, 0.04])
         try recorder.start()
         captures.deliver(try makeSurface(), times: 3)
@@ -148,7 +148,7 @@ struct ScreenRecorderTests {
 
     // MARK: - Cadence
 
-    @Test func `frames arriving faster than the requested frame rate are dropped`() throws {
+    @Test func `should drop frames that arrive faster than the requested frame rate`() throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 10),
             readings: [0, 0, 0.02, 0.04, 0.1, 0.11, 0.2]
@@ -159,7 +159,7 @@ struct ScreenRecorderTests {
         #expect(captures.appended == [0, 0.1, 0.2])
     }
 
-    @Test func `a frame's timestamp is measured from the start of the recording, not from the epoch`() throws {
+    @Test func `should time each frame from the start of the recording, not from the epoch`() throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 10),
             readings: [1000, 1000, 1000.5]
@@ -170,7 +170,7 @@ struct ScreenRecorderTests {
         #expect(captures.appended == [0, 0.5])
     }
 
-    @Test func `a screen that stays still at first still opens the video on its first frame`() throws {
+    @Test func `should start the video on the first frame even when the screen stays still at first`() throws {
         // Launch at 0, nothing changes until 3 s in. The frame that
         // finally arrives anchors the file at zero rather than the
         // video opening on three seconds of nothing.
@@ -186,7 +186,7 @@ struct ScreenRecorderTests {
 
     // MARK: - Duration
 
-    @Test func `a recording stops itself once the requested duration has elapsed`() throws {
+    @Test func `should stop recording once the requested duration has elapsed`() throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 10, duration: 1.0),
             readings: [0, 0, 0.5, 1.2]
@@ -199,7 +199,7 @@ struct ScreenRecorderTests {
         #expect(captures.screenStopped == 1)
     }
 
-    @Test func `a recording without a duration keeps going for as long as frames arrive`() throws {
+    @Test func `should keep recording for as long as frames arrive when no duration is given`() throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 1, duration: nil),
             readings: [0, 0, 60, 3600]
@@ -211,7 +211,7 @@ struct ScreenRecorderTests {
         #expect(recorder.isRecording)
     }
 
-    @Test func `frames delivered after the recording stopped are ignored`() throws {
+    @Test func `should ignore frames delivered after the recording stopped`() throws {
         let (recorder, captures) = makeRecorder(plan: makePlan(fps: 60), readings: [0, 0, 0.1, 0.2])
         try recorder.start()
         let surface = try makeSurface()
@@ -224,7 +224,7 @@ struct ScreenRecorderTests {
 
     // MARK: - Finishing
 
-    @Test func `a finished recording reports the frames it captured and the canvas it wrote`() async throws {
+    @Test func `should report the frames captured and the canvas written when a recording finishes`() async throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 10, duration: nil),
             readings: [0, 0, 0.5, 1.0]
@@ -243,7 +243,7 @@ struct ScreenRecorderTests {
         #expect(captures.closed == 1)
     }
 
-    @Test func `a recording that never saw a frame fails rather than writing an empty file`() async throws {
+    @Test func `should fail rather than write an empty file when no frame was ever seen`() async throws {
         let (recorder, captures) = makeRecorder(plan: makePlan(), readings: [0, 0])
         try recorder.start()
 
@@ -253,7 +253,7 @@ struct ScreenRecorderTests {
         #expect(captures.closed == 0)
     }
 
-    @Test func `a reel that was opened but never written to is thrown away, not left on disk`() async throws {
+    @Test func `should throw away a video that was opened but never written to`() async throws {
         // The encoder refused the only frame that ever arrived, so the
         // reel is open over a file with no video in it. Finishing must
         // clear that file away rather than leave an unplayable stub
@@ -272,7 +272,7 @@ struct ScreenRecorderTests {
         #expect(captures.closed == 0)
     }
 
-    @Test func `a take whose reel failed to close never reports success on a retry`() async throws {
+    @Test func `should never report success on a retry when the video failed to close`() async throws {
         // `finishWriting` failing means the file on disk was never
         // flushed. Reporting "Recorded 3 frames" the second time asked
         // would be reporting on a file that doesn't play.
@@ -292,7 +292,7 @@ struct ScreenRecorderTests {
         }
     }
 
-    @Test func `a reel that was never opened has nothing to throw away`() async throws {
+    @Test func `should throw nothing away when the video was never opened`() async throws {
         let (recorder, captures) = makeRecorder(plan: makePlan(), readings: [0, 0])
         try recorder.start()
 
@@ -302,7 +302,7 @@ struct ScreenRecorderTests {
         #expect(captures.discarded == 0)
     }
 
-    @Test func `finishing twice closes the reel once`() async throws {
+    @Test func `should close the video once when the recording is finished twice`() async throws {
         let (recorder, captures) = makeRecorder(plan: makePlan(), readings: [0, 0])
         try recorder.start()
         captures.deliver(try makeSurface())
@@ -316,7 +316,7 @@ struct ScreenRecorderTests {
 
     // MARK: - Failure
 
-    @Test func `a screen that will not start surfaces the failure to the caller`() {
+    @Test func `should surface the failure when the screen will not start`() {
         struct Boom: Error {}
         let (recorder, _) = makeRecorder(
             plan: makePlan(), readings: [0, 0], startFailure: Boom()
@@ -324,7 +324,7 @@ struct ScreenRecorderTests {
         #expect(throws: Boom.self) { try recorder.start() }
     }
 
-    @Test func `a writer that will not open is reported instead of blamed on the simulator`() async throws {
+    @Test func `should report a video that will not open rather than blame the simulator`() async throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(),
             readings: [0, 0],
@@ -341,7 +341,7 @@ struct ScreenRecorderTests {
         #expect(!recorder.isRecording)
     }
 
-    @Test func `a frame the encoder was not ready for is left out of the summary`() async throws {
+    @Test func `should leave a frame the encoder was not ready for out of the summary`() async throws {
         let (recorder, captures) = makeRecorder(
             plan: makePlan(fps: 10),
             readings: [0, 0, 0.5, 1.0],
@@ -359,7 +359,7 @@ struct ScreenRecorderTests {
         #expect(abs(summary.duration - 1.1) < 1e-9)
     }
 
-    @Test func `the no-frames failure explains that the simulator screen never changed`() {
+    @Test func `should explain that the simulator screen never changed when no frames were captured`() {
         #expect(RecordingError.noFramesCaptured.message
             == "No frames captured — the simulator screen never changed. "
                 + "Drive some input while recording.")

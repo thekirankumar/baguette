@@ -14,7 +14,7 @@ struct BakeryEdgeCaseTests {
 
     // MARK: - references
 
-    @Test func `an https URL with no repository path is refused`() {
+    @Test func `should refuse an https bakery reference with no repository path`() {
         // A host on its own names no repo to clone.
         #expect(throws: BakeryRefError.malformed(reference: "https://github.com")) {
             _ = try BakeryRef.parse("https://github.com")
@@ -24,20 +24,20 @@ struct BakeryEdgeCaseTests {
         }
     }
 
-    @Test func `an https reference that isn't a URL at all is refused`() {
+    @Test func `should refuse an https bakery reference that isn't a URL at all`() {
         #expect(throws: (any Error).self) {
             _ = try BakeryRef.parse("https://")
         }
     }
 
-    @Test func `an scp-style reference with no colon is refused`() {
+    @Test func `should refuse an scp-style bakery reference with no colon`() {
         // `git@host:owner/repo.git` — without the colon there's no path.
         #expect(throws: BakeryRefError.malformed(reference: "git@github.com")) {
             _ = try BakeryRef.parse("git@github.com")
         }
     }
 
-    @Test func `an scp-style reference with no owner and repo is refused`() {
+    @Test func `should refuse an scp-style bakery reference with no owner and repo`() {
         #expect(throws: BakeryRefError.malformed(reference: "git@github.com:tddworks")) {
             _ = try BakeryRef.parse("git@github.com:tddworks")
         }
@@ -45,13 +45,13 @@ struct BakeryEdgeCaseTests {
 
     // MARK: - menus
 
-    @Test func `a menu that isn't JSON is refused`() {
+    @Test func `should refuse a bakery menu that isn't JSON`() {
         #expect(throws: BakeryMenuError.malformedJSON) {
             _ = try BakeryMenu.parsing(json: Data("# a readme, not a menu".utf8))
         }
     }
 
-    @Test func `a menu that is JSON but not an object is refused`() {
+    @Test func `should refuse a bakery menu that is JSON but not an object`() {
         #expect(throws: BakeryMenuError.malformedJSON) {
             _ = try BakeryMenu.parsing(json: Data(#"["a11y"]"#.utf8))
         }
@@ -59,7 +59,7 @@ struct BakeryEdgeCaseTests {
 
     // MARK: - installing by bare name
 
-    @Test func `installing a name two trusted bakeries both offer is refused`() async throws {
+    @Test func `should refuse installing a name when two trusted bakeries both offer it`() async throws {
         // Ambiguity is the user's to resolve: silently picking the first
         // would install code from a source they didn't mean to prefer.
         let home = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -87,7 +87,7 @@ struct BakeryEdgeCaseTests {
         }
     }
 
-    @Test func `installing a name no trusted bakery offers is refused`() async throws {
+    @Test func `should refuse installing a name when no trusted bakery offers it`() async throws {
         let home = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("bakery-missing-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
@@ -99,7 +99,7 @@ struct BakeryEdgeCaseTests {
         }
     }
 
-    @Test func `the ambiguity message tells you how to disambiguate`() {
+    @Test func `should tell the user how to disambiguate when a plugin name is ambiguous`() {
         // Naming both sources and the qualified spelling, because
         // "ambiguous" alone leaves the user stuck.
         let error = BakeryResolveError.ambiguous(

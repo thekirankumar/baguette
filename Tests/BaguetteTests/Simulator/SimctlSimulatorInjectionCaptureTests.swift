@@ -9,7 +9,7 @@ struct SimctlSimulatorInjectionCaptureTests {
     private let camera = "/Library/Application Support/Baguette/builds/e4b2efe8eb36/VirtualCamera.dylib"
     private let motion = "/builds/current/VirtualMotion.dylib"
 
-    @Test func `camera and motion preserve each other despite guest constructor diagnostics on stderr`() async throws {
+    @Test func `should keep camera and motion armed together when the guest prints diagnostics on stderr`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
         let diagnostics = """
@@ -26,7 +26,7 @@ struct SimctlSimulatorInjectionCaptureTests {
         #expect(try fixture.written() == motion)
     }
 
-    @Test func `unknown environment reads fail without changing another injection`() async throws {
+    @Test func `should fail without touching other injections when the environment cannot be read`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
         for (stdout, stderr, status) in [("", "simulator unavailable", 1), (camera, "", 1), ("", "", 2)] {
@@ -43,7 +43,7 @@ struct SimctlSimulatorInjectionCaptureTests {
         }
     }
 
-    @Test func `armed query surfaces an unknown environment rather than reporting disarmed`() async throws {
+    @Test func `should report a failure rather than disarmed when the environment cannot be read`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
         try fixture.output("", stderr: "simulator unavailable", status: 1)

@@ -9,7 +9,7 @@ import Foundation
 @Suite("PluginOffer")
 struct PluginOfferTests {
 
-    @Test func `a bakery's menu becomes its offers, in the order the bakery listed them`() {
+    @Test func `should offer a bakery's plugins in the order its menu lists them`() {
         // Menu order is the bakery author's, and there is no reason to
         // override it — a bakery that puts its headline plugin first
         // meant to.
@@ -19,7 +19,7 @@ struct PluginOfferTests {
         #expect(offers.map(\.name) == ["deeplink", "a11y", "expo"])
     }
 
-    @Test func `a plugin already on this machine is marked installed`() {
+    @Test func `should mark a plugin already on this machine as installed`() {
         let offers = PluginOffer.list(
             of: Self.bakery(plugins: ["deeplink", "a11y"]), installed: ["a11y"]
         )
@@ -29,7 +29,7 @@ struct PluginOfferTests {
         ])
     }
 
-    @Test func `a plugin installed from somewhere else still counts as installed`() {
+    @Test func `should count a plugin as installed when it came from somewhere else`() {
         // The shelf answers "do I have this", not "did I get it from
         // here". `a11y` ships inside the binary and is in nobody's
         // `installed.json`, so a bakery offering it must not show an
@@ -38,7 +38,7 @@ struct PluginOfferTests {
         #expect(offers.first?.installed == true)
     }
 
-    @Test func `a bakery that offers nothing has no offers`() {
+    @Test func `should have no offers when a bakery offers nothing`() {
         // Possible after a menu shrinks and the pin hasn't been moved.
         #expect(PluginOffer.list(of: Self.bakery(plugins: []), installed: ["a11y"]).isEmpty)
     }

@@ -6,7 +6,7 @@ import Mockable
 
 @Suite("Tap")
 struct TapTests {
-    @Test func `parses x, y, size and optional duration`() throws {
+    @Test func `should read a tap's point, size and duration`() throws {
         let gesture = try Tap.parse([
             "x": 10.0, "y": 20.0, "width": 100.0, "height": 200.0, "duration": 0.1
         ])
@@ -15,12 +15,12 @@ struct TapTests {
                                 duration: 0.1))
     }
 
-    @Test func `defaults duration to 50ms when missing`() throws {
+    @Test func `should hold a tap for 50ms when no duration is given`() throws {
         let gesture = try Tap.parse(["x": 0, "y": 0, "width": 1, "height": 1])
         #expect(gesture.duration == 0.05)
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should tap the simulator at the given point, size and duration`() {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
         let tap = Tap(at: Point(x: 5, y: 6), size: Size(width: 100, height: 200), duration: 0.07)
@@ -38,7 +38,7 @@ struct TapTests {
     // like the streaming touch path already does. Without it the CLI
     // could not express what the browser's touch source sends for the
     // same point — see issue #75.
-    @Test func `parses an optional edge hint`() throws {
+    @Test func `should read the screen edge a tap starts on`() throws {
         let gesture = try Tap.parse([
             "x": 742, "y": 44, "width": 800, "height": 480, "edge": "top"
         ])
@@ -48,19 +48,19 @@ struct TapTests {
                                edge: .top))
     }
 
-    @Test func `leaves the edge hint unset when absent`() throws {
+    @Test func `should leave a tap's edge unset when none is given`() throws {
         #expect(try Tap.parse(["x": 0, "y": 0, "width": 1, "height": 1]).edge == nil)
     }
 
     // A typo must not silently become an interior tap — that is the
     // exact swallowed-tap failure the edge hint exists to cure.
-    @Test func `rejects an unrecognised edge`() {
+    @Test func `should reject a tap when its edge is unrecognised`() {
         #expect(throws: GestureError.invalidValue("edge", expected: "left | top | right | bottom")) {
             try Tap.parse(["x": 0, "y": 0, "width": 1, "height": 1, "edge": "Top"])
         }
     }
 
-    @Test func `executes with the edge hint passed through`() {
+    @Test func `should tap the simulator from the named screen edge when an edge is given`() {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
         let tap = Tap(at: Point(x: 742, y: 44),
@@ -82,7 +82,7 @@ struct TapTests {
 
 @Suite("Swipe")
 struct SwipeTests {
-    @Test func `parses start, end, size, optional duration`() throws {
+    @Test func `should read a swipe's start, end, size and duration`() throws {
         let g = try Swipe.parse([
             "startX": 1, "startY": 2, "endX": 3, "endY": 4,
             "width": 100, "height": 200, "duration": 0.3
@@ -93,14 +93,14 @@ struct SwipeTests {
                            duration: 0.3))
     }
 
-    @Test func `defaults duration to 250ms`() throws {
+    @Test func `should take 250ms over a swipe when no duration is given`() throws {
         let g = try Swipe.parse([
             "startX": 0, "startY": 0, "endX": 1, "endY": 1, "width": 1, "height": 1
         ])
         #expect(g.duration == 0.25)
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should swipe the simulator between the given points`() {
         let input = MockInput()
         given(input).swipe(from: .any, to: .any, size: .any, duration: .any).willReturn(true)
         let g = Swipe(from: .init(x: 0, y: 0), to: .init(x: 10, y: 10),
@@ -120,20 +120,20 @@ struct SwipeTests {
 
 @Suite("Touch1")
 struct Touch1Tests {
-    @Test func `parses phase, point, size`() throws {
+    @Test func `should read a one-finger touch's phase, point and size`() throws {
         let g = try Touch1.parse([
             "phase": "move", "x": 1, "y": 2, "width": 3, "height": 4
         ])
         #expect(g == Touch1(phase: .move, at: Point(x: 1, y: 2), size: Size(width: 3, height: 4)))
     }
 
-    @Test func `rejects unknown phase`() {
+    @Test func `should reject a one-finger touch when its phase is unknown`() {
         #expect(throws: GestureError.invalidValue("phase", expected: "down | move | up")) {
             try Touch1.parse(["phase": "wat", "x": 0, "y": 0, "width": 1, "height": 1])
         }
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should touch the simulator with one finger at the given phase and point`() {
         let input = MockInput()
         given(input).touch1(phase: .any, at: .any, size: .any, edge: .any).willReturn(true)
         let g = Touch1(phase: .up, at: Point(x: 5, y: 6), size: Size(width: 100, height: 200))
@@ -147,7 +147,7 @@ struct Touch1Tests {
         ).called(1)
     }
 
-    @Test func `parses optional edge field`() throws {
+    @Test func `should read the screen edge a one-finger touch starts on`() throws {
         let g = try Touch1.parse([
             "phase": "down", "x": 0.5, "y": 0.99,
             "width": 100, "height": 200, "edge": "bottom"
@@ -158,13 +158,13 @@ struct Touch1Tests {
                             edge: .bottom))
     }
 
-    @Test func `rejects an unrecognised edge`() {
+    @Test func `should reject a one-finger touch when its edge is unrecognised`() {
         #expect(throws: GestureError.invalidValue("edge", expected: "left | top | right | bottom")) {
             try Touch1.parse(["phase": "down", "x": 0, "y": 0, "width": 1, "height": 1, "edge": "Bottom"])
         }
     }
 
-    @Test func `executes with edge passed through`() {
+    @Test func `should touch the simulator with one finger from the named screen edge when an edge is given`() {
         let input = MockInput()
         given(input).touch1(phase: .any, at: .any, size: .any, edge: .any).willReturn(true)
         let g = Touch1(phase: .down,
@@ -186,7 +186,7 @@ struct Touch1Tests {
 
 @Suite("Touch2")
 struct Touch2Tests {
-    @Test func `parses phase, two points, size`() throws {
+    @Test func `should read a two-finger touch's phase, both points and size`() throws {
         let g = try Touch2.parse([
             "phase": "down",
             "x1": 1, "y1": 2, "x2": 3, "y2": 4,
@@ -200,7 +200,7 @@ struct Touch2Tests {
         ))
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should touch the simulator with two fingers at the given phase and points`() {
         let input = MockInput()
         given(input).touch2(phase: .any, first: .any, second: .any, size: .any).willReturn(true)
         let g = Touch2(phase: .move,
@@ -222,87 +222,87 @@ struct Touch2Tests {
 
 @Suite("Press")
 struct PressTests {
-    @Test func `parses home button`() throws {
+    @Test func `should read a home button press`() throws {
         let g = try Press.parse(["button": "home"])
         #expect(g == Press(button: .home))
     }
 
-    @Test func `parses lock button`() throws {
+    @Test func `should read a lock button press`() throws {
         let g = try Press.parse(["button": "lock"])
         #expect(g == Press(button: .lock))
     }
 
-    @Test func `parses power button`() throws {
+    @Test func `should read a power button press`() throws {
         let g = try Press.parse(["button": "power"])
         #expect(g == Press(button: .power))
     }
 
-    @Test func `parses volume-up button`() throws {
+    @Test func `should read a volume-up button press`() throws {
         let g = try Press.parse(["button": "volume-up"])
         #expect(g == Press(button: .volumeUp))
     }
 
-    @Test func `parses volume-down button`() throws {
+    @Test func `should read a volume-down button press`() throws {
         let g = try Press.parse(["button": "volume-down"])
         #expect(g == Press(button: .volumeDown))
     }
 
-    @Test func `parses action button`() throws {
+    @Test func `should read an action button press`() throws {
         let g = try Press.parse(["button": "action"])
         #expect(g == Press(button: .action))
     }
 
-    @Test func `parses app-switcher button`() throws {
+    @Test func `should read an app-switcher button press`() throws {
         let g = try Press.parse(["button": "app-switcher"])
         #expect(g == Press(button: .appSwitcher))
     }
 
-    @Test func `parses swipe-to-app-switcher button`() throws {
+    @Test func `should read a swipe-to-app-switcher button press`() throws {
         let g = try Press.parse(["button": "swipe-to-app-switcher"])
         #expect(g == Press(button: .swipeToAppSwitcher))
     }
 
-    @Test func `parses swipe-to-home button`() throws {
+    @Test func `should read a swipe-to-home button press`() throws {
         let g = try Press.parse(["button": "swipe-to-home"])
         #expect(g == Press(button: .swipeToHome))
     }
 
-    @Test func `parses pull-down-to-lock-screen button`() throws {
+    @Test func `should read a pull-down-to-lock-screen button press`() throws {
         let g = try Press.parse(["button": "pull-down-to-lock-screen"])
         #expect(g == Press(button: .pullDownToLockScreen))
     }
 
-    @Test func `parses pull-down-to-notification-center button`() throws {
+    @Test func `should read a pull-down-to-notification-center button press`() throws {
         let g = try Press.parse(["button": "pull-down-to-notification-center"])
         #expect(g == Press(button: .pullDownToNotificationCenter))
     }
 
-    @Test func `parses duration when present`() throws {
+    @Test func `should read a button's hold duration when one is given`() throws {
         let g = try Press.parse(["button": "action", "duration": 1.5])
         #expect(g == Press(button: .action, duration: 1.5))
     }
 
-    @Test func `defaults duration to zero when absent`() throws {
+    @Test func `should hold a button for no time when no duration is given`() throws {
         let g = try Press.parse(["button": "home"])
         #expect(g.duration == 0)
     }
 
-    @Test func `parses digital-crown button`() throws {
+    @Test func `should read a digital-crown button press`() throws {
         let g = try Press.parse(["button": "digital-crown"])
         #expect(g == Press(button: .digitalCrown))
     }
 
-    @Test func `parses side-button button`() throws {
+    @Test func `should read a side-button button press`() throws {
         let g = try Press.parse(["button": "side-button"])
         #expect(g == Press(button: .sideButton))
     }
 
-    @Test func `parses left-side-button button`() throws {
+    @Test func `should read a left-side-button button press`() throws {
         let g = try Press.parse(["button": "left-side-button"])
         #expect(g == Press(button: .leftSideButton))
     }
 
-    @Test func `rejects unknown button`() {
+    @Test func `should reject a press when the button is unknown`() {
         #expect(throws: GestureError.invalidValue(
             "button",
             expected: "home | lock | power | volume-up | volume-down | action | digital-crown | side-button | left-side-button | app-switcher | swipe-to-app-switcher | swipe-to-home | pull-down-to-lock-screen | pull-down-to-notification-center"
@@ -311,7 +311,7 @@ struct PressTests {
         }
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should press the named button on the simulator`() {
         let input = MockInput()
         given(input).button(.any, duration: .any).willReturn(true)
 
@@ -319,7 +319,7 @@ struct PressTests {
         verify(input).button(.value(.home), duration: .value(0)).called(1)
     }
 
-    @Test func `passes hold duration through to input`() {
+    @Test func `should hold the button on the simulator for the given duration`() {
         let input = MockInput()
         given(input).button(.any, duration: .any).willReturn(true)
 
@@ -332,12 +332,12 @@ struct PressTests {
 
 @Suite("DeviceButton")
 struct DeviceButtonTests {
-    @Test func `home and lock have no standard HID usage`() {
+    @Test func `should give home and lock no standard HID usage`() {
         #expect(DeviceButton.home.standardHIDUsage == nil)
         #expect(DeviceButton.lock.standardHIDUsage == nil)
     }
 
-    @Test func `arbitrary-HID buttons carry standard iPhone-family codes`() {
+    @Test func `should give iPhone hardware buttons their standard HID codes`() {
         #expect(DeviceButton.power.standardHIDUsage      == HIDUsage(page: 12, usage: 48))
         #expect(DeviceButton.volumeUp.standardHIDUsage   == HIDUsage(page: 12, usage: 233))
         #expect(DeviceButton.volumeDown.standardHIDUsage == HIDUsage(page: 12, usage: 234))
@@ -350,7 +350,7 @@ struct DeviceButtonTests {
     // the consumer "Information" usage (149), distinct from iPhone
     // power (48); the action button rides Apple's vendor-defined
     // page 0xFF01 (65281) usage 512.
-    @Test func `arbitrary-HID buttons carry Apple-Watch codes`() {
+    @Test func `should give Apple Watch hardware buttons their chrome HID codes`() {
         #expect(DeviceButton.digitalCrown.standardHIDUsage
             == HIDUsage(page: 12, usage: 64))
         #expect(DeviceButton.sideButton.standardHIDUsage
@@ -359,13 +359,13 @@ struct DeviceButtonTests {
             == HIDUsage(page: 65281, usage: 512))
     }
 
-    @Test func `Apple-Watch button raw values match watchchrome json`() {
+    @Test func `should name Apple Watch buttons as the watch chrome does`() {
         #expect(DeviceButton.digitalCrown.rawValue   == "digital-crown")
         #expect(DeviceButton.sideButton.rawValue     == "side-button")
         #expect(DeviceButton.leftSideButton.rawValue == "left-side-button")
     }
 
-    @Test func `press delegates to input button with the given duration`() {
+    @Test func `should press a button on the simulator for the given duration`() {
         let input = MockInput()
         given(input).button(.any, duration: .any).willReturn(true)
 
@@ -373,7 +373,7 @@ struct DeviceButtonTests {
         verify(input).button(.value(.action), duration: .value(1.5)).called(1)
     }
 
-    @Test func `press defaults duration to zero`() {
+    @Test func `should press a button on the simulator with no hold when no duration is given`() {
         let input = MockInput()
         given(input).button(.any, duration: .any).willReturn(true)
 
@@ -386,17 +386,17 @@ struct DeviceButtonTests {
 
 @Suite("Scroll")
 struct ScrollTests {
-    @Test func `parses deltaX and deltaY`() throws {
+    @Test func `should read a scroll's horizontal and vertical deltas`() throws {
         let g = try Scroll.parse(["deltaX": 1, "deltaY": -2])
         #expect(g == Scroll(deltaX: 1, deltaY: -2))
     }
 
-    @Test func `defaults deltas to zero when missing`() throws {
+    @Test func `should scroll by nothing when no deltas are given`() throws {
         let g = try Scroll.parse([:])
         #expect(g == Scroll(deltaX: 0, deltaY: 0))
     }
 
-    @Test func `executes against the input surface`() {
+    @Test func `should scroll the simulator by the given deltas`() {
         let input = MockInput()
         given(input).scroll(deltaX: .any, deltaY: .any).willReturn(true)
 
@@ -409,7 +409,7 @@ struct ScrollTests {
 
 @Suite("Pinch")
 struct PinchTests {
-    @Test func `parses centre, spreads, size, default duration`() throws {
+    @Test func `should read a pinch's centre, spreads and size with a default duration`() throws {
         let g = try Pinch.parse([
             "cx": 100, "cy": 200,
             "startSpread": 60, "endSpread": 240,
@@ -421,7 +421,7 @@ struct PinchTests {
                            duration: 0.6))
     }
 
-    @Test func `executes as a horizontal two-finger path centred on cx, cy`() {
+    @Test func `should pinch as two fingers moving horizontally about the centre`() {
         let input = MockInput()
         given(input).twoFingerPath(
             start1: .any, end1: .any, start2: .any, end2: .any,
@@ -451,13 +451,13 @@ struct PinchTests {
 
 @Suite("Field")
 struct FieldTests {
-    @Test func `requiredDouble throws invalidValue for non-numeric input`() {
+    @Test func `should reject a required number field when its value is not numeric`() {
         #expect(throws: GestureError.invalidValue("x", expected: "number")) {
             _ = try Field.requiredDouble(["x": "abc"], "x")
         }
     }
 
-    @Test func `requiredString throws invalidValue when value is not a string`() {
+    @Test func `should reject a required text field when its value is not a string`() {
         #expect(throws: GestureError.invalidValue("name", expected: "string")) {
             _ = try Field.requiredString(["name": 42], "name")
         }
@@ -465,7 +465,7 @@ struct FieldTests {
 
     // `message` derives a CLI-friendly description for every case;
     // exhaustively assert all three so a future case-add fails the suite.
-    @Test func `GestureError message covers all cases`() {
+    @Test func `should describe every gesture error in a readable message`() {
         #expect(GestureError.missingField("x").message == "missing field: x")
         #expect(GestureError.invalidValue("x", expected: "number").message
                 == "invalid x: expected number")
@@ -477,7 +477,7 @@ struct FieldTests {
 
 @Suite("Pan")
 struct PanTests {
-    @Test func `parses two starting points, delta, size`() throws {
+    @Test func `should read a pan's two starting points, delta and size`() throws {
         let g = try Pan.parse([
             "x1": 150, "y1": 500, "x2": 250, "y2": 500,
             "dx": 0, "dy": 200, "width": 393, "height": 852
@@ -491,7 +491,7 @@ struct PanTests {
         ))
     }
 
-    @Test func `executes as a parallel two-finger path translated by dx, dy`() {
+    @Test func `should pan as two fingers moving in parallel by the given delta`() {
         let input = MockInput()
         given(input).twoFingerPath(
             start1: .any, end1: .any, start2: .any, end2: .any,

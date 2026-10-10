@@ -55,7 +55,7 @@ struct GuestHingeMotorTests {
         return (motor, guest)
     }
 
-    @Test func `the first command starts the guest tool serving under a deadline; later ones are written to it`() throws {
+    @Test func `should start the guest tool serving under a deadline on the first command and write later ones to it`() throws {
         let (motor, guest) = make()
         try motor.fold(from: 130, to: 0, over: 0.8)
         try motor.fold(from: 0, to: 180, over: 0.5)
@@ -64,7 +64,7 @@ struct GuestHingeMotorTests {
         #expect(guest.written == ["sweep 130 0 800\n", "sweep 0 180 500\n"])
     }
 
-    @Test func `custom device sets scope the helper launch that rotation and folding share`() throws {
+    @Test func `should launch the helper rotation and folding share inside a custom device set`() throws {
         let (motor, guest) = make(deviceSetPath: "/tmp/custom devices")
         try motor.turn(to: .portrait)
         try motor.fold(from: 0, to: 130, over: 0.5)
@@ -74,7 +74,7 @@ struct GuestHingeMotorTests {
         #expect(guest.written == ["orientation portrait\n", "sweep 0 130 500\n"])
     }
 
-    @Test func `shared motors are isolated by device set and device identifier`() {
+    @Test func `should keep one shared motor per device set and device identifier`() {
         let udid = UUID().uuidString
         let a = GuestHingeMotor.forDevice(udid, deviceSetPath: "/sets/a")
         #expect(a === GuestHingeMotor.forDevice(udid, deviceSetPath: "/sets/a"))
@@ -83,7 +83,7 @@ struct GuestHingeMotorTests {
         #expect(a !== GuestHingeMotor.forDevice(UUID().uuidString, deviceSetPath: "/sets/a"))
     }
 
-    @Test func `a hardware key is pressed as Device Hub presses it, for as long as asked`() throws {
+    @Test func `should press a hardware key as Device Hub presses it, for as long as asked`() throws {
         let (motor, guest) = make()
         try motor.press(HIDUsage(page: 12, usage: 233), hold: 0.25)
         try motor.press(HIDUsage(page: 0xFF00, usage: 0x66), hold: 1.5)
@@ -96,7 +96,7 @@ struct GuestHingeMotorTests {
         (.landscapeLeft, "landscape-right"),
         (.landscapeRight, "landscape-left"),
     ])
-    func `rotation uses the native physical orientation values`(
+    func `should rotate using the native physical orientation values`(
         orientation: DeviceOrientation, native: String
     ) throws {
         let (motor, guest) = make()
@@ -110,7 +110,7 @@ struct GuestHingeMotorTests {
         #expect(physicalValues[native] == orientation.rawValue)
     }
 
-    @Test func `a command the guest refuses is an error carrying its status`() {
+    @Test func `should fail with the guest's status when the guest refuses a command`() {
         let (motor, guest) = make()
         guest.answer = { _ in ["done 1\n"] }
         #expect(throws: HingeError.toolFailed(status: 1)) { try motor.turn(to: .portrait) }
@@ -118,14 +118,14 @@ struct GuestHingeMotorTests {
         #expect(throws: HingeError.toolFailed(status: 2)) { try motor.fold(from: 0, to: 130, over: 0.5) }
     }
 
-    @Test func `diagnostics and answers split across reads are understood`() throws {
+    @Test func `should understand answers split across reads and mixed with diagnostics`() throws {
         let (motor, guest) = make()
         guest.greeting = "runtime warning\npi"
         guest.answer = { _ in ["d 4242\nbad line: x\ndo", "ne 0\n"] }
         try motor.turn(to: .landscapeLeft)
     }
 
-    @Test func `a command that is not answered stops the guest helper and bounds the outcome`() throws {
+    @Test func `should stop the guest helper and time out when a command is not answered`() throws {
         let (motor, guest) = make()
         guest.answer = { _ in [] }
         #expect(throws: HingeError.toolTimedOut) { try motor.turn(to: .portrait) }
@@ -136,7 +136,7 @@ struct GuestHingeMotorTests {
         #expect(guest.runs.count == 2)
     }
 
-    @Test func `a helper that never announced its pid is still abandoned`() {
+    @Test func `should still abandon an unanswering helper when it never announced its pid`() {
         let (motor, guest) = make()
         guest.greeting = nil
         guest.answer = { _ in [] }
@@ -145,7 +145,7 @@ struct GuestHingeMotorTests {
         #expect(guest.killed == 1)
     }
 
-    @Test func `a helper that ends without answering is an error, and the next command starts another`() throws {
+    @Test func `should fail when the helper ends without answering, and start another for the next command`() throws {
         let (motor, guest) = make()
         guest.answer = { _ in [] }
         guest.exitOnWrite = 164
@@ -158,7 +158,7 @@ struct GuestHingeMotorTests {
 
     /// Under load a spawn can outlast the helper's deadline; it then exits
     /// 3 having done nothing, which is a definite failure, not a timeout.
-    @Test func `a helper that started after its deadline reports that nothing was delivered`() {
+    @Test func `should report nothing was delivered when the helper started after its deadline`() {
         let (motor, guest) = make()
         guest.answer = { _ in [] }
         guest.exitOnWrite = 3
@@ -167,12 +167,12 @@ struct GuestHingeMotorTests {
             == "HingeControl started after its deadline and did nothing; the command was not delivered.")
     }
 
-    @Test func `a timeout says the stopped helper cannot act later`() {
+    @Test func `should explain on a timeout that the stopped helper cannot act later`() {
         #expect(String(describing: HingeError.toolTimedOut)
             == "HingeControl did not answer in time; the command may have been delivered, but the stopped helper cannot deliver it later.")
     }
 
-    @Test func `a tool that went away is started again for the next sweep`() throws {
+    @Test func `should start the tool again for the next sweep when it went away`() throws {
         let (motor, guest) = make()
         try motor.fold(from: 0, to: 130, over: 0.8)
         guest.onExit?(0)
@@ -180,7 +180,7 @@ struct GuestHingeMotorTests {
         #expect(guest.runs.count == 2)
     }
 
-    @Test func `a missing tool or a failing spawn is an error`() {
+    @Test func `should fail when the tool is missing or cannot be spawned`() {
         let (missing, _) = make(tool: nil)
         #expect(throws: HingeError.toolMissing) { try missing.fold(from: 0, to: 130, over: 0.5) }
         let (failing, _) = make(spawnFails: true)

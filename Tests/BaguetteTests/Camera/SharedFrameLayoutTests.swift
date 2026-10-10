@@ -4,23 +4,23 @@ import Foundation
 
 @Suite("SharedFrameLayout")
 struct SharedFrameLayoutTests {
-    @Test func `header size is 24 bytes`() {
+    @Test func `should give the shared frame a 24-byte header`() {
         #expect(SharedFrameLayout.headerSize == 24)
     }
 
-    @Test func `max canvas matches dylib reader's static cap`() {
+    @Test func `should cap the shared canvas at the virtual camera reader's 1280 by 1280`() {
         // VirtualCamera/Sources/SharedFrameReader.m: kMaxCanvas = 1280.
         // A mismatch here means the reader would reject our frames.
         #expect(SharedFrameLayout.maxCanvasWidth == 1280)
         #expect(SharedFrameLayout.maxCanvasHeight == 1280)
     }
 
-    @Test func `total byte count covers header plus 1280x1280 BGRA`() {
+    @Test func `should size the shared frame as the header plus a 1280 by 1280 BGRA canvas`() {
         // 24 + 1280 * 1280 * 4 = 6_553_624 bytes.
         #expect(SharedFrameLayout.totalByteCount == 24 + 1280 * 1280 * 4)
     }
 
-    @Test func `encodes fields little-endian at documented offsets`() {
+    @Test func `should write the frame header fields little-endian at their documented offsets`() {
         let header = SharedFrameLayout.encodeHeader(
             sequence: 0x0A0B0C0D,
             timestampMs: 0x11223344,

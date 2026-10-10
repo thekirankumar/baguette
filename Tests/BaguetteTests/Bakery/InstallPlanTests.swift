@@ -19,14 +19,14 @@ struct InstallPlanTests {
 
     // MARK: - resolving which plugin
 
-    @Test func `a ref naming a plugin resolves to just that entry`() throws {
+    @Test func `should install just the plugin a reference names`() throws {
         let ref = try BakeryRef.parse("acme/tools/expo")
         let plan = try InstallPlan.resolve(ref: ref, requested: nil, menu: twoPlugin)
         #expect(plan.map(\.name) == ["expo"])
         #expect(plan.first?.path == "tools/expo")
     }
 
-    @Test func `an explicit requested name wins over the ref`() throws {
+    @Test func `should let an explicitly requested name win over the reference`() throws {
         // `plugin install a11y` from a bakery already added — the ref
         // is the bakery, the requested name picks the plugin.
         let ref = try BakeryRef.parse("acme/tools")
@@ -34,7 +34,7 @@ struct InstallPlanTests {
         #expect(plan.map(\.name) == ["a11y"])
     }
 
-    @Test func `a single-plugin bakery needs no name`() throws {
+    @Test func `should install the only plugin of a single-plugin bakery without a name`() throws {
         let ref = try BakeryRef.parse("acme/solo")
         let plan = try InstallPlan.resolve(ref: ref, requested: nil, menu: onePlugin)
         #expect(plan.map(\.name) == ["hello"])
@@ -42,7 +42,7 @@ struct InstallPlanTests {
 
     // MARK: - errors
 
-    @Test func `a bare ref against a multi-plugin bakery is ambiguous`() throws {
+    @Test func `should reject a bare reference to a multi-plugin bakery as ambiguous`() throws {
         // Don't silently install all of them, and don't pick one —
         // make the user say which, naming the choices.
         let ref = try BakeryRef.parse("acme/tools")
@@ -51,14 +51,14 @@ struct InstallPlanTests {
         }
     }
 
-    @Test func `a requested name the bakery doesn't offer is rejected`() throws {
+    @Test func `should reject a requested name the bakery doesn't offer`() throws {
         let ref = try BakeryRef.parse("acme/tools")
         #expect(throws: InstallPlanError.notOffered(name: "ghost", available: ["a11y", "expo"])) {
             try InstallPlan.resolve(ref: ref, requested: "ghost", menu: twoPlugin)
         }
     }
 
-    @Test func `a ref plugin the bakery doesn't offer is rejected`() throws {
+    @Test func `should reject a referenced plugin the bakery doesn't offer`() throws {
         let ref = try BakeryRef.parse("acme/tools/ghost")
         #expect(throws: InstallPlanError.notOffered(name: "ghost", available: ["a11y", "expo"])) {
             try InstallPlan.resolve(ref: ref, requested: nil, menu: twoPlugin)

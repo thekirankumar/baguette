@@ -48,7 +48,7 @@ struct DeepLinkRoutesTests {
 
     // MARK: - openurl
 
-    @Test func `opening a custom scheme reports it reached the app`() async {
+    @Test func `should report that a custom-scheme link reached the app`() async {
         let (simulators, apps) = host()
         let outcome = await Server.openURL(udid: "U", url: "myapp://profile", simulators: simulators)
 
@@ -56,7 +56,7 @@ struct DeepLinkRoutesTests {
         verify(apps).open(.value(DeepLink.from("myapp://profile")!)).called(1)
     }
 
-    @Test func `opening an https link reports it went to the browser`() async {
+    @Test func `should report that an https link went to the browser`() async {
         // Dispatch succeeds; the link still lands in Safari. The URL bar
         // needs to say so, so the outcome carries the routing.
         let (simulators, _) = host()
@@ -66,7 +66,7 @@ struct DeepLinkRoutesTests {
         #expect(outcome == .opened(routing: .browser))
     }
 
-    @Test func `a bare word is refused as not a URL`() async {
+    @Test func `should refuse a bare word as not a URL`() async {
         let (simulators, apps) = host()
         let outcome = await Server.openURL(udid: "U", url: "profile", simulators: simulators)
 
@@ -74,13 +74,13 @@ struct DeepLinkRoutesTests {
         verify(apps).open(.any).called(0)
     }
 
-    @Test func `opening against an unknown device is reported`() async {
+    @Test func `should report an unknown device when opening a link on an unknown udid`() async {
         let (simulators, _) = host()
         let outcome = await Server.openURL(udid: "nope", url: "myapp://x", simulators: simulators)
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `a failed dispatch is reported`() async {
+    @Test func `should report a failed dispatch when the link cannot be opened`() async {
         let (simulators, _) = host(openSucceeds: false)
         let outcome = await Server.openURL(udid: "U", url: "myapp://x", simulators: simulators)
         #expect(outcome == .dispatchFailed)
@@ -88,7 +88,7 @@ struct DeepLinkRoutesTests {
 
     // MARK: - schemes
 
-    @Test func `the schemes route answers the ranked inventory`() async {
+    @Test func `should answer the schemes route with the ranked scheme inventory`() async {
         let (simulators, _) = host(installed: [Self.myApp])
         let outcome = await Server.schemes(udid: "U", query: "", simulators: simulators)
 
@@ -98,7 +98,7 @@ struct DeepLinkRoutesTests {
         ]))
     }
 
-    @Test func `the schemes route ranks against the typed query`() async {
+    @Test func `should rank the schemes against the typed query`() async {
         // Ranking is server-side so the browser never re-implements it.
         let (simulators, _) = host(installed: [
             InstalledApp(bundleIdentifier: "a", name: "A", schemes: ["superapp"]),
@@ -110,12 +110,12 @@ struct DeepLinkRoutesTests {
         #expect(suggestions.map(\.scheme) == ["app", "superapp"])
     }
 
-    @Test func `listing against an unknown device is reported`() async {
+    @Test func `should report an unknown device when listing schemes on an unknown udid`() async {
         let (simulators, _) = host()
         #expect(await Server.schemes(udid: "nope", query: "", simulators: simulators) == .unknownDevice)
     }
 
-    @Test func `a failed listing is reported`() async {
+    @Test func `should report a failed listing when the installed apps cannot be read`() async {
         let (simulators, _) = host(listSucceeds: false)
         #expect(await Server.schemes(udid: "U", query: "", simulators: simulators) == .listFailed)
     }
@@ -126,13 +126,13 @@ struct DeepLinkRoutesTests {
         (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any] ?? [:]
     }
 
-    @Test func `an opened custom scheme serialises as having reached the app`() {
+    @Test func `should tell the page a custom-scheme link reached the app, with no warning`() {
         let body = object(Server.openedJSONString(routing: .app))
         #expect(body["routing"] as? String == "app")
         #expect(body["warning"] == nil)
     }
 
-    @Test func `an opened https link serialises with the warning attached`() {
+    @Test func `should tell the page an https link went to the browser, with a Safari warning`() {
         // The copy lives server-side so the URL bar renders it rather
         // than keeping its own duplicate of the explanation.
         let body = object(Server.openedJSONString(routing: .browser))
@@ -141,7 +141,7 @@ struct DeepLinkRoutesTests {
         #expect(warning?.contains("Safari") == true)
     }
 
-    @Test func `suggestions serialise with what the bar needs to render a row`() {
+    @Test func `should give each scheme suggestion what the URL bar needs to render a row`() {
         let json = Server.schemesJSONString([
             SchemeSuggestion(scheme: "myapp", appName: "My App", bundleIdentifier: "com.example.MyApp"),
         ])
@@ -154,7 +154,7 @@ struct DeepLinkRoutesTests {
         #expect(rows.first?["bundleId"] as? String == "com.example.MyApp")
     }
 
-    @Test func `an empty inventory serialises as an empty list`() {
+    @Test func `should send an empty scheme list when no app declares a scheme`() {
         #expect((object(Server.schemesJSONString([]))["schemes"] as? [[String: Any]])?.isEmpty == true)
     }
 }

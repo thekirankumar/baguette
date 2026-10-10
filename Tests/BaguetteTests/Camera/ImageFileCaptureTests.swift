@@ -38,14 +38,14 @@ struct ImageFileCaptureTests {
         return url.path
     }
 
-    @Test func `start rejects a source that isn't a still image`() async {
+    @Test func `should refuse to start the image capture when the source is not a still image`() async {
         let capture = ImageFileCapture()
         await #expect(throws: (any Error).self) {
             try await capture.start(source: .video(path: "/tmp/clip.mp4")) { _ in }
         }
     }
 
-    @Test func `start decodes the file and emits a fitted, sequenced frame`() async throws {
+    @Test func `should deliver a still image as one fitted, sequenced camera frame`() async throws {
         let path = try writeTempPNG(width: 2000, height: 1000)
         defer { try? FileManager.default.removeItem(atPath: path) }
 

@@ -5,7 +5,7 @@ import Testing
 @Suite("InstalledDeviceModel")
 struct InstalledDeviceModelTests {
 
-    @Test func `local asset resolves relative to its model bundle`() throws {
+    @Test func `should resolve a local asset relative to its model bundle`() throws {
         let scratch = try Self.makeBundle()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let asset = scratch.appending(path: "device.usdz")
@@ -15,7 +15,7 @@ struct InstalledDeviceModelTests {
         #expect(try model.localAssetURL() == asset)
     }
 
-    @Test func `local asset rejects parent traversal`() throws {
+    @Test func `should reject a local asset path that traverses to the parent`() throws {
         let scratch = try Self.makeBundle()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let model = Self.installed(directory: scratch, file: "../secret.usdz")
@@ -25,7 +25,7 @@ struct InstalledDeviceModelTests {
         }
     }
 
-    @Test func `local asset rejects a symlink that leaves its model bundle`() throws {
+    @Test func `should reject a local asset symlink that leaves its model bundle`() throws {
         let scratch = try Self.makeBundle()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let outside = scratch.deletingLastPathComponent()
@@ -43,7 +43,7 @@ struct InstalledDeviceModelTests {
         }
     }
 
-    @Test func `local asset reports a missing file`() throws {
+    @Test func `should report a missing local asset file`() throws {
         let scratch = try Self.makeBundle()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let model = Self.installed(directory: scratch, file: "missing.usdz")

@@ -4,7 +4,7 @@ import Testing
 @Suite("H264Tuning")
 struct H264TuningTests {
 
-    @Test func `strict preset keeps low latency without the optional frame delay property`() {
+    @Test func `should keep the strict preset low-latency without setting a frame delay`() {
         let tuning = H264Tuning.strict
         #expect(tuning.realTime)
         #expect(!tuning.allowFrameReordering)
@@ -12,7 +12,7 @@ struct H264TuningTests {
         #expect(tuning.maxFrameDelayCount == nil)
     }
 
-    @Test func `low-latency preset holds no frames and disables reordering`() {
+    @Test func `should hold no frames and disable reordering in the low-latency preset`() {
         let t = H264Tuning.lowLatency
         #expect(t.realTime == true)
         #expect(t.allowFrameReordering == false)
@@ -20,15 +20,15 @@ struct H264TuningTests {
         #expect(t.lowLatencyRateControl == true)
     }
 
-    @Test func `keyframe interval is five seconds of frames at 60fps`() {
+    @Test func `should space keyframes five seconds apart at 60fps`() {
         #expect(H264Tuning.lowLatency.maxKeyFrameInterval(fps: 60) == 300)
     }
 
-    @Test func `keyframe interval scales with capture rate`() {
+    @Test func `should scale the keyframe interval with the capture rate`() {
         #expect(H264Tuning.lowLatency.maxKeyFrameInterval(fps: 30) == 150)
     }
 
-    @Test func `keyframe interval never collapses on a zero capture rate`() {
+    @Test func `should keep a non-zero keyframe interval when the capture rate is zero`() {
         #expect(H264Tuning.lowLatency.maxKeyFrameInterval(fps: 0) == 5)
     }
 }

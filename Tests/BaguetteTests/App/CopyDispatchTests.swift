@@ -25,7 +25,7 @@ struct CopyDispatchTests {
 
     // MARK: - routing
 
-    @Test func `a non-copy line falls through as notCopy`() async {
+    @Test func `should leave a line that is not a copy for the gesture pipeline`() async {
         let (pasteboard, input) = surfaces()
         for line in [
             #"{"type":"tap","x":1,"y":2,"width":390,"height":844}"#,
@@ -41,7 +41,7 @@ struct CopyDispatchTests {
         verify(pasteboard).syncToHost().called(0)
     }
 
-    @Test func `a valid copy line presses Cmd+C, syncs to the host, and acks ok`() async {
+    @Test func `should press Cmd+C, copy the simulator pasteboard to the host and ack ok for a copy line`() async {
         let (pasteboard, input) = surfaces()
         let outcome = await CopyDispatch.dispatch(
             line: #"{"type":"copy"}"#, pasteboard: pasteboard, input: input
@@ -51,7 +51,7 @@ struct CopyDispatchTests {
         verify(pasteboard).syncToHost().called(1)
     }
 
-    @Test func `press false ferries without a keystroke`() async {
+    @Test func `should copy to the host without a keystroke when press is false`() async {
         let (pasteboard, input) = surfaces()
         let outcome = await CopyDispatch.dispatch(
             line: #"{"type":"copy","press":false}"#, pasteboard: pasteboard, input: input
@@ -61,7 +61,7 @@ struct CopyDispatchTests {
         verify(pasteboard).syncToHost().called(1)
     }
 
-    @Test func `dispatches with surfaces vended by the simulator`() async {
+    @Test func `should copy using the pasteboard and input of the simulator`() async {
         let sim = MockSimulator()
         let (pasteboard, input) = surfaces()
         given(sim).pasteboard().willReturn(pasteboard)
@@ -73,7 +73,7 @@ struct CopyDispatchTests {
         #expect(outcome == .ok)
     }
 
-    @Test func `a simctl failure surfaces in the outcome`() async {
+    @Test func `should report a simctl failure when copying`() async {
         let input = MockInput()
         given(input).key(.any, modifiers: .any, duration: .any).willReturn(true)
         let pasteboard = MockPasteboard()
@@ -88,7 +88,7 @@ struct CopyDispatchTests {
 
     // MARK: - projections
 
-    @Test func `outcomes project to stdin acks and typed copy_result frames`() {
+    @Test func `should answer a copy with a stdin ack and a copy_result frame`() {
         #expect(CopyDispatch.Outcome.notCopy.ackJSON == nil)
         #expect(CopyDispatch.Outcome.notCopy.resultFrame == nil)
 

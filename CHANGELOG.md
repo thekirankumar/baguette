@@ -16,6 +16,13 @@ For releases prior to this changelog, see the
 
 ---
 
+## [0.2.4] - 2026-10-07
+
+### Fixed
+- The live 3D view (`stream.3d.mjpeg` / `stream.3d.avcc`) runs at up to 60 fps again, as smooth as the flat stream; 0.2.3's frame pacing had turned its old 20 fps setting into a hard cap. → [docs](docs/features/3d-rendering/frames.md)
+
+---
+
 ## [0.2.3] - 2026-10-05
 
 ### Added
@@ -90,7 +97,8 @@ For releases prior to this changelog, see the
 
 [0.1](docs/changelog/0.1.md)
 
-[Unreleased]: https://github.com/tddworks/baguette/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/tddworks/baguette/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/tddworks/baguette/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/tddworks/baguette/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/tddworks/baguette/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/tddworks/baguette/compare/v0.2.0...v0.2.1

@@ -6,7 +6,7 @@ import Mockable
 @Suite("IndigoHIDInput — error paths")
 struct IndigoHIDInputErrorTests {
 
-    @Test func `tap returns false when host has no matching device`() {
+    @Test func `should fail a tap when the host has no matching device`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let input = IndigoHIDInput(udid: "ghost", host: host)
@@ -20,7 +20,7 @@ struct IndigoHIDInputErrorTests {
         #expect(!ok)
     }
 
-    @Test func `swipe returns false when host has no matching device`() {
+    @Test func `should fail a swipe when the host has no matching device`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let input = IndigoHIDInput(udid: "ghost", host: host)
@@ -34,7 +34,7 @@ struct IndigoHIDInputErrorTests {
         #expect(!ok)
     }
 
-    @Test func `touch1 returns false when host has no matching device`() {
+    @Test func `should fail a one-finger touch when the host has no matching device`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let input = IndigoHIDInput(udid: "ghost", host: host)
@@ -48,7 +48,7 @@ struct IndigoHIDInputErrorTests {
         #expect(!ok)
     }
 
-    @Test func `key returns false when host has no matching device`() {
+    @Test func `should fail a key press when the host has no matching device`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let input = IndigoHIDInput(udid: "ghost", host: host)

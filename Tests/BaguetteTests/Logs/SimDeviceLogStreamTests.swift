@@ -15,7 +15,7 @@ struct SimDeviceLogStreamErrorTests {
 
     // MARK: - device resolution
 
-    @Test func `start throws simulatorNotBooted when host returns no device`() {
+    @Test func `should refuse to stream logs as not booted when no device matches the udid`() {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let stream = SimDeviceLogStream(udid: "ghost", host: host)
@@ -25,7 +25,7 @@ struct SimDeviceLogStreamErrorTests {
         }
     }
 
-    @Test func `start throws simulatorNotBooted when device state is shutdown`() {
+    @Test func `should refuse to stream logs as not booted when the device is shut down`() {
         let host = MockDeviceHost()
         let device = FakeSimDevice(state: 1) // 1 = shutdown
         given(host).resolveDevice(udid: .any).willReturn(device)
@@ -36,7 +36,7 @@ struct SimDeviceLogStreamErrorTests {
         }
     }
 
-    @Test func `start throws simulatorNotBooted when device state is booting`() {
+    @Test func `should refuse to stream logs as not booted when the device is still booting`() {
         let host = MockDeviceHost()
         let device = FakeSimDevice(state: 2) // 2 = booting
         given(host).resolveDevice(udid: .any).willReturn(device)
@@ -49,7 +49,7 @@ struct SimDeviceLogStreamErrorTests {
 
     // MARK: - lifecycle
 
-    @Test func `stop is idempotent when never started`() {
+    @Test func `should do nothing when stopping logs that never started`() {
         let host = MockDeviceHost()
         let stream = SimDeviceLogStream(udid: "u1", host: host)
         // Should not crash, hang, or fire onTerminate.
@@ -59,7 +59,7 @@ struct SimDeviceLogStreamErrorTests {
 
     // MARK: - error type contract
 
-    @Test func `LogStreamError equality covers every case`() {
+    @Test func `should tell log stream failures apart by kind and detail`() {
         #expect(LogStreamError.simulatorNotBooted(udid: "u1")
              == LogStreamError.simulatorNotBooted(udid: "u1"))
         #expect(LogStreamError.simulatorNotBooted(udid: "u1")

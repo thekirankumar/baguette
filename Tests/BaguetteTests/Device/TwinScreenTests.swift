@@ -54,14 +54,14 @@ struct TwinScreenTests {
     private let keyframe = AVCCEnvelope.keyframe(avcc: Data([0x01]))
     private let delta = AVCCEnvelope.delta(avcc: Data([0x02]))
 
-    @Test func `chunks before the description never reach the decoder`() {
+    @Test func `should decode nothing that arrives before the stream description`() {
         let (screen, decoder, _) = makeScreen()
         screen.ingest(chunk: keyframe)
         screen.ingest(chunk: delta)
         verify(decoder).decode(.any).called(0)
     }
 
-    @Test func `the description builds the decoder once a surface view watches`() {
+    @Test func `should start decoding from the stream description once a frame viewer watches`() {
         let (screen, decoder, captures) = makeScreen()
         try? screen.view().start { _ in }
         screen.ingest(chunk: description)
@@ -70,7 +70,7 @@ struct TwinScreenTests {
         verify(decoder).decode(.value(Data([0x01]))).called(1)
     }
 
-    @Test func `no surface consumer means no decode at all`() {
+    @Test func `should decode nothing when no frame viewer watches`() {
         // Lazy pixels: a connected but unwatched phone costs nothing.
         let (screen, decoder, _) = makeScreen()
         screen.ingest(chunk: description)
@@ -80,7 +80,7 @@ struct TwinScreenTests {
         verify(decoder).decode(.any).called(0)
     }
 
-    @Test func `a late surface view starts the decoder from the cached description`() {
+    @Test func `should start decoding for a late frame viewer from the cached description and next keyframe`() {
         let (screen, decoder, captures) = makeScreen()
         screen.ingest(chunk: description)
         screen.ingest(chunk: keyframe)
@@ -92,7 +92,7 @@ struct TwinScreenTests {
         verify(decoder).decode(.any).called(1)
     }
 
-    @Test func `the decoder stops when the last surface view leaves`() {
+    @Test func `should stop decoding when the last frame viewer leaves`() {
         let (screen, decoder, _) = makeScreen()
         let view = screen.view()
         try? view.start { _ in }
@@ -103,7 +103,7 @@ struct TwinScreenTests {
         verify(decoder).decode(.any).called(0)
     }
 
-    @Test func `byte viewers get the cached description then video from the next keyframe`() {
+    @Test func `should give a byte viewer the cached description, then video from the next keyframe`() {
         // The byte role: H.264 passthrough, no decode anywhere.
         let (screen, decoder, _) = makeScreen()
         screen.ingest(chunk: description)
@@ -120,7 +120,7 @@ struct TwinScreenTests {
         verify(decoder).configure(description: .any, onFrame: .any).called(0)
     }
 
-    @Test func `a fresh description re-gates byte viewers until the next keyframe`() {
+    @Test func `should hold byte viewers back until the next keyframe when a fresh description arrives`() {
         let (screen, _, _) = makeScreen()
         screen.ingest(chunk: description)
         let received = LockedChunks()
@@ -135,7 +135,7 @@ struct TwinScreenTests {
         #expect(received.chunks.count == 4)
     }
 
-    @Test func `detached byte viewers receive nothing further`() {
+    @Test func `should send nothing further to a byte viewer once detached`() {
         let (screen, _, _) = makeScreen()
         screen.ingest(chunk: description)
         let received = LockedChunks()
@@ -146,7 +146,7 @@ struct TwinScreenTests {
         #expect(received.chunks == [description])
     }
 
-    @Test func `a second description reconfigures the decoder`() {
+    @Test func `should reconfigure decoding when a second stream description arrives`() {
         let (screen, _, captures) = makeScreen()
         try? screen.view().start { _ in }
         screen.ingest(chunk: description)
@@ -154,14 +154,14 @@ struct TwinScreenTests {
         #expect(captures.descriptions == [Data([0xAA, 0xBB]), Data([0xCC])])
     }
 
-    @Test func `malformed chunks are ignored`() {
+    @Test func `should ignore a malformed video chunk`() {
         let (screen, decoder, captures) = makeScreen()
         screen.ingest(chunk: Data([0x00]))
         #expect(captures.descriptions.isEmpty)
         verify(decoder).decode(.any).called(0)
     }
 
-    @Test func `decoded surfaces reach every subscribed view`() throws {
+    @Test func `should deliver each decoded frame to every watching viewer`() throws {
         let (screen, _, captures) = makeScreen()
         screen.ingest(chunk: description)
         let first = Recorder()
@@ -173,7 +173,7 @@ struct TwinScreenTests {
         #expect(second.frames.count == 1)
     }
 
-    @Test func `a late view immediately receives the latest surface`() throws {
+    @Test func `should give a late frame viewer the latest frame right away`() throws {
         let (screen, _, captures) = makeScreen()
         try screen.view().start { _ in } // first consumer starts the decoder
         screen.ingest(chunk: description)
@@ -183,7 +183,7 @@ struct TwinScreenTests {
         #expect(late.frames.count == 1)
     }
 
-    @Test func `stopping a view detaches only that view`() throws {
+    @Test func `should stop delivering only to the frame viewer that stops`() throws {
         let (screen, _, captures) = makeScreen()
         screen.ingest(chunk: description)
         let kept = Recorder()
@@ -198,7 +198,7 @@ struct TwinScreenTests {
         #expect(dropped.frames.isEmpty)
     }
 
-    @Test func `the hub records when it last published a frame`() throws {
+    @Test func `should remember when it last published a frame`() throws {
         // The gyro's render clock skips its forced refresh while
         // mirror frames are flowing — pose rides the next frame for
         // free — and only renders itself when the source goes idle
@@ -213,7 +213,7 @@ struct TwinScreenTests {
         #expect(screen.lastPublish == 123.5)
     }
 
-    @Test func `deltas are dropped until a keyframe follows each configure`() {
+    @Test func `should drop delta frames until a keyframe follows each stream description`() {
         // A companion (re)sends its description mid-GOP on reconnects;
         // the deltas that follow reference frames this decoder never
         // saw and VideoToolbox rejects them (-12909). Video resumes at
@@ -231,7 +231,7 @@ struct TwinScreenTests {
         verify(decoder).decode(.any).called(2)
     }
 
-    @Test func `close tears down the decoder and detaches every view`() throws {
+    @Test func `should stop decoding and detach every viewer when closed`() throws {
         let (screen, decoder, captures) = makeScreen()
         screen.ingest(chunk: description)
         let viewer = Recorder()

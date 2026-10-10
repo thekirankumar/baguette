@@ -17,7 +17,7 @@ struct AXNodeWalkTests {
 
     // MARK: - leaf elements
 
-    @Test func `leaf element produces a childless AXNode with role + label + frame`() {
+    @Test func `should describe a leaf element by role, label, identifier and frame with no children`() {
         let leaf = FakeAXTreeElement(
             role: "AXButton",
             label: "Sign in",
@@ -38,13 +38,13 @@ struct AXNodeWalkTests {
         #expect(node.children.isEmpty)
     }
 
-    @Test func `missing role falls back to AXUnknown`() {
+    @Test func `should describe an element as AXUnknown when it has no role`() {
         let elem = FakeAXTreeElement()  // no role
         let node = AXNode.walk(from: elem, transform: identityTransform())
         #expect(node.role == "AXUnknown")
     }
 
-    @Test func `walk reads enabled, focused, hidden bool flags via KVC`() {
+    @Test func `should read whether an element is enabled, focused and hidden`() {
         let elem = FakeAXTreeElement(
             role: "AXButton",
             booleans: [
@@ -59,7 +59,7 @@ struct AXNodeWalkTests {
         #expect(node.hidden == true)
     }
 
-    @Test func `NSNumber accessibilityValue is stringified`() {
+    @Test func `should describe a numeric value such as a slider position as text`() {
         let elem = FakeAXTreeElement(
             role: "AXSlider",
             numberValue: NSNumber(value: 0.42)
@@ -70,7 +70,7 @@ struct AXNodeWalkTests {
 
     // MARK: - recursion
 
-    @Test func `walk recurses through accessibilityChildren depth-first`() {
+    @Test func `should describe children in order, depth first`() {
         let leaf1 = FakeAXTreeElement(role: "AXStaticText", label: "first")
         let leaf2 = FakeAXTreeElement(role: "AXStaticText", label: "second")
         let parent = FakeAXTreeElement(
@@ -90,7 +90,7 @@ struct AXNodeWalkTests {
         #expect(node.children[0].children.map(\.label) == ["first", "second"])
     }
 
-    @Test func `depth cap stops recursion at the configured level`() {
+    @Test func `should stop describing children at the depth cap`() {
         // Build: root → c1 → c2 → c3 (4 levels deep). The cap is
         // expressed as "the depth at which children are dropped" —
         // a child whose own depth equals the cap walks its
@@ -109,7 +109,7 @@ struct AXNodeWalkTests {
         #expect(node.children[0].children.isEmpty)  // c2 dropped at the cap
     }
 
-    @Test func `deadline in the past short-circuits child traversal`() {
+    @Test func `should skip children when the deadline has already passed`() {
         let c1 = FakeAXTreeElement(role: "AXButton")
         let root = FakeAXTreeElement(role: "AXApplication", children: [c1])
         let node = AXNode.walk(
@@ -125,7 +125,7 @@ struct AXNodeWalkTests {
 
     // MARK: - frame transform application
 
-    @Test func `child frames are projected through the supplied AXFrameTransform`() {
+    @Test func `should project child frames onto the rotated screen`() {
         let leaf = FakeAXTreeElement(
             role: "AXButton",
             macFrame: CGRect(x: 200, y: 400, width: 100, height: 80)
@@ -144,7 +144,7 @@ struct AXNodeWalkTests {
     }
 
     @Test(arguments: [CGRect.zero, CGRect(x: 20, y: 40, width: 300, height: 600)])
-    func `application bounds do not scale or offset guest screen coordinates`(bounds: CGRect) {
+    func `should not scale or offset element frames by the app bounds`(bounds: CGRect) {
         let raw = CGRect(x: 50, y: 80, width: 84, height: 48)
         let root = FakeAXTreeElement(
             role: "AXApplication",
@@ -161,13 +161,13 @@ struct AXNodeWalkTests {
 
     // MARK: - resilience
 
-    @Test func `accessibilityChildren absent yields no children, not an error`() {
+    @Test func `should describe no children when the element reports none`() {
         let elem = FakeAXTreeElement(role: "AXButton")  // no children key
         let node = AXNode.walk(from: elem, transform: identityTransform())
         #expect(node.children.isEmpty)
     }
 
-    @Test func `non-array accessibilityChildren is treated as empty`() {
+    @Test func `should describe no children when the element reports them in an unexpected shape`() {
         let elem = FakeAXTreeElement(
             role: "AXButton",
             childrenAny: NSObject()  // not an [NSObject]

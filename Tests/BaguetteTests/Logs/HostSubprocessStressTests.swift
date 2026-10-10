@@ -26,7 +26,7 @@ struct HostSubprocessStressTests {
         return String(decoding: data, as: UTF8.self).contains("ok")
     }
 
-    @Test func `terminating short children beside a long one never closes a bystander's pipe`() async throws {
+    @Test func `should never close a bystander's pipe when short children are stopped beside a long one`() async throws {
         let long = HostSubprocess()
         try long.run(
             executable: URL(fileURLWithPath: "/bin/sh"),

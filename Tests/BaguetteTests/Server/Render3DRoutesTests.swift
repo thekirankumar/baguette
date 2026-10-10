@@ -6,7 +6,7 @@ import Testing
 @Suite("Server 3D render routes")
 struct Render3DRoutesTests {
 
-    @Test func `render3D resolves simulator model and invokes renderer`() throws {
+    @Test func `should render the device's 3D model, found by its device type, at the requested size and finish`() throws {
         let (simulators, simulator, models, installed) = Self.fixture()
         let renderer = MockDeviceRenderer()
         given(renderer).render(plan: .any, screenImage: .value(Data("SCREEN".utf8)))
@@ -54,7 +54,7 @@ struct Render3DRoutesTests {
     // there is a captured screen to grow against. The route has to ask the
     // options to resolve it, not read the `fixed`-only `size` and silently
     // fall back to the source.
-    @Test func `render3D grows a ratio size against the captured screen`() throws {
+    @Test func `should grow a ratio render size against the captured screen`() throws {
         let (simulators, simulator, models, _) = Self.fixture()
         let renderer = MockDeviceRenderer()
         given(renderer).render(plan: .any, screenImage: .any)
@@ -84,7 +84,7 @@ struct Render3DRoutesTests {
         _ = simulator
     }
 
-    @Test func `render3D reports unknown simulator without consulting models`() {
+    @Test func `should report an unknown device when rendering 3D for an unknown udid`() {
         let simulators = MockSimulators()
         let models = MockDeviceModels()
         let renderer = MockDeviceRenderer()
@@ -103,7 +103,7 @@ struct Render3DRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `model metadata exposes only public ids and choices`() throws {
+    @Test func `should describe a 3D model by its public ids and choices only`() throws {
         let (simulators, _, models, _) = Self.fixture()
 
         let json = try #require(Server.model3DJSONString(
@@ -125,7 +125,7 @@ struct Render3DRoutesTests {
         #expect(json.contains("usdValue") == false)
     }
 
-    @Test func `live 3D connection resolves its simulator model and render plan`() throws {
+    @Test func `should plan a live 3D stream from the device's model and the requested view`() throws {
         let (simulators, _, models, installed) = Self.fixture()
         let options = try Device3DStreamOptions.parse([
             "rotation": ["-8,18,0"],
@@ -146,7 +146,7 @@ struct Render3DRoutesTests {
         #expect(plan.variants.map(\.usdValue) == ["Silver"])
     }
 
-    @Test func `live 3D connection rejects an unknown simulator`() throws {
+    @Test func `should reject a live 3D stream for an unknown udid`() throws {
         let simulators = MockSimulators()
         let models = MockDeviceModels()
         given(simulators).find(udid: .value("ghost")).willReturn(nil)
@@ -161,13 +161,13 @@ struct Render3DRoutesTests {
         }
     }
 
-    @Test func `live 3D route accepts both existing stream codecs`() {
+    @Test func `should stream live 3D as mjpeg or avcc and nothing else`() {
         #expect(Server.live3DFormat(pathExtension: "mjpeg") == .mjpeg)
         #expect(Server.live3DFormat(pathExtension: "avcc") == .avcc)
         #expect(Server.live3DFormat(pathExtension: "png") == nil)
     }
 
-    @Test func `live camera control mutates the scene without replacing its stream`() throws {
+    @Test func `should move the live 3D camera on set_3d_camera without replacing the stream`() throws {
         let scene = MockDeviceScene()
         given(scene).update(camera: .any).willReturn()
 
@@ -183,7 +183,7 @@ struct Render3DRoutesTests {
         }).called(1)
     }
 
-    @Test func `screen quad encodes its four corners in TL TR BR BL order`() throws {
+    @Test func `should send a screen_quad with its four corners in TL TR BR BL order`() throws {
         let quad = ScreenQuad(
             topLeft: NormalizedPoint(u: 0.1, v: 0.2),
             topRight: NormalizedPoint(u: 0.9, v: 0.2),
@@ -201,7 +201,7 @@ struct Render3DRoutesTests {
         #expect(corners == [[0.1, 0.2], [0.9, 0.2], [0.9, 0.8], [0.1, 0.8]])
     }
 
-    @Test func `a foldable's screen pieces each carry their corners and their part of the buffer`() throws {
+    @Test func `should send each foldable screen piece with its corners and its part of the frame`() throws {
         let quad = ScreenQuad(
             topLeft: NormalizedPoint(u: 0.1, v: 0.2),
             topRight: NormalizedPoint(u: 0.5, v: 0.2),

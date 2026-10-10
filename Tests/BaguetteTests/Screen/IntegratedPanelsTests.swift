@@ -20,26 +20,26 @@ struct IntegratedPanelsTests {
 
     /// iPhone 17 Pro: one portrait port plus the landscape decoys every
     /// device carries (TVOut, CarPlay, the 8K resizable scene).
-    @Test func `a phone has one panel among its landscape decoys`() {
+    @Test func `should count one panel on a phone among its landscape decoys`() {
         let ports = [port(1206, 2622), port(720, 480), port(7680, 4320), port(720, 480)]
         #expect(IntegratedPanels.count(in: ports) == 1)
         #expect(!IntegratedPanels.several(in: ports))
     }
 
     /// iPhone Duo: cover and unfolded panels, both portrait.
-    @Test func `a foldable has two panels`() {
+    @Test func `should count two panels on a foldable`() {
         let ports = [port(2007, 2853), port(720, 480), port(7680, 4320), port(720, 480), port(1398, 2034)]
         #expect(IntegratedPanels.count(in: ports) == 2)
         #expect(IntegratedPanels.several(in: ports))
     }
 
     /// An attached 4K external is landscape and never counts as a panel.
-    @Test func `an external display is not a panel`() {
+    @Test func `should not count an external display as a panel`() {
         let ports = [port(1206, 2622), port(3840, 2160)]
         #expect(IntegratedPanels.count(in: ports) == 1)
     }
 
-    @Test func `no ports means no panels`() {
+    @Test func `should count no panels when there are no framebuffers`() {
         #expect(IntegratedPanels.count(in: []) == 0)
         #expect(!IntegratedPanels.several(in: []))
     }

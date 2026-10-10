@@ -6,13 +6,13 @@ import Foundation
 /// Device Hub's three — or an angle, swept over a duration.
 @Suite("HingeCommand")
 struct HingeCommandTests {
-    @Test func `a pose by name is Device Hub's angle for it`() throws {
+    @Test func `should take a pose by name as Device Hub's angle for it`() throws {
         #expect(try HingeCommand.parse(pose: "closed", angle: nil, duration: nil).degrees == 0)
         #expect(try HingeCommand.parse(pose: "open", angle: nil, duration: nil).degrees == 130)
         #expect(try HingeCommand.parse(pose: "flat", angle: nil, duration: nil).degrees == 180)
     }
 
-    @Test func `an angle is taken as given, within the hinge's range`() throws {
+    @Test func `should take an angle as given and reject one outside the hinge's range`() throws {
         let command = try HingeCommand.parse(pose: nil, angle: "95.5", duration: "1.2")
         #expect(command == HingeCommand(degrees: 95.5, duration: 1.2))
         #expect(throws: HingeCommandError.angleOutOfRange) {
@@ -20,14 +20,14 @@ struct HingeCommandTests {
         }
     }
 
-    @Test func `the sweep takes Device Hub's time unless told otherwise, and never a negative one`() throws {
+    @Test func `should sweep over Device Hub's time unless told otherwise, and reject a negative duration`() throws {
         #expect(try HingeCommand.parse(pose: "open", angle: nil, duration: nil).duration == HingeCommand.defaultDuration)
         #expect(throws: HingeCommandError.invalidDuration) {
             try HingeCommand.parse(pose: "open", angle: nil, duration: "-1")
         }
     }
 
-    @Test func `one of pose and angle is required, and a pose must be one of the three`() {
+    @Test func `should require a pose or an angle, and reject a pose other than the three`() {
         #expect(throws: HingeCommandError.missingTarget) {
             try HingeCommand.parse(pose: nil, angle: nil, duration: nil)
         }

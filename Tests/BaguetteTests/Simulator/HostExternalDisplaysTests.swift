@@ -29,7 +29,7 @@ struct HostExternalDisplaysTests {
             Pixel Size: {1206, 2622}
         """
 
-    @Test func `enableCarPlay is a no-op when Connected Screens already list TVOut`() throws {
+    @Test func `should leave the panel alone when enabling CarPlay and a TVOut screen is already connected`() throws {
         let panel = MockExternalDisplayPanel()
         given(panel).enableCarPlay().willReturn()
         let external = HostExternalDisplays(
@@ -43,7 +43,7 @@ struct HostExternalDisplaysTests {
         #expect(external.isCarPlayConnected)
     }
 
-    @Test func `enableCarPlay clicks the panel then reports connected`() throws {
+    @Test func `should click the panel once and report CarPlay connected when enabling it`() throws {
         let panel = MockExternalDisplayPanel()
         given(panel).enableCarPlay().willReturn()
         let state = EnumerateState(text: phoneOnlyEnumerate)
@@ -62,7 +62,7 @@ struct HostExternalDisplaysTests {
         verify(panel).enableCarPlay().called(1)
     }
 
-    @Test func `enableCarPlay tracks enabled after panel success when probe stays empty`() throws {
+    @Test func `should report CarPlay connected after the panel click when the screen list stays empty`() throws {
         let panel = MockExternalDisplayPanel()
         given(panel).enableCarPlay().willReturn()
         let external = HostExternalDisplays(
@@ -84,7 +84,7 @@ struct HostExternalDisplaysTests {
     /// state that needs the Disabled → CarPlay cycle, and precisely the
     /// state where the probe says "already connected, nothing to do".
     /// So reattach must not consult it.
-    @Test func `reattach cycles the panel even when a screen is already listed`() throws {
+    @Test func `should cycle the panel when reattaching CarPlay even if a screen is already listed`() throws {
         let panel = MockExternalDisplayPanel()
         given(panel).recoverCarPlay().willReturn()
         let external = HostExternalDisplays(
@@ -99,7 +99,7 @@ struct HostExternalDisplaysTests {
         verify(panel).enableCarPlay().called(0)
     }
 
-    @Test func `reattach on a device with no external at all still cycles`() throws {
+    @Test func `should cycle the panel when reattaching CarPlay on a device with no external display`() throws {
         let panel = MockExternalDisplayPanel()
         given(panel).recoverCarPlay().willReturn()
         let external = HostExternalDisplays(

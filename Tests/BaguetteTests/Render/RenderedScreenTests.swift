@@ -6,7 +6,7 @@ import Testing
 
 @Suite("RenderedScreen")
 struct RenderedScreenTests {
-    @Test func `renders source surfaces before delivering them to a codec`() throws {
+    @Test func `should render source surfaces before delivering them to a codec`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         let input = try #require(Self.surface(width: 2, height: 2))
@@ -29,7 +29,7 @@ struct RenderedScreenTests {
         verify(source).stop().called(1)
     }
 
-    @Test func `slow rendering never blocks source delivery`() throws {
+    @Test func `should never block source delivery on slow rendering`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         let input = try #require(Self.surface(width: 2, height: 2))
@@ -52,7 +52,7 @@ struct RenderedScreenTests {
         #expect(elapsed < .milliseconds(50))
     }
 
-    @Test func `refresh rerenders the latest simulator surface after camera movement`() throws {
+    @Test func `should rerender the latest simulator surface on refresh after the camera moves`() throws {
         let source = MockScreen()
         let scene = MockDeviceScene()
         let input = try #require(Self.surface(width: 2, height: 2))

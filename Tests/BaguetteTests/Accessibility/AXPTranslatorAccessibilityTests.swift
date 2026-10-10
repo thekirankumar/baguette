@@ -15,7 +15,7 @@ import Mockable
 @Suite("AXPTranslatorAccessibility — error paths")
 struct AXPTranslatorAccessibilityErrorTests {
 
-    @Test func `AX observations reject changed orientation size or panel`() throws {
+    @Test func `should reject a reading when orientation, size or panel changed during it`() throws {
         let before = AXScreen(
             width: 402, height: 874, orientation: .portrait,
             target: ScreenTarget(screenId: 1, litPanel: nil, pixelSize: Size(width: 1206, height: 2622)))
@@ -34,7 +34,7 @@ struct AXPTranslatorAccessibilityErrorTests {
         }
     }
 
-    @Test func `an unobservable display fails the query instead of guessing a screen`() throws {
+    @Test func `should fail the query rather than guess a screen when the display cannot be observed`() throws {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(NSObject())
         let ax = AXPTranslatorAccessibility(udid: "ghost", host: host) {
@@ -47,13 +47,13 @@ struct AXPTranslatorAccessibilityErrorTests {
         #expect(throws: ObservedScreenError.unavailable) { try ax.describeAt(point: Point(x: 10, y: 20)) }
     }
 
-    @Test func `a changed display tells the caller to observe again`() {
+    @Test func `should tell the caller to observe again when the display changed`() {
         #expect(
             AXPTranslatorAccessibility.Failure.displayChanged.localizedDescription
                 == "The display changed while reading accessibility; discard the result and observe again.")
     }
 
-    @Test func `describeAll returns nil when host has no matching device`() throws {
+    @Test func `should describe no UI when no device matches the udid`() throws {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let ax = AXPTranslatorAccessibility(udid: "ghost", host: host) {
@@ -63,7 +63,7 @@ struct AXPTranslatorAccessibilityErrorTests {
         #expect(try ax.describeAll() == nil)
     }
 
-    @Test func `describeAt returns nil when host has no matching device`() throws {
+    @Test func `should describe no element at a point when no device matches the udid`() throws {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(nil)
         let ax = AXPTranslatorAccessibility(udid: "ghost", host: host) {
@@ -80,7 +80,7 @@ struct AXPTranslatorFrontmostTests {
         width: 402, height: 874, orientation: .portrait,
         target: ScreenTarget(screenId: 1, litPanel: nil, pixelSize: Size(width: 1206, height: 2622)))
 
-    @Test func `a failed guest frontmost query propagates after the geometry was read`() throws {
+    @Test func `should surface the failure when the frontmost app query fails on the guest`() throws {
         struct GuestDown: Error, Equatable {}
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(NSObject())
@@ -96,7 +96,7 @@ struct AXPTranslatorFrontmostTests {
         #expect(throws: GuestDown()) { try ax.describeAll() }
     }
 
-    @Test func `the application lookup returns the translation the device answers with`() throws {
+    @Test func `should look up the app with the answer the device gives`() throws {
         let translation = NSObject()
         let device = AnsweringDevice(answer: TranslationResponse(translation))
         let dispatcher = TokenDispatcher()
@@ -108,7 +108,7 @@ struct AXPTranslatorFrontmostTests {
         #expect(device.requests == 1)
     }
 
-    @Test func `a device without a translation and a missing request class fail by name`() {
+    @Test func `should name the device and process when the app lookup gets no answer`() {
         let dispatcher = TokenDispatcher()
         for (device, request, cause) in [
             (AnsweringDevice(answer: nil), { (_: Int32) -> NSObject? in NSObject() }, "returned no application translation"),

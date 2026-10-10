@@ -3,7 +3,7 @@ import Testing
 
 @Suite("VideoFrameDimensions")
 struct VideoFrameDimensionsTests {
-    @Test func `aligns requested dimensions for 4 2 0 video frames`() {
+    @Test func `should align requested dimensions for 4 2 0 video frames`() {
         let dimensions = VideoFrameDimensions(
             requested: RenderDimensions(width: 669, height: 1047)
         )
@@ -13,7 +13,7 @@ struct VideoFrameDimensionsTests {
         #expect(dimensions.renderDimensions == RenderDimensions(width: 670, height: 1048))
     }
 
-    @Test func `scales before applying codec alignment`() {
+    @Test func `should scale before applying codec alignment`() {
         let dimensions = VideoFrameDimensions.scaling(
             RenderDimensions(width: 670, height: 1048),
             by: 2

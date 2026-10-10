@@ -16,7 +16,7 @@ import Mockable
 @Suite("Server file routes")
 struct FileRoutesTests {
 
-    @Test func `an .ipa is installed through the apps collection`() async {
+    @Test func `should install a dropped .ipa on the simulator`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -31,7 +31,7 @@ struct FileRoutesTests {
         verify(apps).install(.value(AppBundle(path: URL(fileURLWithPath: "/tmp/up/MyApp.ipa")))).called(1)
     }
 
-    @Test func `a photo is added through the photo library`() async {
+    @Test func `should add a dropped photo to the simulator's photo library`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let photos = MockPhotoLibrary()
@@ -48,7 +48,7 @@ struct FileRoutesTests {
 
     // MARK: - what a given route will accept
 
-    @Test func `the media route refuses an app`() async {
+    @Test func `should refuse an app on the media route`() async {
         // `/media` carries the `media` capability. Installing software
         // through it would let a plugin trusted only to add photos put
         // an executable on the device.
@@ -66,7 +66,7 @@ struct FileRoutesTests {
         verify(apps).install(.any).called(0)
     }
 
-    @Test func `the apps route refuses a photo`() async {
+    @Test func `should refuse a photo on the apps route`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let photos = MockPhotoLibrary()
@@ -81,7 +81,7 @@ struct FileRoutesTests {
         verify(photos).add(.any).called(0)
     }
 
-    @Test func `the browser's drag-and-drop route still takes either`() async {
+    @Test func `should take both apps and photos on the browser's drag-and-drop route`() async {
         // `/files` is the one entry point that classifies for you, which
         // is why it is closed to plugins entirely.
         let host = MockSimulators()
@@ -104,7 +104,7 @@ struct FileRoutesTests {
         ) == .added)
     }
 
-    @Test func `a file with no home on a simulator is refused`() async {
+    @Test func `should refuse a file that has no home on a simulator`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         given(host).find(udid: .value("U")).willReturn(sim)
@@ -115,7 +115,7 @@ struct FileRoutesTests {
         #expect(outcome == .unsupported(ext: "pdf"))
     }
 
-    @Test func `an unknown udid is reported`() async {
+    @Test func `should report an unknown device when a file is added for an unknown udid`() async {
         let host = MockSimulators()
         given(host).find(udid: .value("ghost")).willReturn(nil)
         let outcome = await Server.addFile(
@@ -124,7 +124,7 @@ struct FileRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `a zipped .app is installed through the apps collection as an archive`() async {
+    @Test func `should install a zipped .app as an archive`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -139,7 +139,7 @@ struct FileRoutesTests {
         verify(apps).install(archive: .value(AppArchive(path: URL(fileURLWithPath: "/tmp/up/MyApp.app.zip")))).called(1)
     }
 
-    @Test func `a zip with no app inside is refused with the reason`() async {
+    @Test func `should refuse a zip with no app inside and say why`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -153,7 +153,7 @@ struct FileRoutesTests {
         #expect(outcome == .badArchive(reason: "no single .app bundle at the top level of the zip"))
     }
 
-    @Test func `a corrupt zip is refused with the extract failure`() async {
+    @Test func `should refuse a corrupt zip with the extract failure`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -167,7 +167,7 @@ struct FileRoutesTests {
         #expect(outcome == .badArchive(reason: "ditto -x -k exited 2 (corrupt zip?)"))
     }
 
-    @Test func `a zip that inflates past the extraction cap is refused with the reason`() async {
+    @Test func `should refuse a zip that inflates past the extraction cap and say why`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -184,7 +184,7 @@ struct FileRoutesTests {
         ))
     }
 
-    @Test func `a simctl failure on the archive path surfaces as dispatchFailed`() async {
+    @Test func `should report a failed dispatch when simctl cannot install a zipped app`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()
@@ -198,7 +198,7 @@ struct FileRoutesTests {
         #expect(outcome == .dispatchFailed)
     }
 
-    @Test func `a simctl failure surfaces as dispatchFailed`() async {
+    @Test func `should report a failed dispatch when simctl cannot install an .ipa`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let apps = MockApps()

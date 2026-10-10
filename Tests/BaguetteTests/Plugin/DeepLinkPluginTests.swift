@@ -35,7 +35,7 @@ struct DeepLinkPluginTests {
         ))
     }
 
-    @Test func `the published manifest parses, with nothing to warn about`() throws {
+    @Test func `should load the published deeplink manifest with nothing to warn about`() throws {
         let manifest = try manifest()
         #expect(manifest.name == "deeplink")
         #expect(manifest.apiVersion == 1)
@@ -45,14 +45,14 @@ struct DeepLinkPluginTests {
         #expect(manifest.warnings.isEmpty)
     }
 
-    @Test func `it asks for the power to open links and nothing more`() throws {
+    @Test func `should ask for the power to open links and nothing more`() throws {
         // The pre-install trust screen (`baguette plugin show`) prints
         // this list. It must not creep: `apps` next door installs
         // software, and `input` can tap through any consent dialog.
         #expect(try manifest().capabilities == [.openURL])
     }
 
-    @Test func `its panel offers a field to type a link into`() throws {
+    @Test func `should offer a panel with a field to type a link into`() throws {
         let panel = try #require(try manifest().panels.first)
         #expect(panel.when == .simulatorBooted)
         guard case .list(let list) = panel.body else {
@@ -68,7 +68,7 @@ struct DeepLinkPluginTests {
         #expect(list.prompt?.filter == true)
     }
 
-    @Test func `the command it runs is a file that is actually there`() throws {
+    @Test func `should run a command script that actually exists in the plugin`() throws {
         // A manifest naming a script that didn't ship parses perfectly
         // and then fails on first click, which is the worst time to find
         // out. The interpreter is absolute; the script is relative to
@@ -84,7 +84,7 @@ struct DeepLinkPluginTests {
         )
     }
 
-    @Test func `the repo's bakery menu offers it`() throws {
+    @Test func `should be offered by the repo's bakery menu`() throws {
         // `baguette plugin install tddworks/baguette/deeplink` resolves
         // through this file. A plugin the menu doesn't name is
         // unreachable however good its manifest is.
@@ -95,7 +95,7 @@ struct DeepLinkPluginTests {
         #expect(entry.path == "plugins/deeplink")
     }
 
-    @Test func `it is not one of the plugins baguette ships bundled`() throws {
+    @Test func `should not ship bundled with baguette`() throws {
         // The whole point: official, and still installed on purpose. If
         // this directory ever appears, the plugin starts arriving with
         // every build and the distinction is gone.

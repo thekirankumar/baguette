@@ -9,7 +9,7 @@ import Testing
 @Suite("FramebufferSelectionError")
 struct FramebufferSelectionErrorTests {
 
-    @Test func `an absent CarPlay plane names the menu that attaches one`() {
+    @Test func `should point to the External Displays menu when no CarPlay screen is attached`() {
         let message = FramebufferSelectionError.noMatchingPort(.carPlay).message
         #expect(message.contains("CarPlay"))
         #expect(message.contains("External Displays"))
@@ -20,13 +20,13 @@ struct FramebufferSelectionErrorTests {
         #expect(!message.contains("Baguette."))
     }
 
-    @Test func `an absent device plane says the device has no framebuffer`() {
+    @Test func `should say the device has no framebuffer when its screen is absent`() {
         let message = FramebufferSelectionError.noMatchingPort(.phone).message
         #expect(message.contains("device"))
         #expect(!message.contains("Baguette."))
     }
 
-    @Test func `an unresolved screen id reads as a display still coming up`() {
+    @Test func `should explain a missing screen id as a display still coming up`() {
         let message = FramebufferSelectionError.screenIdUnavailable.message
         #expect(message.contains("screen id"))
         #expect(!message.contains("Baguette."))

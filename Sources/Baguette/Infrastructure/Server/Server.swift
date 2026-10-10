@@ -2831,7 +2831,7 @@ struct Server: Sendable {
             outbound: outbound, format: format, preservingDescriptions: !options.frameMetadata
         )
         let stream = format.makeStream(
-            config: .default.with(fps: 20),
+            config: .default.with(fps: options.frameRate),
             sink: sink,
             quality: 0.7
         )
@@ -2849,7 +2849,7 @@ struct Server: Sendable {
             let box = Box()
             let book = RenderedFoldable(
                 unfolded: unfolded.screen(), cover: cover.screen(),
-                hinge: sim.hinge(), scene: scene, fps: options.frameMetadata ? 20 : nil,
+                hinge: sim.hinge(), scene: scene, fps: options.frameMetadata ? options.frameRate : nil,
                 onPose: {
                     // The lit screen moved: tell the page where it is.
                     // Atomic frames carry the placement themselves.
@@ -2874,7 +2874,7 @@ struct Server: Sendable {
                 return
             }
             let rendered = RenderedScreen(
-                source: bound.screen, scene: scene, fps: options.frameMetadata ? 20 : nil)
+                source: bound.screen, scene: scene, fps: options.frameMetadata ? options.frameRate : nil)
             screen = rendered
             input = bound.input
             refresh = { rendered.refresh() }
@@ -2902,7 +2902,7 @@ struct Server: Sendable {
         let stopFrames: () -> Void
         if format == .avcc {
             let encoder = DeviceAVCCEncoder(
-                config: .default.with(fps: 20), quality: 0.7,
+                config: .default.with(fps: options.frameRate), quality: 0.7,
                 deliver: { sink.writeMessage($0) }, onError: frameFailure)
             receiveFrame = { encoder.receive($0) }
             stopFrames = { encoder.stop() }

@@ -40,14 +40,14 @@ struct VideoFileCaptureTests {
         }
     }
 
-    @Test func `start rejects a source that isn't a video`() async {
+    @Test func `should refuse to start the video capture when the source is not a video`() async {
         let cap = VideoFileCapture(decoder: MockVideoDecoder())
         await #expect(throws: (any Error).self) {
             try await cap.start(source: .image(path: "/tmp/pic.png")) { _ in }
         }
     }
 
-    @Test func `emits frames with a monotonic sequence and loops the asset at EOF`() async throws {
+    @Test func `should deliver video frames in increasing sequence and loop the video at its end`() async throws {
         let decoder = MockVideoDecoder()
         let feed = Feed([decoded(pts: 0), decoded(pts: 20), nil])  // 2 frames, then loop
         let rewinds = Counter()
@@ -72,7 +72,7 @@ struct VideoFileCaptureTests {
     /// throw from the pacing sleep, which is swallowed — so without an
     /// explicit check the loop runs on to emit one more frame into a
     /// buffer nobody is streaming any more.
-    @Test func `no frame is emitted after stop`() async throws {
+    @Test func `should deliver no frame after the video capture stops`() async throws {
         let decoder = MockVideoDecoder()
         // 500 ms apart, so the pump is parked in the pacing sleep when
         // stop lands.
@@ -99,7 +99,7 @@ struct VideoFileCaptureTests {
     /// Paced literally that becomes a sleep of days and the feed simply
     /// dies, so the gap is capped — the sim's reader calls the buffer
     /// stale after ~1 s anyway, so pacing longer can't buy anything.
-    @Test func `an absurd presentation gap is capped so the feed keeps moving`() async throws {
+    @Test func `should cap an absurd gap between frames so the video keeps playing`() async throws {
         let decoder = MockVideoDecoder()
         let feed = Feed([decoded(pts: 0), decoded(pts: 10_000_000), nil])  // ~2.8 hours apart
         given(decoder).start(path: .any, maxDimension: .any).willReturn(())
@@ -116,7 +116,7 @@ struct VideoFileCaptureTests {
         #expect(rec.count >= 2, "the second frame must not wait out its real gap")
     }
 
-    @Test func `stop tears down the decoder`() async throws {
+    @Test func `should stop decoding when the video capture stops`() async throws {
         let decoder = MockVideoDecoder()
         let feed = Feed([decoded(pts: 0)])
         given(decoder).start(path: .any, maxDimension: .any).willReturn(())

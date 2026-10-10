@@ -6,7 +6,7 @@ import Testing
 @Suite("FramebufferPortSnapshots")
 struct FramebufferPortSnapshotsTests {
 
-    @Test func `assigns connected screen ids by closest pixel size`() {
+    @Test func `should match each framebuffer to the connected screen closest in pixel size`() {
         let ports = [
             SizedFramebufferPort(
                 portName: "com.apple.framebuffer.display",
@@ -46,7 +46,7 @@ struct FramebufferPortSnapshotsTests {
 
     /// The port itself has no idea which panel it is; the name comes
     /// from the Connected Screens record it joins to.
-    @Test func `carries the panel from the matched screen onto the port`() {
+    @Test func `should give a framebuffer the panel and orientation of its matched screen`() {
         let ports = [
             SizedFramebufferPort(
                 portName: "com.apple.framebuffer.display",
@@ -81,7 +81,7 @@ struct FramebufferPortSnapshotsTests {
         #expect(snapshots[1].panel == .primary)
     }
 
-    @Test func `a port with no matched screen is not a panel`() {
+    @Test func `should name no panel for a framebuffer with no matched screen`() {
         let snapshots = FramebufferPortSnapshots.assigningScreenIds(
             ports: [SizedFramebufferPort(
                 portName: "com.apple.framebuffer.display",
@@ -92,7 +92,7 @@ struct FramebufferPortSnapshotsTests {
         #expect(snapshots[0].panel == nil)
     }
 
-    @Test func `leaves screen id nil when no connected screens remain to match`() {
+    @Test func `should leave the screen id unset when no connected screen remains to match`() {
         let ports = [
             SizedFramebufferPort(
                 portName: "com.apple.framebuffer.display",
@@ -106,7 +106,7 @@ struct FramebufferPortSnapshotsTests {
         #expect(snapshots[0].connectedScreenId == nil)
     }
 
-    @Test func `phone and carPlay bindings share the assigned live screen ids`() throws {
+    @Test func `should bind phone and CarPlay to the live screen ids just matched`() throws {
         let ports = FramebufferPortSnapshots.assigningScreenIds(
             ports: [
                 SizedFramebufferPort(

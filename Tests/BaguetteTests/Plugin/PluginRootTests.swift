@@ -13,7 +13,7 @@ import Foundation
 @Suite("PluginRoot", .serialized)
 struct PluginRootTests {
 
-    @Test func `an explicit override wins over everything else`() throws {
+    @Test func `should use the BAGUETTE_PLUGIN_DIR override over every other plugin location`() throws {
         // Step 1 of the lookup. Also how a plugin author points baguette
         // at a working tree without installing anything.
         let tmp = try Self.makeTempDirectory()
@@ -25,7 +25,7 @@ struct PluginRootTests {
         #expect(PluginRoot.bundled()?.path == tmp.path)
     }
 
-    @Test func `an override naming nothing resolves to nothing`() {
+    @Test func `should find no bundled plugins when BAGUETTE_PLUGIN_DIR names nothing that exists`() {
         // Not a fallback to the source tree: naming a directory that
         // isn't there is a mistake worth surfacing as "no plugins"
         // rather than silently loading a different set than asked for.
@@ -35,7 +35,7 @@ struct PluginRootTests {
         #expect(PluginRoot.bundled() == nil)
     }
 
-    @Test func `an override pointing at a file rather than a directory is refused`() throws {
+    @Test func `should refuse BAGUETTE_PLUGIN_DIR when it points at a file rather than a directory`() throws {
         let tmp = try Self.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tmp) }
         let file = tmp.appendingPathComponent("not-a-directory.txt")
@@ -54,7 +54,7 @@ struct PluginRootTests {
     // with an explicit starting directory so the walk is exercised
     // without `dladdr` — the walk is the part that can be wrong.
 
-    @Test func `the walk finds the package root above the executable`() throws {
+    @Test func `should find the source tree's plugins in the package root above the executable`() throws {
         let tmp = try Self.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tmp) }
 
@@ -68,7 +68,7 @@ struct PluginRootTests {
         #expect(PluginRoot.sourceTreeRoot(startingAt: exeDir)?.path == plugins.path)
     }
 
-    @Test func `the walk gives up rather than climbing to the filesystem root`() throws {
+    @Test func `should give up looking for the source tree rather than climb to the filesystem root`() throws {
         // A release install has no package above it. Walking forever
         // would eventually hit someone else's `Sources/` directory.
         let tmp = try Self.makeTempDirectory()
@@ -79,7 +79,7 @@ struct PluginRootTests {
         #expect(PluginRoot.sourceTreeRoot(startingAt: deep) == nil)
     }
 
-    @Test func `the walk stops at the configured depth`() throws {
+    @Test func `should stop looking for the source tree at the configured depth`() throws {
         // The package root sits deeper than the walk is allowed to
         // climb, so it must not be found — this is what bounds the
         // search rather than the loop happening to terminate.
@@ -97,7 +97,7 @@ struct PluginRootTests {
 
     // MARK: - the sidecar bundle
 
-    @Test func `no sidecar bundle beside the executable resolves to nothing`() throws {
+    @Test func `should find no bundled plugins when no sidecar bundle sits beside the executable`() throws {
         // Step 3, and the common case for a binary-only install with no
         // resource bundle. Must be nil rather than a `fatalError`, which
         // is what `Bundle.module` would do here.
@@ -107,7 +107,7 @@ struct PluginRootTests {
         #expect(PluginRoot.sidecarRoot(nextTo: tmp) == nil)
     }
 
-    @Test func `a sidecar that isn't a loadable bundle resolves to nothing`() throws {
+    @Test func `should find no bundled plugins when the sidecar is not a loadable bundle`() throws {
         let tmp = try Self.makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: tmp) }
         // Right name, not a bundle.
@@ -117,7 +117,7 @@ struct PluginRootTests {
         #expect(PluginRoot.sidecarRoot(nextTo: tmp) == nil)
     }
 
-    @Test func `a sidecar bundle carrying a Plugins directory resolves to it`() throws {
+    @Test func `should find the bundled plugins in a sidecar bundle that carries a Plugins directory`() throws {
         // The shape a release install actually has: SPM's resource
         // bundle sitting next to the binary, with `Plugins/` inside.
         let tmp = try Self.makeTempDirectory()
@@ -135,7 +135,7 @@ struct PluginRootTests {
         #expect(root.lastPathComponent == PluginRoot.bundleDirectoryName)
     }
 
-    @Test func `a sidecar bundle with no Plugins directory resolves to nothing`() throws {
+    @Test func `should find no bundled plugins when the sidecar bundle has no Plugins directory`() throws {
         // A build that shipped web assets but no plugins. Not an error —
         // just no bundled plugins.
         let tmp = try Self.makeTempDirectory()
@@ -151,7 +151,7 @@ struct PluginRootTests {
 
     // MARK: - the whole lookup
 
-    @Test func `with no override the running build resolves its own bundled plugins`() throws {
+    @Test func `should find the running build's own bundled plugins when no override is set`() throws {
         // End-to-end through `dladdr`: the test binary lives under
         // `.build/`, so the walk must reach the package root and land on
         // the directory holding the reference a11y plugin. This is the
@@ -167,7 +167,7 @@ struct PluginRootTests {
         #expect(FileManager.default.fileExists(atPath: manifest.path))
     }
 
-    @Test func `the scanner picks up whatever the root resolves to`() throws {
+    @Test func `should discover plugins from wherever the bundled root resolves to`() throws {
         // The point of the whole lookup: `FileSystemPlugins.standard`
         // starts from it, so an override lands real plugins in the rail.
         let tmp = try Self.makeTempDirectory()

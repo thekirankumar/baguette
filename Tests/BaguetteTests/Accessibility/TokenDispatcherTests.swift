@@ -26,7 +26,7 @@ struct TokenDispatcherTests {
 
     // MARK: - lifecycle
 
-    @Test func `unregister removes a registered token`() {
+    @Test func `should allow a token to be registered again once unregistered`() {
         let dispatcher = TokenDispatcher()
         let device = NSObject()
         dispatcher.register(device: device, token: "T1", deadline: Date.distantFuture)
@@ -42,13 +42,13 @@ struct TokenDispatcherTests {
         // No crash, no exception → state was cleared first time.
     }
 
-    @Test func `unregister of an unknown token is a silent no-op`() {
+    @Test func `should ignore unregistering an unknown token`() {
         let dispatcher = TokenDispatcher()
         // Should not crash, throw, or affect anything else.
         dispatcher.unregister(token: "never-registered")
     }
 
-    @Test func `multiple tokens can coexist`() {
+    @Test func `should keep several device tokens at once`() {
         let dispatcher = TokenDispatcher()
         let d1 = NSObject(), d2 = NSObject()
         dispatcher.register(device: d1, token: "A", deadline: Date.distantFuture)
@@ -60,7 +60,7 @@ struct TokenDispatcherTests {
 
     // MARK: - callback surfaces
 
-    @Test func `bridge callback returns a callable block for any token`() {
+    @Test func `should answer the translator with a callback for any token`() {
         let dispatcher = TokenDispatcher()
         // Even for an unregistered token we get back *something*
         // — AXPTranslator stores the returned object and invokes
@@ -75,7 +75,7 @@ struct TokenDispatcherTests {
                 "callback must return a non-nil object suitable for AXPTranslator")
     }
 
-    @Test func `convertPlatformFrameToSystem is identity`() {
+    @Test func `should leave platform frames unchanged`() {
         let dispatcher = TokenDispatcher()
         let input = CGRect(x: 11, y: 22, width: 33, height: 44)
         let out = dispatcher.accessibilityTranslationConvertPlatformFrameToSystem(
@@ -84,7 +84,7 @@ struct TokenDispatcherTests {
         #expect(out == input)
     }
 
-    @Test func `rootParentWithToken returns nil`() {
+    @Test func `should report no root parent for any token`() {
         let dispatcher = TokenDispatcher()
         #expect(dispatcher
             .accessibilityTranslationRootParentWithToken("any" as NSString) == nil)
@@ -92,7 +92,7 @@ struct TokenDispatcherTests {
 
     // MARK: - empty response fallback
 
-    @Test func `emptyResponse returns AXPTranslatorResponse instance when class is loaded`() {
+    @Test func `should answer with a typed empty translator response when the translator is loaded`() {
         // The test process loads CoreSimulator + AXP via
         // AXPTranslatorAccessibility's static dlopen the first
         // time `isAvailable` is touched. Force that load here so

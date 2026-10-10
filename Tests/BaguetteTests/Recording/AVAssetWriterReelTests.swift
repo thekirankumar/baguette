@@ -21,7 +21,7 @@ import IOSurface
 @Suite("AVAssetWriterReel")
 struct AVAssetWriterReelTests {
 
-    @Test func `a frame letterboxed to the bottom of the canvas is painted at the bottom`() throws {
+    @Test func `should paint the frame at the bottom when it is letterboxed to the bottom of the canvas`() throws {
         // 4×4 frame: red on top, blue underneath. Placed into the lower
         // half of a 4×8 canvas over a green mat.
         let surface = try stripedSurface()
@@ -39,7 +39,7 @@ struct AVAssetWriterReelTests {
         #expect(grid.pixel(x: 2, y: 7) == Pixel(r: 0, g: 0, b: 255, a: 255))
     }
 
-    @Test func `a frame letterboxed to the top of the canvas is painted at the top`() throws {
+    @Test func `should paint the frame at the top when it is letterboxed to the top of the canvas`() throws {
         let surface = try stripedSurface()
         let placement = CapturePlacement(
             width: 4, height: 8,
@@ -53,7 +53,7 @@ struct AVAssetWriterReelTests {
         #expect(grid.pixel(x: 2, y: 6) == Pixel(r: 0, g: 255, b: 0, a: 255))
     }
 
-    @Test func `a crop keeps the part of the frame the placement points at`() throws {
+    @Test func `should keep the part of the frame the placement points at when cropping`() throws {
         // The frame overhangs the canvas by its bottom half. At 1:1
         // there is no resampling to blur the answer: what survives is
         // the frame's *top* rows, because that is where `drawY: 0`
@@ -72,7 +72,7 @@ struct AVAssetWriterReelTests {
         #expect(grid.pixel(x: 2, y: 1) == Pixel(r: 255, g: 0, b: 0, a: 255))
     }
 
-    @Test func `the letterbox shows the requested background colour, opaque`() throws {
+    @Test func `should fill the letterbox with the requested background colour, opaque`() throws {
         let surface = try stripedSurface()
         let placement = CapturePlacement(
             width: 8, height: 4,
@@ -90,7 +90,7 @@ struct AVAssetWriterReelTests {
 
     // MARK: - What lands at the user's path
 
-    @Test func `a take with no frames in it leaves the file already at that path alone`() async throws {
+    @Test func `should leave an existing file alone when a take has no frames`() async throws {
         // The classic re-run: yesterday's good clip is sitting at
         // `--output`, today's take captures nothing. Deleting the good
         // one to make room for a file that never got written is the
@@ -113,7 +113,7 @@ struct AVAssetWriterReelTests {
         #expect(try siblings(of: destination) == ["demo.mp4"])
     }
 
-    @Test func `a finished take replaces whatever was at that path`() async throws {
+    @Test func `should replace whatever was at the output path when a take finishes`() async throws {
         let destination = try scratchDirectory().appendingPathComponent("demo.mp4")
         try Data("yesterday's take".utf8).write(to: destination)
 

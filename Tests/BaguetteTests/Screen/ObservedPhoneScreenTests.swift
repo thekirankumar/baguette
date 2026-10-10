@@ -16,7 +16,7 @@ struct ObservedPhoneScreenTests {
         SizedFramebufferPort(portName: "inner", size: inner.size),
     ]
 
-    @Test func `a single integrated screen binds without a hinge sample or a panel name`() throws {
+    @Test func `should observe a single integrated screen without a hinge sample or a panel name`() throws {
         let anonymous = ConnectedScreenRecord(
             screenId: 1, name: "LCD", screenType: .integrated, size: Self.cover.size, scale: 3)
         let observed = try ConnectedScreens.observedPhone(ports: [Self.ports[0]], screens: [anonymous], angle: nil)
@@ -26,7 +26,7 @@ struct ObservedPhoneScreenTests {
         #expect(observed.binding.pointSize(scale: observed.scale) == Size(width: 402, height: 874))
     }
 
-    @Test func `two panels bind the one the hinge lights`() throws {
+    @Test func `should observe the panel the hinge lights when a device has two`() throws {
         let opened = try ConnectedScreens.observedPhone(
             ports: Self.ports, screens: [Self.cover, Self.inner], angle: HingeAngle(degrees: 180))
         #expect(opened.binding.connectedScreenId == 2)
@@ -40,13 +40,13 @@ struct ObservedPhoneScreenTests {
         #expect(closed.binding.panel == .primary)
     }
 
-    @Test func `two panels without a fresh hinge sample fail instead of guessing the cover`() {
+    @Test func `should report the screen unavailable instead of guessing the cover when two panels have no hinge sample`() {
         #expect(throws: ObservedScreenError.unavailable) {
             try ConnectedScreens.observedPhone(ports: Self.ports, screens: [Self.cover, Self.inner], angle: nil)
         }
     }
 
-    @Test func `the lit panel needs exactly one framebuffer of its size`() {
+    @Test func `should report the screen unavailable unless exactly one framebuffer matches the lit panel's size`() {
         #expect(throws: ObservedScreenError.unavailable) {
             try ConnectedScreens.observedPhone(
                 ports: [Self.ports[0]], screens: [Self.cover, Self.inner], angle: HingeAngle(degrees: 180))
@@ -57,7 +57,7 @@ struct ObservedPhoneScreenTests {
         }
     }
 
-    @Test func `a screen without a usable scale cannot provide point geometry`() {
+    @Test func `should report the screen unavailable when it has no usable scale for point geometry`() {
         let unscaled = ConnectedScreenRecord(
             screenId: 1, name: "LCD", screenType: .integrated, size: Self.cover.size)
         #expect(throws: ObservedScreenError.unavailable) {

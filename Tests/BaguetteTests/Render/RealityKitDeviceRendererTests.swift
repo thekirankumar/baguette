@@ -7,7 +7,7 @@ import Testing
 
 @Suite("RealityKitDeviceRenderer")
 struct RealityKitDeviceRendererTests {
-    @Test func `rejects folding a single-panel device instead of dropping its screenshot`() throws {
+    @Test func `should reject folding a single-panel device instead of dropping its screenshot`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         #expect(throws: DeviceModelError.modelCannotFold("test-device")) {
@@ -17,7 +17,7 @@ struct RealityKitDeviceRendererTests {
 
     /// The capture goes where the device shows it: the inner screen when
     /// open, the cover — turned by the fold to face the camera — when shut.
-    @Test func `a saved capture lands on the cover when shut and on the inner screen when open`() throws {
+    @Test func `should land a saved capture on the cover when shut and on the inner screen when open`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let screen = try Self.screenPNG()
@@ -39,7 +39,7 @@ struct RealityKitDeviceRendererTests {
         #expect(try Self.opaqueWidth(shut) * 4 < Self.opaqueWidth(open) * 3)
     }
 
-    @Test func `rotates an indexed PNG that already renders without rotation`() throws {
+    @Test func `should rotate an indexed PNG that already renders without rotation`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let plan = try Self.plan(directory: scratch, file: "device.usda")
@@ -66,7 +66,7 @@ struct RealityKitDeviceRendererTests {
         #expect(try result != renderer.render(plan: rolledOnly, screenImage: data as Data))
     }
 
-    @Test func `renders a generated device scene to requested PNG dimensions`() throws {
+    @Test func `should render a generated device scene at the requested PNG dimensions`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let plan = try Self.plan(directory: scratch, file: "device.usda")
@@ -84,7 +84,7 @@ struct RealityKitDeviceRendererTests {
         #expect(try Self.opaqueHeight(png) > 160)
     }
 
-    @Test func `reports the declared local asset when it is missing`() throws {
+    @Test func `should report the declared local asset when it is missing`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let plan = try Self.plan(directory: scratch, file: "missing.usdz")
@@ -97,7 +97,7 @@ struct RealityKitDeviceRendererTests {
         }
     }
 
-    @Test func `material appearance variant changes rendered device finish`() throws {
+    @Test func `should change the rendered device finish with a material appearance variant`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let orange = try Self.plan(

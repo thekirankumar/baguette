@@ -4,7 +4,7 @@ import Testing
 
 @Suite("DeviceCameraFraming")
 struct DeviceCameraFramingTests {
-    @Test func `fits the complete device through a standard perspective lens`() {
+    @Test func `should fit the complete device through a standard perspective lens`() {
         let framing = DeviceCameraFraming.fit(
             subjectWidth: 2.2,
             subjectHeight: 4.4,
@@ -17,7 +17,7 @@ struct DeviceCameraFramingTests {
         #expect(abs(framing.distanceFromCenter - expectedDistance) < 0.000_001)
     }
 
-    @Test func `zooms by moving the camera while preserving its lens`() {
+    @Test func `should zoom by moving the camera while keeping its lens`() {
         let framing = DeviceCameraFraming.fit(
             subjectWidth: 2.2,
             subjectHeight: 4.4,
@@ -29,7 +29,7 @@ struct DeviceCameraFramingTests {
         #expect(framing.fieldOfViewDegrees == 32)
     }
 
-    @Test func `fits width when a device is wider than its viewport`() {
+    @Test func `should fit the width when a device is wider than its viewport`() {
         let framing = DeviceCameraFraming.fit(
             subjectWidth: 4,
             subjectHeight: 2,

@@ -7,7 +7,7 @@ import Testing
 /// the outcome of a failure from here.
 @Suite("PoseDelivery")
 struct PoseDeliveryTests {
-    @Test func `only a helper timeout leaves a pose change unconfirmed`() {
+    @Test func `should leave a pose change unconfirmed only when the helper timed out`() {
         #expect(PoseDelivery(failure: HingeError.toolTimedOut) == .unconfirmed)
         #expect(PoseDelivery(failure: HingeError.toolStartedLate) == .rejected)
         #expect(PoseDelivery(failure: HingeError.toolFailed(status: 1)) == .rejected)
@@ -15,7 +15,7 @@ struct PoseDeliveryTests {
         #expect(PoseDelivery(failure: CocoaError(.fileNoSuchFile)) == .rejected)
     }
 
-    @Test func `each outcome ends a command with its documented exit status`() {
+    @Test func `should end a command with each outcome's documented exit status`() {
         #expect(PoseDelivery.delivered.exitStatus == 0)
         #expect(PoseDelivery.rejected.exitStatus == 1)
         #expect(PoseDelivery.unconfirmed.exitStatus == 3)

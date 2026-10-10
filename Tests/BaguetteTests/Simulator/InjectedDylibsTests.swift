@@ -20,19 +20,19 @@ struct InjectedDylibsTests {
     private let camera = "/Users/x/Library/Application Support/Baguette/builds/abc123/VirtualCamera.dylib"
     private let motion = "/Users/x/Library/Application Support/Baguette/builds/def456/BaguetteMotion.dylib"
 
-    @Test func `treats a missing or empty value as nothing armed`() {
+    @Test func `should treat a missing or empty value as nothing armed`() {
         #expect(InjectedDylibs.parsing(nil).isEmpty)
         #expect(InjectedDylibs.parsing("").isEmpty)
         #expect(InjectedDylibs.parsing("   \n").isEmpty)
         #expect(InjectedDylibs.parsing(nil).environmentValue == "")
     }
 
-    @Test func `parses a colon-joined value`() {
+    @Test func `should read a colon-joined value as several dylibs`() {
         let dylibs = InjectedDylibs.parsing("\(camera):\(motion)")
         #expect(dylibs.paths == [camera, motion])
     }
 
-    @Test func `ignores empty segments and surrounding whitespace`() {
+    @Test func `should ignore empty segments and surrounding whitespace`() {
         // `launchctl getenv` output arrives with a trailing newline, and a
         // stray colon shouldn't become an empty dylib path that dyld then
         // complains about.
@@ -40,14 +40,14 @@ struct InjectedDylibsTests {
         #expect(dylibs.paths == [camera, motion])
     }
 
-    @Test func `arms a second dylib alongside the first`() {
+    @Test func `should arm a second dylib alongside the first`() {
         // The headline: turning on motion must not turn off the camera.
         let dylibs = InjectedDylibs.parsing(camera).adding(motion)
         #expect(dylibs.paths == [camera, motion])
         #expect(dylibs.environmentValue == "\(camera):\(motion)")
     }
 
-    @Test func `replaces an earlier build of the same dylib instead of stacking it`() {
+    @Test func `should replace an earlier build of the same dylib rather than stack it`() {
         // Every release installs under a fresh sha-keyed directory (iOS 26's
         // dyld page-hash cache rejects a replaced dylib at the same path),
         // so the same dylib legitimately arrives under a new path. Two
@@ -57,25 +57,25 @@ struct InjectedDylibsTests {
         #expect(dylibs.paths == [camera])
     }
 
-    @Test func `arming the same path twice changes nothing`() {
+    @Test func `should change nothing when the same path is armed twice`() {
         let dylibs = InjectedDylibs.parsing(camera).adding(camera)
         #expect(dylibs.paths == [camera])
     }
 
-    @Test func `disarms one dylib and leaves the others armed`() {
+    @Test func `should disarm one dylib and leave the others armed`() {
         let dylibs = InjectedDylibs.parsing("\(camera):\(motion)").removing(camera)
         #expect(dylibs.paths == [motion])
         #expect(!dylibs.isEmpty)
     }
 
-    @Test func `is empty once the last dylib is disarmed`() {
+    @Test func `should be empty once the last dylib is disarmed`() {
         // Empty is what tells the adapter to `unsetenv` rather than set an
         // empty string — dyld treats an empty entry as a path it can't load.
         let dylibs = InjectedDylibs.parsing(camera).removing(camera)
         #expect(dylibs.isEmpty)
     }
 
-    @Test func `preserves a dylib baguette did not arm`() {
+    @Test func `should preserve a dylib baguette did not arm`() {
         // Someone may have armed their own dylib by hand. Read-modify-write
         // means we must hand it back untouched rather than clobbering it.
         let theirs = "/opt/theirs/Instrument.dylib"
@@ -83,7 +83,7 @@ struct InjectedDylibsTests {
         #expect(dylibs.paths == [theirs])
     }
 
-    @Test func `keeps only absolute dylib paths, ignoring anything else`() {
+    @Test func `should keep only absolute dylib paths when the value is polluted with log noise`() {
         // Not hypothetical: a simulator's stdout channel carries leftover
         // output from *previously* spawned processes, so
         // `simctl spawn … launchctl getenv` can hand back log lines — even
@@ -99,17 +99,17 @@ struct InjectedDylibsTests {
         #expect(InjectedDylibs.parsing(polluted).paths == [motion])
     }
 
-    @Test func `ignores a relative path`() {
+    @Test func `should ignore a relative path`() {
         // dyld needs an absolute path, and a bare word is far more likely to
         // be noise than a library anyone meant to inject.
         #expect(InjectedDylibs.parsing("VirtualCamera.dylib").isEmpty)
     }
 
-    @Test func `ignores a path that is not a dylib`() {
+    @Test func `should ignore a path that is not a dylib`() {
         #expect(InjectedDylibs.parsing("/usr/lib/thing.txt").isEmpty)
     }
 
-    @Test func `matches by dylib filename, not by directory`() {
+    @Test func `should disarm a dylib by its file name whatever folder it sits in`() {
         // The sha-keyed install directory differs per release; the filename
         // is what identifies the feature's dylib.
         #expect(InjectedDylibs.parsing(camera).removing(

@@ -29,7 +29,7 @@ struct SharedHingeTests {
 
     final class Seen: @unchecked Sendable { var angles: [Double] = [] }
 
-    @Test func `subscribers share one inner watch and all receive each sample`() {
+    @Test func `should share one inner watch and deliver each sample to every subscriber`() {
         let inner = Inner()
         let shared = SharedHinge(inner: inner.hinge)
         let a = Seen(), b = Seen()
@@ -43,7 +43,7 @@ struct SharedHingeTests {
         wa.cancel(); wb.cancel()
     }
 
-    @Test func `a watcher joining a running monitor is told the standing angle at once`() {
+    @Test func `should tell a watcher joining a running monitor the standing angle at once`() {
         // devicectl reports a change-driven stream: the standing angle
         // comes once, at start. A socket that joins later — a 3D scene
         // opened while the page's own socket already watches — would
@@ -60,7 +60,7 @@ struct SharedHingeTests {
         w.cancel(); first.cancel()
     }
 
-    @Test func `while watched, the angle is the last sample with no read`() {
+    @Test func `should answer the angle from the last sample without a read while watched`() {
         let inner = Inner()
         let shared = SharedHinge(inner: inner.hinge)
         let w = shared.watch { _ in }
@@ -70,7 +70,7 @@ struct SharedHingeTests {
         w.cancel()
     }
 
-    @Test func `with no watch running, the angle is read`() {
+    @Test func `should read the angle when no watch is running`() {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(HingeAngle(degrees: 0))
         let shared = SharedHinge(inner: inner.hinge)
@@ -80,7 +80,7 @@ struct SharedHingeTests {
 
     /// Before the monitor's first sample lands there is nothing cached;
     /// a read answers rather than a stale `nil`.
-    @Test func `a watch that has not sampled yet does not shadow a read`() {
+    @Test func `should still read the angle when a watch has not sampled yet`() {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(HingeAngle(degrees: 180))
         let shared = SharedHinge(inner: inner.hinge)
@@ -89,7 +89,7 @@ struct SharedHingeTests {
         w.cancel()
     }
 
-    @Test func `the inner watch stops when the last subscriber leaves, not before`() {
+    @Test func `should stop the inner watch when the last subscriber leaves, not before`() {
         let inner = Inner()
         let shared = SharedHinge(inner: inner.hinge)
         let wa = shared.watch { _ in }
@@ -100,7 +100,7 @@ struct SharedHingeTests {
         verify(inner.watch).cancel().called(1)
     }
 
-    @Test func `a cancelled subscriber receives nothing more`() {
+    @Test func `should deliver nothing more to a cancelled subscriber`() {
         let inner = Inner()
         let shared = SharedHinge(inner: inner.hinge)
         let a = Seen()
@@ -118,7 +118,7 @@ struct SharedHingeTests {
     /// must agree, and the sweep's last sample is the truth for a
     /// while: the hinge does not move without Device Hub, and the new
     /// page's socket restarts the watch within seconds.
-    @Test func `the last sample outlives the watch for a grace period`() {
+    @Test func `should keep the last sample for a grace period after the watch ends`() {
         let inner = Inner()
         var now = Date(timeIntervalSince1970: 1000)
         let shared = SharedHinge(inner: inner.hinge, now: { now })
@@ -130,7 +130,7 @@ struct SharedHingeTests {
         verify(inner.hinge).angle().called(0)
     }
 
-    @Test func `after the grace period the angle is read again`() {
+    @Test func `should read the angle again after the grace period`() {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(HingeAngle(degrees: 130))
         var now = Date(timeIntervalSince1970: 1000)
@@ -148,7 +148,7 @@ struct SharedHingeTests {
     /// produced disagreeing panels (a second concurrent devicectl
     /// monitor answers 0° for a device sitting at 130°). One read
     /// serves the burst: the first spawns, the rest share its sample.
-    @Test func `a one-shot read is remembered for the grace period`() {
+    @Test func `should remember a one-shot read for the grace period`() {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(HingeAngle(degrees: 130))
         var now = Date(timeIntervalSince1970: 1000)
@@ -160,7 +160,7 @@ struct SharedHingeTests {
     }
 
     /// A failed read is not remembered — the next caller tries again.
-    @Test func `a read that returns nothing is not cached as an angle, but is not retried at once`() {
+    @Test func `should not cache a silent read as an angle, but not retry it at once either`() {
         // A silent hinge (the guest's motion stream can drop after a
         // SpringBoard restart) makes every read wait out its deadline;
         // callers queue behind the serialised read and the server
@@ -177,7 +177,7 @@ struct SharedHingeTests {
         verify(inner.hinge).angle().called(2)
     }
 
-    @Test func `folding sweeps from the angle last heard to the one asked for`() throws {
+    @Test func `should fold from the angle last heard to the one asked for`() throws {
         let inner = Inner()
         let motor = MockHingeMotor()
         given(motor).fold(from: .any, to: .any, over: .any).willReturn()
@@ -194,7 +194,7 @@ struct SharedHingeTests {
     /// devicectl cannot read a device in a custom set. Sweeping from an
     /// assumed shut would fold an open device closed and hand the display
     /// to the cover and back on the way to the angle asked for.
-    @Test func `with no angle heard, a fold goes straight to the angle asked for`() throws {
+    @Test func `should fold straight to the angle asked for when no angle was heard`() throws {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(nil)
         let motor = MockHingeMotor()
@@ -207,7 +207,7 @@ struct SharedHingeTests {
     }
 
     /// The same device always gets the same shared hinge, whoever asks.
-    @Test func `the registry hands out one shared hinge per device`() {
+    @Test func `should hand out one shared hinge per device`() {
         let inner = Inner()
         let first = SharedHinge.forDevice("duo", make: { inner.hinge })
         let second = SharedHinge.forDevice("duo", make: { MockHinge() })

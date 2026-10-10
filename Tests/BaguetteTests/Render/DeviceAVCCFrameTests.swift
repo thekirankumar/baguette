@@ -7,7 +7,7 @@ import Testing
 
 @Suite("DeviceAVCCFrame")
 struct DeviceAVCCFrameTests {
-    @Test func `codec descriptions are separate from visual frame identities`() throws {
+    @Test func `should keep codec descriptions separate from visual frame identities`() throws {
         let description = try DeviceAVCCEnvelope.description(Data([1, 100, 0, 31]))
         let (metadata, body) = try Self.unpack(description)
         #expect(metadata["version"] as? Int == 2)
@@ -25,7 +25,7 @@ struct DeviceAVCCFrameTests {
         #expect(video == Data([3, 0, 0, 0, 1, 7]))
     }
 
-    @Test func `invalid identities tags and oversized payloads are rejected`() {
+    @Test func `should reject invalid frame ids, tags and oversized payloads`() {
         for (id, tag, data) in [
             (0, UInt8(2), Data([1])), (1, UInt8(1), Data([1])),
             (1, UInt8(3), Data()), (1, UInt8(4), Data([1])),
@@ -37,7 +37,7 @@ struct DeviceAVCCFrameTests {
         }
     }
 
-    @Test func `slow consumers reject overflow without discarding encoded references`() {
+    @Test func `should reject overflow for slow consumers without discarding encoded references`() {
         var backlog = FrameBacklog(byteBudget: 8, preservingDescriptions: false, rejectingOverflow: true)
         let first = backlog.append(Data([1, 2, 3, 4]))
         let second = backlog.append(Data([5, 6, 7, 8]))
@@ -50,7 +50,7 @@ struct DeviceAVCCFrameTests {
         #expect(backlog.popFirst() == Data([5, 6, 7, 8]))
     }
 
-    @Test func `delayed encoding keeps original geometry and replaces only unsubmitted frames`() throws {
+    @Test func `should keep original geometry and replace only unsubmitted frames when encoding is delayed`() throws {
         let state = AVCCState()
         let encoder = Self.encoder(state)
         defer { encoder.stop() }
@@ -76,7 +76,7 @@ struct DeviceAVCCFrameTests {
         #expect(frames.last?.1 == Data([3, 33]))
     }
 
-    @Test func `a dropped frame advances pending rendering without closing the stream`() throws {
+    @Test func `should advance pending rendering without closing the stream when a frame is dropped`() throws {
         let state = AVCCState()
         let encoder = Self.encoder(state)
         defer { encoder.stop() }
@@ -95,7 +95,7 @@ struct DeviceAVCCFrameTests {
         #expect(last.1 == Data([2, 44]))
     }
 
-    @Test func `failure and stop discard deferred frames and late completions`() throws {
+    @Test func `should discard deferred frames and late completions on failure or stop`() throws {
         for fail in [true, false] {
             let state = AVCCState()
             let encoder = Self.encoder(state)

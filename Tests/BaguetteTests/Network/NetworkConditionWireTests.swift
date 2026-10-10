@@ -11,7 +11,7 @@ import Foundation
 @Suite("NetworkCondition wire format")
 struct NetworkConditionWireTests {
 
-    @Test func `encodes as sorted-key JSON with the pacing resolved`() throws {
+    @Test func `should publish the condition as sorted-key JSON with the pacing resolved`() throws {
         // 400 kbps is 50 000 bytes/second, so a 50 ms tick carries 2 500 of
         // them. The dylib is handed both numbers and multiplies nothing.
         let condition = NetworkCondition(
@@ -23,7 +23,7 @@ struct NetworkConditionWireTests {
             """)
     }
 
-    @Test func `leaves the bandwidth out entirely when the link is unmetered`() throws {
+    @Test func `should leave the bandwidth out entirely when the link is unmetered`() throws {
         // Absent, not zero. A zero on the wire would have to mean either
         // "unlimited" or "nothing gets through", and the dylib would have to
         // guess which.
@@ -32,12 +32,12 @@ struct NetworkConditionWireTests {
         #expect(json == #"{"latencyMs":300,"lossPercent":0,"offline":false}"#)
     }
 
-    @Test func `publishes offline as a plain flag`() throws {
+    @Test func `should publish offline as a plain flag`() throws {
         let json = String(decoding: try NetworkCondition.offline.encoded(), as: UTF8.self)
         #expect(json == #"{"latencyMs":0,"lossPercent":0,"offline":true}"#)
     }
 
-    @Test func `publishes a cleared condition as one that changes nothing`() throws {
+    @Test func `should publish a cleared condition as one that changes nothing`() throws {
         // What `network clear` writes before disarming. An app already
         // running still has the dylib loaded and still reads this file, so
         // the last thing it reads has to say "nothing is being done to you".
@@ -46,7 +46,7 @@ struct NetworkConditionWireTests {
         #expect(json == #"{"latencyMs":0,"lossPercent":0,"offline":false}"#)
     }
 
-    @Test func `round-trips through its own encoding`() throws {
+    @Test func `should read back every condition it publishes unchanged`() throws {
         for condition in [
             NetworkCondition(latencyMs: 300, bandwidthKbps: 400, lossPercent: 5)!,
             NetworkCondition(latencyMs: 300)!,
@@ -58,7 +58,7 @@ struct NetworkConditionWireTests {
         }
     }
 
-    @Test func `refuses to decode a condition that describes no network`() throws {
+    @Test func `should refuse to read a published condition that describes no network`() throws {
         // The file is on shared /tmp and hand-editable. Decoding goes
         // through the same validating door as everything else, so a
         // negative latency is a decode failure rather than a condition

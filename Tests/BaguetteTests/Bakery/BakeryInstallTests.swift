@@ -12,7 +12,7 @@ struct BakeryInstallTests {
 
     // MARK: - add a source
 
-    @Test func `adding a bakery records it trusted with its pinned commit`() async throws {
+    @Test func `should trust an added bakery at its pinned commit`() async throws {
         let env = try Env()
         let ref = try BakeryRef.parse("acme/tools")
         let bakery = try await env.install.add(ref)
@@ -23,7 +23,7 @@ struct BakeryInstallTests {
         #expect(try env.registry.bakeries().map(\.id) == ["github.com/acme/tools"])
     }
 
-    @Test func `preview does not record the bakery`() async throws {
+    @Test func `should leave the trusted list unchanged when previewing a bakery`() async throws {
         // The browser previews before the user consents, so preview
         // must be side-effect-free on the trusted list.
         let env = try Env()
@@ -34,7 +34,7 @@ struct BakeryInstallTests {
         #expect(try env.registry.bakeries().isEmpty)
     }
 
-    @Test func `a repo without baguette.json is not a bakery`() async throws {
+    @Test func `should refuse to add a repo without baguette.json as a bakery`() async throws {
         let env = try Env(writeMenu: false)
         await #expect(throws: BakeryMenuError.self) {
             _ = try await env.install.add(try BakeryRef.parse("acme/tools"))
@@ -43,7 +43,7 @@ struct BakeryInstallTests {
 
     // MARK: - install a plugin
 
-    @Test func `installing copies the plugin into the plugins root`() async throws {
+    @Test func `should copy an installed plugin into the plugins root where it is discoverable`() async throws {
         let env = try Env()
         let ref = try BakeryRef.parse("acme/tools/hello")
         let installed = try await env.install.install(ref: ref, requested: nil)
@@ -57,7 +57,7 @@ struct BakeryInstallTests {
         #expect(discovered.map(\.id) == ["hello"])
     }
 
-    @Test func `installing records provenance and trusts the source`() async throws {
+    @Test func `should record an installed plugin's provenance and trust its source`() async throws {
         let env = try Env()
         _ = try await env.install.install(ref: try BakeryRef.parse("acme/tools/hello"), requested: nil)
 
@@ -69,7 +69,7 @@ struct BakeryInstallTests {
         #expect(try env.registry.bakeries().map(\.id) == ["github.com/acme/tools"])
     }
 
-    @Test func `an unknown plugin name is refused before any copy`() async throws {
+    @Test func `should refuse an unknown plugin name before copying anything`() async throws {
         let env = try Env()
         await #expect(throws: InstallPlanError.self) {
             _ = try await env.install.install(ref: try BakeryRef.parse("acme/tools"), requested: "ghost")
@@ -79,7 +79,7 @@ struct BakeryInstallTests {
 
     // MARK: - install by bare name across trusted bakeries
 
-    @Test func `a bare name resolves to the trusted bakery that offers it`() async throws {
+    @Test func `should install a bare plugin name from the trusted bakery that offers it`() async throws {
         // `plugin install hello` after the bakery was added — no ref,
         // no second trust prompt.
         let env = try Env()
@@ -91,7 +91,7 @@ struct BakeryInstallTests {
             atPath: env.home.appendingPathComponent("plugins/hello/baguette-plugin.json").path))
     }
 
-    @Test func `a bare name no trusted bakery offers is refused`() async throws {
+    @Test func `should refuse a bare plugin name when no trusted bakery offers it`() async throws {
         let env = try Env()
         _ = try await env.install.add(try BakeryRef.parse("acme/tools"))
         await #expect(throws: BakeryResolveError.notOffered(name: "ghost")) {
@@ -101,7 +101,7 @@ struct BakeryInstallTests {
 
     // MARK: - remove
 
-    @Test func `removing deletes the plugin and clears its provenance`() async throws {
+    @Test func `should delete a removed plugin and clear its provenance`() async throws {
         let env = try Env()
         _ = try await env.install.install(ref: try BakeryRef.parse("acme/tools/hello"), requested: nil)
 
@@ -115,7 +115,7 @@ struct BakeryInstallTests {
 
     // MARK: - the pin
 
-    @Test func `installing from an already-trusted bakery asks for its recorded commit`() async throws {
+    @Test func `should fetch the recorded commit when installing from an already-trusted bakery`() async throws {
         // Trust was granted to a specific commit. Taking HEAD on the
         // second install would mean a bakery accepted months ago
         // silently delivers whatever it holds today — the pin only means

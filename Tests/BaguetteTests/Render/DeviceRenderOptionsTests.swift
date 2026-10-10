@@ -5,7 +5,7 @@ import Testing
 @Suite("DeviceRenderOptions")
 struct DeviceRenderOptionsTests {
 
-    @Test func `empty object uses HTTP render defaults`() throws {
+    @Test func `should use HTTP render defaults when the body is an empty object`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("{}".utf8))
 
         #expect(options.rotation == .zero)
@@ -16,7 +16,7 @@ struct DeviceRenderOptionsTests {
         #expect(options.screenGlass == false)
     }
 
-    @Test func `parses every HTTP render option`() throws {
+    @Test func `should read every HTTP render option`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("""
         {
           "rotation": {"x": -30, "y": 45, "z": 30},
@@ -36,7 +36,7 @@ struct DeviceRenderOptionsTests {
         #expect(options.screenGlass == true)
     }
 
-    @Test func `rejects malformed HTTP render options`() {
+    @Test func `should reject malformed HTTP render options`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try DeviceRenderOptions.parsing(json: Data("""
             {"fit":"tile","size":{"width":0,"height":900}}
@@ -44,7 +44,7 @@ struct DeviceRenderOptionsTests {
         }
     }
 
-    @Test func `accepts a size preset name in the render body`() throws {
+    @Test func `should accept a size preset name in the render body`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("""
         {"size": "appstore-6.9"}
         """.utf8))
@@ -54,7 +54,7 @@ struct DeviceRenderOptionsTests {
             == RenderDimensions(width: 1290, height: 2796))
     }
 
-    @Test func `resolves a ratio size in the render body against the captured screen`() throws {
+    @Test func `should resolve a ratio size in the render body against the captured screen`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("""
         {"size": "square"}
         """.utf8))
@@ -63,7 +63,7 @@ struct DeviceRenderOptionsTests {
             == RenderDimensions(width: 2796, height: 2796))
     }
 
-    @Test func `keeps the explicit width and height object form`() throws {
+    @Test func `should keep the explicit width and height size object`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("""
         {"size": {"width": 1200, "height": 900}}
         """.utf8))
@@ -73,7 +73,7 @@ struct DeviceRenderOptionsTests {
             == RenderDimensions(width: 1200, height: 900))
     }
 
-    @Test func `renders at the captured screen size when no size is asked for`() throws {
+    @Test func `should render at the captured screen size when no size is asked for`() throws {
         let options = try DeviceRenderOptions.parsing(json: Data("{}".utf8))
 
         #expect(options.captureSize == .native)
@@ -81,7 +81,7 @@ struct DeviceRenderOptionsTests {
             == RenderDimensions(width: 1179, height: 2556))
     }
 
-    @Test func `rejects an unknown size preset name`() {
+    @Test func `should reject an unknown size preset name`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try DeviceRenderOptions.parsing(json: Data("""
             {"size": "gigantic"}

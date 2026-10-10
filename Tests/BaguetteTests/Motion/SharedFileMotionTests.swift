@@ -44,7 +44,7 @@ struct SharedFileMotionTests {
                      startedAt: startedAt, stepsBefore: 0, distanceBefore: 0)
     }
 
-    @Test func `scopes the intent file to one simulator`() async throws {
+    @Test func `should scope the intent file to one simulator`() async throws {
         // One shared path meant publishing for simulator B replaced the
         // intent an injected app on simulator A was still reading. The dylib
         // builds the same path from its own SIMULATOR_UDID.
@@ -54,7 +54,7 @@ struct SharedFileMotionTests {
         #expect(a.hasSuffix("BaguetteMotion-AAAA-1111.json"))
     }
 
-    @Test func `reads back the intent it published`() async throws {
+    @Test func `should read back the intent it published`() async throws {
         // The published file *is* the state for callers that keep none —
         // the CLI recovers the pedometer's running totals from it.
         let (motion, _, sim, _) = makeMotion()
@@ -66,7 +66,7 @@ struct SharedFileMotionTests {
         #expect(motion.published() == intent)
     }
 
-    @Test func `publish writes the intent where the dylib reads it`() async throws {
+    @Test func `should write a published intent where the dylib reads it`() async throws {
         let (motion, _, sim, url) = makeMotion()
         let intent = walking()
 
@@ -79,7 +79,7 @@ struct SharedFileMotionTests {
         #expect(try MotionIntent(decoding: written) == intent)
     }
 
-    @Test func `publish arms the motion dylib`() async throws {
+    @Test func `should arm the motion dylib when publishing`() async throws {
         let (motion, injection, sim, _) = makeMotion()
 
         try await motion.publish(walking(), on: sim)
@@ -87,7 +87,7 @@ struct SharedFileMotionTests {
         verify(injection).arm(dylibPath: .value(Self.dylib), on: .any).called(1)
     }
 
-    @Test func `publish replaces the previous intent rather than appending`() async throws {
+    @Test func `should replace the previous intent rather than append when publishing`() async throws {
         // The file is a single current value, not a log — a dylib reading a
         // concatenation would fail to parse and see no motion at all.
         let (motion, _, sim, url) = makeMotion()
@@ -100,7 +100,7 @@ struct SharedFileMotionTests {
         #expect(try MotionIntent(decoding: try Data(contentsOf: url)) == second)
     }
 
-    @Test func `clear disarms without destroying the last published intent`() async throws {
+    @Test func `should disarm without destroying the last published intent when cleared`() async throws {
         // Disarming only stops *future* app launches loading the dylib. An
         // app already running still has it loaded and still reads the file,
         // so the file must survive — the session parks the device as
@@ -117,7 +117,7 @@ struct SharedFileMotionTests {
         #expect(try MotionIntent(decoding: try Data(contentsOf: url)) == parked)
     }
 
-    @Test func `a failed arm surfaces rather than reporting success`() async {
+    @Test func `should surface a failed arm rather than report success`() async {
         let (motion, _, sim, _) = makeMotion(
             armError: SimctlCapture.Failure.failed(udid: "U", status: 2, output: ""))
 
@@ -131,7 +131,7 @@ struct SharedFileMotionTests {
         #expect(threw)
     }
 
-    @Test func `publish reports a missing dylib rather than arming an empty path`() async {
+    @Test func `should report a missing dylib rather than arm an empty path when publishing`() async {
         // A build that didn't ship VirtualMotion.dylib has nothing to arm.
         // Arming an empty entry would make dyld log a load failure for every
         // app launched afterwards, and publishing an intent nothing reads
@@ -154,7 +154,7 @@ struct SharedFileMotionTests {
         verify(injection).arm(dylibPath: .any, on: .any).called(0)
     }
 
-    @Test func `publishes into a directory that does not exist yet`() async throws {
+    @Test func `should publish into a directory that does not exist yet`() async throws {
         // The shared path is configurable, and a caller pointing at a fresh
         // directory shouldn't have to create it first.
         let dir = URL(fileURLWithPath: NSTemporaryDirectory())

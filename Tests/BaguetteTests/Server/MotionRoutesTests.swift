@@ -54,7 +54,7 @@ struct MotionRoutesTests {
 
     // MARK: - parse
 
-    @Test func `parseMotionRequest reads an activity with speed and confidence`() {
+    @Test func `should read a motion activity with its speed and confidence`() {
         let request = Server.parseMotionRequest(
             json: #"{"activity":"running","speed":3.6,"confidence":"medium"}"#)
         #expect(request?.kind == .running)
@@ -62,13 +62,13 @@ struct MotionRoutesTests {
         #expect(request?.confidence == .medium)
     }
 
-    @Test func `parseMotionRequest falls back to the kind's usual pace`() {
+    @Test func `should fall back to the activity's usual pace when no speed is given`() {
         // The browser's toggle sends only an activity; the speed it would
         // otherwise have to invent lives in one place instead.
         #expect(Server.parseMotionRequest(json: #"{"activity":"cycling"}"#)?.speed == 6)
     }
 
-    @Test func `parseMotionRequest classifies a body that carries only a speed`() {
+    @Test func `should classify the activity from the speed when the body carries only a speed`() {
         // How the browser arms: it posts the speed it is set to move at and
         // the kind is derived here. Duplicating MotionKind's thresholds in
         // JavaScript would put domain logic in the frontend, and the two
@@ -78,7 +78,7 @@ struct MotionRoutesTests {
         #expect(Server.parseMotionRequest(json: #"{"speed":0}"#)?.kind == .stationary)
     }
 
-    @Test func `an explicit activity wins over the speed's classification`() {
+    @Test func `should keep an explicit activity over the one its speed would suggest`() {
         // The CLI names a kind outright; that must not be re-derived.
         let request = Server.parseMotionRequest(
             json: #"{"activity":"walking","speed":13.4}"#)
@@ -86,28 +86,28 @@ struct MotionRoutesTests {
         #expect(request?.speed == 13.4)
     }
 
-    @Test func `parseMotionRequest rejects an unsupported confidence`() {
+    @Test func `should reject an unsupported motion confidence`() {
         // Silently downgrading an unknown word to `high` would report a
         // confidence the caller never asked for. Say no instead.
         #expect(Server.parseMotionRequest(
             json: #"{"activity":"walking","confidence":"certain"}"#) == nil)
     }
 
-    @Test func `parseMotionRequest rejects a negative speed`() {
+    @Test func `should reject a negative motion speed`() {
         // A negative speed classifies as `unknown`, which would arm a session
         // that reports no motion at all — indistinguishable from a bug.
         #expect(Server.parseMotionRequest(json: #"{"speed":-1}"#) == nil)
         #expect(Server.parseMotionRequest(json: #"{"activity":"walking","speed":-1}"#) == nil)
     }
 
-    @Test func `parseMotionRequest rejects an unknown activity`() {
+    @Test func `should reject an unknown motion activity or a malformed body`() {
         #expect(Server.parseMotionRequest(json: #"{"activity":"swimming"}"#) == nil)
         #expect(Server.parseMotionRequest(json: "not json") == nil)
     }
 
     // MARK: - apply
 
-    @Test func `applyMotion publishes the requested activity`() async {
+    @Test func `should arm motion with the requested activity`() async {
         let w = makeWiring()
 
         let outcome = await Server.applyMotion(
@@ -119,7 +119,7 @@ struct MotionRoutesTests {
         #expect(w.sessions.active(udid: "U") != nil)
     }
 
-    @Test func `applyMotion reports an unknown device`() async {
+    @Test func `should report an unknown device when arming its motion`() async {
         // Its own mock: the shared wiring answers every udid, because a
         // single test makes several lookups.
         let simulators = MockSimulators()
@@ -130,14 +130,14 @@ struct MotionRoutesTests {
         #expect(outcome == .unknownDevice)
     }
 
-    @Test func `applyMotion reports a malformed body`() async {
+    @Test func `should report an invalid body when the motion request is malformed`() async {
         let w = makeWiring()
         let outcome = await Server.applyMotion(
             udid: "U", body: "not json", simulators: w.simulators, sessions: w.sessions)
         #expect(outcome == .invalidBody)
     }
 
-    @Test func `motion state reports an unknown device rather than an idle one`() async {
+    @Test func `should find no motion state for an unknown device rather than call it idle`() async {
         // The POST and DELETE routes 404 an unknown udid; the read-back said
         // `{"active":false}`, which reads as "this device has motion off"
         // rather than "there is no such device".
@@ -149,7 +149,7 @@ struct MotionRoutesTests {
                                          sessions: sessions) == nil)
     }
 
-    @Test func `a failed disarm is reported rather than swallowed`() async {
+    @Test func `should report a failed disarm and keep the session for a retry`() async {
         // If disarming fails, future app launches still load the dylib. An
         // API that answered `ok` there would leave motion silently injected.
         let simulators = MockSimulators()
@@ -173,7 +173,7 @@ struct MotionRoutesTests {
         #expect(sessions.active(udid: "U") != nil)
     }
 
-    @Test func `stopMotion parks the device and forgets the session`() async {
+    @Test func `should park the device as stationary and forget the session when motion stops`() async {
         let w = makeWiring()
         _ = await Server.applyMotion(
             udid: "U", body: #"{"activity":"walking"}"#,
@@ -187,7 +187,7 @@ struct MotionRoutesTests {
         #expect(w.sessions.active(udid: "U") == nil)
     }
 
-    @Test func `stopMotion after a server restart parks and disarms the published motion`() async {
+    @Test func `should park and disarm the published motion when stopping after a server restart`() async {
         let w = makeWiring()
         // What the guest already reads from the previous server's run.
         w.captures.intents.append(.stationary(startedAt: 1000, stepsBefore: 812, distanceBefore: 610))
@@ -204,7 +204,7 @@ struct MotionRoutesTests {
     }
 
     @Test(arguments: [false, true])
-    func `stopMotion after a restart retains a failed cleanup until explicit retry`(failPublish: Bool) async {
+    func `should keep a failed cleanup after a restart until an explicit retry succeeds`(failPublish: Bool) async {
         let simulators = MockSimulators()
         let sim = MockSimulator()
         let motion = MockMotion()
@@ -238,7 +238,7 @@ struct MotionRoutesTests {
 
     // MARK: - the location hook
 
-    @Test func `a walk drives motion once motion is on`() async {
+    @Test func `should drive the motion activity from a walk's speed once motion is on`() async {
         // The headline: the browser keeps posting the same walk vector it
         // always did, and the activity follows from its speed.
         let w = makeWiring()
@@ -253,7 +253,7 @@ struct MotionRoutesTests {
         #expect(w.captures.last?.kind == .cycling)
     }
 
-    @Test func `a walk drives nothing while motion is off`() async {
+    @Test func `should drive no motion from a walk while motion is off`() async {
         // Motion is opt-in: moving the device must not arm a sim-wide
         // DYLD_INSERT_LIBRARIES behind the user's back.
         let w = makeWiring()
@@ -266,7 +266,7 @@ struct MotionRoutesTests {
         verify(w.motion).publish(.any, on: .any).called(0)
     }
 
-    @Test func `a route drives motion from its own speed`() async {
+    @Test func `should drive the motion activity from a route's own speed`() async {
         let w = makeWiring()
         _ = await Server.applyMotion(
             udid: "U", body: #"{"activity":"walking"}"#,
@@ -281,7 +281,7 @@ struct MotionRoutesTests {
         #expect(w.captures.last?.kind == .automotive)
     }
 
-    @Test func `pinning a point parks motion as stationary`() async {
+    @Test func `should park motion as stationary when the location is pinned to a point`() async {
         // Releasing the joystick posts a bare point, which is exactly the
         // moment the device stops travelling — `course` drops to -1 and the
         // activity should stop claiming movement too.
@@ -296,7 +296,7 @@ struct MotionRoutesTests {
         #expect(w.captures.last?.kind == .stationary)
     }
 
-    @Test func `clearing the location parks motion too`() async {
+    @Test func `should park motion as stationary when the location is cleared`() async {
         let w = makeWiring()
         _ = await Server.applyMotion(
             udid: "U", body: #"{"activity":"walking"}"#,

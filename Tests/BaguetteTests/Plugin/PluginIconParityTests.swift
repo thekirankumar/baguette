@@ -51,7 +51,7 @@ struct PluginIconParityTests {
         return names
     }
 
-    @Test func `every glyph the host parses is one the page can draw`() throws {
+    @Test func `should let the page draw every glyph a plugin manifest may name`() throws {
         // The direction that actually breaks a user: a manifest names an
         // icon, Swift accepts it as known, and the browser has no path
         // for it — so `iconSVG` silently falls back to `list` and the
@@ -65,7 +65,7 @@ struct PluginIconParityTests {
         )
     }
 
-    @Test func `the page draws no glyph the host would refuse to parse`() throws {
+    @Test func `should draw no glyph on the page that a plugin manifest could not name`() throws {
         // The other direction is dead weight rather than breakage, but it
         // means a plugin naming that icon gets `puzzle` plus a validate
         // warning while the artwork sits right there unused.
@@ -78,7 +78,7 @@ struct PluginIconParityTests {
         )
     }
 
-    @Test func `the parse actually found the icon set, rather than agreeing about nothing`() throws {
+    @Test func `should find the page's full icon set rather than agree about nothing`() throws {
         // Two empty sets are equal. If the regex ever stops matching —
         // the literal is reformatted, renamed, moved — both tests above
         // would pass vacuously and go on passing forever.

@@ -31,7 +31,7 @@ struct SimctlLocationTests {
         return (SimctlLocation(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `set spawns xcrun simctl location set with the lat,lon argument`() async throws {
+    @Test func `should set the simulator's location via xcrun simctl location set with the lat,lon argument`() async throws {
         let (location, captures) = makeLocation()
         try await location.set(Coordinate(latitude: 37.3318, longitude: -122.0312)!)
 
@@ -39,7 +39,7 @@ struct SimctlLocationTests {
         #expect(captures.arguments == ["simctl", "location", "U", "set", "37.3318,-122.0312"])
     }
 
-    @Test func `start spawns xcrun simctl location start with the route argv`() async throws {
+    @Test func `should start a route via xcrun simctl location start with the route's flags and waypoints`() async throws {
         let (location, captures) = makeLocation()
         let route = LocationRoute(
             waypoints: [
@@ -58,13 +58,13 @@ struct SimctlLocationTests {
         ])
     }
 
-    @Test func `clear spawns xcrun simctl location clear`() async throws {
+    @Test func `should clear the simulated location via xcrun simctl location clear`() async throws {
         let (location, captures) = makeLocation()
         try await location.clear()
         #expect(captures.arguments == ["simctl", "location", "U", "clear"])
     }
 
-    @Test func `a non-zero simctl exit propagates as a location failure`() async {
+    @Test func `should report a location failure when simctl exits non-zero`() async {
         let (location, _) = makeLocation(exitCode: 3)
         var caught: LocationError?
         do {

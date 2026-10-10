@@ -23,32 +23,32 @@ struct MotionSessionsTests {
         return (MotionSessions(makeMotion: { _ in motion }), sim)
     }
 
-    @Test func `has no session until motion is started`() {
+    @Test func `should have no session until motion is started`() {
         let (sessions, _) = makeSessions()
         #expect(sessions.active(udid: "U") == nil)
     }
 
-    @Test func `starting creates a session that is then reachable`() {
+    @Test func `should reach a session once motion is started`() {
         let (sessions, sim) = makeSessions()
         let created = sessions.session(for: sim)
         #expect(sessions.active(udid: "U") === created)
     }
 
-    @Test func `reuses one session per simulator so the ledger survives`() {
+    @Test func `should reuse one session per simulator so the ledger survives`() {
         // A second `motion` POST must not reset the pedometer — the running
         // totals live on the session.
         let (sessions, sim) = makeSessions()
         #expect(sessions.session(for: sim) === sessions.session(for: sim))
     }
 
-    @Test func `keeps separate sessions per simulator`() {
+    @Test func `should keep separate sessions per simulator`() {
         let (sessions, sim) = makeSessions()
         let other = MockSimulator()
         given(other).udid.willReturn("V")
         #expect(sessions.session(for: sim) !== sessions.session(for: other))
     }
 
-    @Test func `ending drops the session so a walk stops driving it`() {
+    @Test func `should drop the session when motion ends so a walk stops driving it`() {
         let (sessions, sim) = makeSessions()
         _ = sessions.session(for: sim)
         sessions.end(udid: "U")

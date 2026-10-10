@@ -14,7 +14,7 @@ struct SimulatorTests {
 
     // MARK: - semantic flags
 
-    @Test func `canStream is true only when booted`() {
+    @Test func `should allow streaming only when the simulator is booted`() {
         for state in [SimulatorState.creating, .shutdown, .booting, .shuttingDown] {
             let s = MockSimulator()
             given(s).state.willReturn(state)
@@ -25,7 +25,7 @@ struct SimulatorTests {
         #expect(booted.canStream)
     }
 
-    @Test func `canAcceptInput is true only when booted`() {
+    @Test func `should accept input only when the simulator is booted`() {
         for state in [SimulatorState.creating, .shutdown, .booting, .shuttingDown] {
             let s = MockSimulator()
             given(s).state.willReturn(state)
@@ -38,7 +38,7 @@ struct SimulatorTests {
 
     // MARK: - chrome lookup
 
-    @Test func `chrome looks up assets by device-type name`() {
+    @Test func `should find the device chrome by the simulator's device type`() {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         let assets = DeviceChromeAssets(
@@ -64,7 +64,7 @@ struct SimulatorTests {
     // Cloned simulators carry a user-given `name` (e.g. "iPhone 17 pro
     // max clone 1") that no longer matches a `.simdevicetype` bundle.
     // Chrome lookup keys off `deviceTypeName`, not the display name.
-    @Test func `chrome keys off deviceTypeName even when display name differs`() {
+    @Test func `should find the device chrome by device type when the simulator was renamed`() {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         let assets = DeviceChromeAssets(
@@ -90,7 +90,7 @@ struct SimulatorTests {
 
     // MARK: - presentation
 
-    @Test func `json shape matches the list subcommand contract`() {
+    @Test func `should describe a simulator in the shape baguette list prints`() {
         let s = MockSimulator()
         given(s).udid.willReturn("u1")
         given(s).name.willReturn("iPhone 17")
@@ -103,7 +103,7 @@ struct SimulatorTests {
 
     // The `state` strings end up in the list output and the serve UI;
     // exhaustively pin every enum case so a typo or new case is caught.
-    @Test func `SimulatorState description covers all cases`() {
+    @Test func `should name every simulator state the way list prints it`() {
         #expect(SimulatorState.creating.description == "Creating")
         #expect(SimulatorState.shutdown.description == "Shutdown")
         #expect(SimulatorState.booting.description == "Booting")

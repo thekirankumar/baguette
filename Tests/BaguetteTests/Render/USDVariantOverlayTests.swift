@@ -4,7 +4,7 @@ import Testing
 @Suite("USDVariantOverlay")
 struct USDVariantOverlayTests {
 
-    @Test func `authors root variant selections over a sublayer`() throws {
+    @Test func `should author root variant selections over a sublayer`() throws {
         let source = try USDVariantOverlay.make(
             assetReference: "device.usdz",
             selections: [
@@ -34,7 +34,7 @@ struct USDVariantOverlayTests {
         """)
     }
 
-    @Test func `authors independent selections on the same prim`() throws {
+    @Test func `should author independent selections on the same prim`() throws {
         let source = try USDVariantOverlay.make(
             assetReference: "device.usdz",
             selections: [
@@ -58,7 +58,7 @@ struct USDVariantOverlayTests {
         #expect(source.components(separatedBy: #"over "Device""#).count == 2)
     }
 
-    @Test func `authors a selection on a nested prim path`() throws {
+    @Test func `should author a selection on a nested prim path`() throws {
         let source = try USDVariantOverlay.make(
             assetReference: "device.usdz",
             selections: [
@@ -79,7 +79,7 @@ struct USDVariantOverlayTests {
         #expect(source.contains(#"string Position = "Raised""#))
     }
 
-    @Test func `rejects unsafe USD identifiers before authoring`() {
+    @Test func `should reject unsafe USD identifiers before authoring`() {
         #expect(throws: DeviceModelError.invalidUSDIdentifier("Bad Name")) {
             _ = try USDVariantOverlay.make(
                 assetReference: "device.usdz",

@@ -63,14 +63,14 @@ struct CameraSessionTests {
         }
     }
 
-    @Test func `starts in idle phase with no error and zero fps`() {
+    @Test func `should begin idle with no error and zero fps`() {
         let w = makeWiring()
         #expect(w.session.phase == .idle)
         #expect(w.session.fps == 0)
         #expect(w.session.lastError == nil)
     }
 
-    @Test func `start arms the dylib and kicks off capture`() async {
+    @Test func `should arm the virtual camera on the simulator and start capturing when started`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         stubHappyCapture(w)
@@ -83,7 +83,7 @@ struct CameraSessionTests {
         #expect(w.session.lastError == nil)
     }
 
-    @Test func `an image source is routed to the image capture, not the webcam or video`() async {
+    @Test func `should capture from the image source alone when the source is an image`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.image).start(source: .any, onFrame: .any).willReturn(())
@@ -97,7 +97,7 @@ struct CameraSessionTests {
         #expect(w.session.phase == .streaming(source: source))
     }
 
-    @Test func `stop tears down the capture that was started for the active source`() async {
+    @Test func `should stop the capture of the active source when stopped`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any).willReturn(())
@@ -112,7 +112,7 @@ struct CameraSessionTests {
         #expect(w.session.phase == .idle)
     }
 
-    @Test func `start failure on injection leaves the session idle with an error`() async {
+    @Test func `should stay idle with an error when arming the simulator fails`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any)
             .willThrow(
@@ -128,7 +128,7 @@ struct CameraSessionTests {
         #expect(w.session.lastError?.contains("no perm") == true)
     }
 
-    @Test func `start failure on capture leaves the session idle with an error`() async {
+    @Test func `should stay idle with an error when the capture fails to start`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any).willReturn(())
@@ -146,7 +146,7 @@ struct CameraSessionTests {
         #expect(w.session.lastError?.contains("device busy") == true)
     }
 
-    @Test func `incoming frames are written to the sink with the current flags`() async throws {
+    @Test func `should write each captured frame with the current flags`() async throws {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.sink).write(.any, flags: .any).willReturn(())
@@ -165,7 +165,7 @@ struct CameraSessionTests {
             .called(1)
     }
 
-    @Test func `stop drops back to idle and tears down capture`() async {
+    @Test func `should go back to idle with zero fps and stop capturing when stopped`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any).willReturn(())
@@ -180,7 +180,7 @@ struct CameraSessionTests {
         #expect(w.session.fps == 0)
     }
 
-    @Test func `stop disarms the dylib on the simulator it armed`() async {
+    @Test func `should disarm its own virtual camera on the simulator it armed when stopped`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any).willReturn(())
@@ -197,7 +197,7 @@ struct CameraSessionTests {
         verify(w.injection).disarm(dylibPath: .value("/tmp/vc.dylib"), on: .any).called(1)
     }
 
-    @Test func `a failed disarm stays visible and a later explicit stop retries it`() async throws {
+    @Test func `should keep a failed disarm visible and retry it on a later explicit stop`() async throws {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any)
@@ -232,7 +232,7 @@ struct CameraSessionTests {
         verify(w.webcam).stop().called(1)
     }
 
-    @Test func `unsolicited camera state has no request id and parse errors retain their request`() throws {
+    @Test func `should report unsolicited camera state without a request id and keep the request id on a parse error`() throws {
         let w = makeWiring()
         let heartbeat = try #require(
             JSONSerialization.jsonObject(with: Data(Server.cameraStateJSON(w.session).utf8)) as? [String: Any])
@@ -249,7 +249,7 @@ struct CameraSessionTests {
         #expect(failure["cleanupRequired"] as? Bool == false)
     }
 
-    @Test func `capture failure preserves both errors when disarming also fails`() async {
+    @Test func `should report both errors when the capture fails and disarming also fails`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any)
@@ -273,7 +273,7 @@ struct CameraSessionTests {
         #expect(w.session.lastError == nil)
     }
 
-    @Test func `concurrent stop waits for the shared disarm result`() async {
+    @Test func `should make a concurrent stop wait for the shared disarm outcome`() async {
         @MainActor final class Gate {
             var continuation: CheckedContinuation<Void, Never>?
             var secondEntered = false
@@ -326,7 +326,7 @@ struct CameraSessionTests {
         verify(w.injection).disarm(dylibPath: .any, on: .any).called(1)
     }
 
-    @Test func `the server admits one camera connection until its cleanup completes`() async throws {
+    @Test func `should admit one camera connection at a time until its cleanup completes`() async throws {
         let sessions = CameraSessions(guestTerminated: { _ in false })
         let first = makeWiring()
         let second = makeWiring()
@@ -337,7 +337,7 @@ struct CameraSessionTests {
         #expect(try await sessions.connect(udid: "V") { second.session } === second.session)
     }
 
-    @Test func `a reconnect waits for the previous socket's teardown instead of being refused`() async throws {
+    @Test func `should make a reconnect wait for the previous connection's teardown instead of refusing it`() async throws {
         final class Gate: @unchecked Sendable {
             var continuation: CheckedContinuation<Void, Never>?
             var reconnected = false
@@ -384,7 +384,7 @@ struct CameraSessionTests {
         #expect(try await reconnect.value === other.session)
     }
 
-    @Test func `failed cleanup survives disconnect and only its device can recover it`() async throws {
+    @Test func `should keep a failed cleanup across disconnect so only its own simulator can recover it`() async throws {
         let sessions = CameraSessions(guestTerminated: { _ in false })
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
@@ -413,7 +413,7 @@ struct CameraSessionTests {
         #expect(try await sessions.connect(udid: "V") { other.session } === other.session)
     }
 
-    @Test func `a disconnected camera owner is released only after guest termination is confirmed`() async throws {
+    @Test func `should release a disconnected camera owner only when the guest is confirmed terminated`() async throws {
         for terminated in [true, false] {
             let sessions = CameraSessions(guestTerminated: { _ in terminated })
             let w = makeWiring()
@@ -439,7 +439,7 @@ struct CameraSessionTests {
         }
     }
 
-    @Test func `failed guest-state confirmation keeps the disconnected camera owner`() async throws {
+    @Test func `should keep the disconnected camera owner when the guest's state cannot be confirmed`() async throws {
         let sessions = CameraSessions(guestTerminated: { _ in throw NSError(domain: "device list unavailable", code: 1)
         })
         let w = makeWiring()
@@ -457,7 +457,7 @@ struct CameraSessionTests {
         verify(w.injection).disarm(dylibPath: .any, on: .any).called(1)
     }
 
-    @Test func `explicit stop confirms cleanup when the armed guest has terminated`() async {
+    @Test func `should confirm cleanup on an explicit stop when the armed guest has terminated`() async {
         for terminated in [true, false] {
             let w = makeWiring(guestTerminated: { _ in terminated })
             given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
@@ -474,7 +474,7 @@ struct CameraSessionTests {
         }
     }
 
-    @Test func `explicit stop preserves disarm and state-query failures together`() async {
+    @Test func `should report both the disarm and the guest-state failure on an explicit stop`() async {
         let w = makeWiring(guestTerminated: { _ in
             throw NSError(domain: "state", code: 2, userInfo: [NSLocalizedDescriptionKey: "device list unavailable"])
         })
@@ -490,7 +490,7 @@ struct CameraSessionTests {
         #expect(w.session.lastError?.contains("device list unavailable") == true)
     }
 
-    @Test func `a fresh session stop must disarm the selected guest and retain a failed cleanup for retry`() async {
+    @Test func `should disarm the chosen simulator on a fresh stop and keep a failed cleanup for retry`() async {
         let w = makeWiring()
         given(w.injection).disarm(dylibPath: .value("/tmp/current/VirtualCamera.dylib"), on: .any)
             .willThrow(NSError(domain: "disarm", code: 1, userInfo: [NSLocalizedDescriptionKey: "disarm denied"]))
@@ -504,7 +504,7 @@ struct CameraSessionTests {
         verify(w.injection).disarm(dylibPath: .any, on: .any).called(2)
     }
 
-    @Test func `a fresh session stop confirms either disarm or verified guest termination`() async {
+    @Test func `should confirm cleanup on a fresh stop by either a disarm or a verified guest termination`() async {
         for terminated in [false, true] {
             let w = makeWiring(guestTerminated: { udid in
                 #expect(udid == "sim-U")
@@ -527,7 +527,7 @@ struct CameraSessionTests {
     /// a second `stop` from interleaving at a suspension point — and if
     /// the phase is still `.streaming` when it looks, it tears the same
     /// session down a second time.
-    @Test func `a stop that lands mid-teardown doesn't tear down twice`() async {
+    @Test func `should not tear down twice when a stop lands mid-teardown`() async {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.injection).disarm(dylibPath: .any, on: .any).willReturn(())
@@ -544,7 +544,7 @@ struct CameraSessionTests {
         #expect(w.session.phase == .idle)
     }
 
-    @Test func `sampleFPS divides frame delta by elapsed seconds`() async throws {
+    @Test func `should measure fps as frames delivered over elapsed time`() async throws {
         let w = makeWiring()
         given(w.injection).arm(dylibPath: .any, on: .any).willReturn(())
         given(w.sink).write(.any, flags: .any).willReturn(())

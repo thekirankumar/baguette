@@ -4,7 +4,7 @@ import Testing
 
 @Suite("TwinEnvelope")
 struct TwinEnvelopeTests {
-    @Test func `parses a hello with identity and capabilities`() throws {
+    @Test func `should read a hello carrying the device identity and capabilities`() throws {
         let line = """
         {"type":"hello","udid":"00008140-AA","name":"Baguette's iPhone","model":"iPhone17,2","capabilities":["motion","screen"]}
         """
@@ -17,7 +17,7 @@ struct TwinEnvelopeTests {
         )))
     }
 
-    @Test func `hello capabilities default to empty`() throws {
+    @Test func `should assume no capabilities when a hello lists none`() throws {
         let line = """
         {"type":"hello","udid":"00008140-AA","name":"iPhone","model":"iPhone17,2"}
         """
@@ -28,13 +28,13 @@ struct TwinEnvelopeTests {
         #expect(hello.capabilities == [])
     }
 
-    @Test func `hello without a udid is rejected`() {
+    @Test func `should reject a hello without a udid`() {
         #expect(throws: (any Error).self) {
             try TwinEnvelope.parse(line: #"{"type":"hello","name":"iPhone","model":"iPhone17,2"}"#)
         }
     }
 
-    @Test func `parses an attitude sample in wire order`() throws {
+    @Test func `should read an attitude sample in wire order`() throws {
         let line = #"{"type":"attitude","q":[0.012,-0.221,0.003,0.975],"t":163412.041}"#
         let envelope = try TwinEnvelope.parse(line: line)
         #expect(envelope == .attitude(AttitudeSample(
@@ -43,7 +43,7 @@ struct TwinEnvelopeTests {
         )))
     }
 
-    @Test func `attitude with a malformed quaternion is rejected`() {
+    @Test func `should reject an attitude with a malformed or missing quaternion`() {
         #expect(throws: (any Error).self) {
             try TwinEnvelope.parse(line: #"{"type":"attitude","q":[0.1,0.2,0.3],"t":1}"#)
         }
@@ -52,7 +52,7 @@ struct TwinEnvelopeTests {
         }
     }
 
-    @Test func `parses a video format with orientation and codec`() throws {
+    @Test func `should read a video format with its orientation and codec`() throws {
         let line = #"{"type":"format","width":1290,"height":2796,"orientation":"landscape-left","codec":"avcc"}"#
         let envelope = try TwinEnvelope.parse(line: line)
         #expect(envelope == .format(VideoFormat(
@@ -63,7 +63,7 @@ struct TwinEnvelopeTests {
         )))
     }
 
-    @Test func `format orientation defaults to portrait`() throws {
+    @Test func `should assume portrait when a video format names no orientation`() throws {
         let line = #"{"type":"format","width":1290,"height":2796,"codec":"avcc"}"#
         guard case .format(let format) = try TwinEnvelope.parse(line: line) else {
             Issue.record("expected format")
@@ -72,19 +72,19 @@ struct TwinEnvelopeTests {
         #expect(format.orientation == .portrait)
     }
 
-    @Test func `format with an unknown orientation is rejected`() {
+    @Test func `should reject a video format with an unknown orientation`() {
         #expect(throws: (any Error).self) {
             try TwinEnvelope.parse(line: #"{"type":"format","width":1,"height":1,"orientation":"sideways","codec":"avcc"}"#)
         }
     }
 
-    @Test func `unknown envelope types are rejected`() {
+    @Test func `should reject an unknown envelope type`() {
         #expect(throws: (any Error).self) {
             try TwinEnvelope.parse(line: #"{"type":"teleport"}"#)
         }
     }
 
-    @Test func `non-JSON lines are rejected`() {
+    @Test func `should reject a line that is not JSON`() {
         #expect(throws: (any Error).self) {
             try TwinEnvelope.parse(line: "not json")
         }

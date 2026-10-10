@@ -12,14 +12,14 @@ import Mockable
 @Suite("SimulatorDefinition.compose")
 struct SimulatorDefinitionTests {
 
-    @Test func `identity carries the simulator's udid, name, and device-type name`() {
+    @Test func `should identify the simulator by its udid, name and device type`() {
         let def = Self.composeFixture()
         #expect(def.identity.udid == "UDID-1")
         #expect(def.identity.name == "iPhone 17 Pro")
         #expect(def.identity.model == "iPhone 17 Pro")
     }
 
-    @Test func `screen viewport equals the bare composite size`() {
+    @Test func `should size the screen viewport to the bare bezel`() {
         // The SDK always overlays buttons; the bezel image served to
         // the browser is `bezel.png?buttons=false` (the bare device
         // body), so the viewport reported in the definition is the
@@ -30,7 +30,7 @@ struct SimulatorDefinitionTests {
         #expect(def.screen.viewport == Size(width: 400, height: 800))
     }
 
-    @Test func `screen viewport subtracts buttonMargins so it matches the bare bezel`() {
+    @Test func `should size the screen viewport to the bare bezel when the bezel has button margins`() {
         let def = Self.composeFixtureWithMargins()
         // composite 420×820, margins {top:10, left:10, bottom:10, right:10}
         //   → bare = 400 × 800
@@ -40,7 +40,7 @@ struct SimulatorDefinitionTests {
     /// The baked composite clips each button to the body plus its
     /// margins; the SDK overlay has to clip to the same canvas, so the
     /// margins ride along in the definition.
-    @Test func `screen carries the button margins the bake clipped to`() throws {
+    @Test func `should carry the button margins the baked bezel was clipped to`() throws {
         let def = Self.composeFixtureWithMargins()
         #expect(def.screen.buttonMargins == Insets(top: 10, left: 10, bottom: 10, right: 10))
         let json = try #require(def.toJSON().data(using: .utf8))
@@ -54,7 +54,7 @@ struct SimulatorDefinitionTests {
     /// on iPhone Duo's cover the hinge-side corners are nearly square
     /// and the outer ones round, which one radius cannot describe. When
     /// the chrome carries the mask, the page is pointed at it.
-    @Test func `screen carries a mask image url when the chrome has a mask`() throws {
+    @Test func `should point the screen at a mask image when the chrome has a mask`() throws {
         let def = Self.composeFixture(screenMask: ChromeImage(
             data: Data("MASK".utf8), size: Size(width: 466, height: 678)))
         #expect(def.screen.maskImage == "/simulators/UDID-1/screen-mask.png?panel=primary")
@@ -64,7 +64,7 @@ struct SimulatorDefinitionTests {
         #expect(screen["maskImage"] as? String == "/simulators/UDID-1/screen-mask.png?panel=primary")
     }
 
-    @Test func `screen has no mask image when the chrome has none`() throws {
+    @Test func `should leave the screen mask image unset when the chrome has none`() throws {
         let def = Self.composeFixture()
         #expect(def.screen.maskImage == nil)
         let json = try #require(def.toJSON().data(using: .utf8))
@@ -76,7 +76,7 @@ struct SimulatorDefinitionTests {
     /// A foldable's unfolded panel is one framebuffer with a crease
     /// across the middle of its long axis — the hinge. The page draws
     /// it, and the fold view splits there.
-    @Test func `an unfolded panel carries its crease`() {
+    @Test func `should draw a crease only on the unfolded panel`() {
         #expect(Self.composeFixture(panel: .secondary).screen.crease == true)
         #expect(Self.composeFixture(panel: .primary).screen.crease == false)
         #expect(Self.composeFixture().screen.crease == false)
@@ -86,7 +86,7 @@ struct SimulatorDefinitionTests {
     /// one panel: a plain URL that served "whichever panel is lit" came
     /// back from the browser cache as the wrong bezel after every fold.
     /// Every panel's images name their panel — the primary's included.
-    @Test func `the unfolded panel's image urls name their panel`() throws {
+    @Test func `should name the unfolded panel in its image urls`() throws {
         let def = Self.composeFixture(
             screenMask: ChromeImage(data: Data("MASK".utf8), size: Size(width: 1, height: 1)),
             panel: .secondary)
@@ -95,13 +95,13 @@ struct SimulatorDefinitionTests {
         #expect(def.screen.maskImage == "/simulators/UDID-1/screen-mask.png?panel=secondary")
     }
 
-    @Test func `the primary panel's image urls name it too`() throws {
+    @Test func `should name the primary panel in its image urls too`() throws {
         let def = Self.composeFixture(panel: .primary)
         #expect(def.screen.bezelImage.rest == "/simulators/UDID-1/bezel.png?panel=primary")
         #expect(def.screen.bezelImage.bare == "/simulators/UDID-1/bezel.png?buttons=false&panel=primary")
     }
 
-    @Test func `screen rect is in bare-bezel coordinates`() {
+    @Test func `should place the screen in bare-bezel coordinates when the bezel has button margins`() {
         let def = Self.composeFixtureWithMargins()
         // chrome insets are {top:20, left:10, bottom:20, right:10} on
         // a 400×800 bare composite → screen at (10,20) size (380, 760)
@@ -111,7 +111,7 @@ struct SimulatorDefinitionTests {
         ))
     }
 
-    @Test func `screen rect is the screen cutout inside the composite`() {
+    @Test func `should place the screen at its cutout inside the bezel`() {
         let def = Self.composeFixture()
         // composite 400×800, insets {10, 20, 10, 20}  →  screen at (10,20) size (380, 760)
         #expect(def.screen.rect == Rect(
@@ -120,13 +120,13 @@ struct SimulatorDefinitionTests {
         ))
     }
 
-    @Test func `screen clip radius is the chrome's inner corner radius`() {
+    @Test func `should round the screen to the bezel's inner corner radius`() {
         let def = Self.composeFixture()
         // outerCornerRadius 60, bezelWidth = max(left=10, top=20) = 20  →  inner = 40
         #expect(def.screen.clipRadius == 40)
     }
 
-    @Test func `screen bezel image URLs are scoped to the simulator's udid`() {
+    @Test func `should scope the bezel image urls to the simulator's udid`() {
         let def = Self.composeFixture()
         #expect(def.screen.bezelImage.rest == "/simulators/UDID-1/bezel.png?panel=primary")
         #expect(def.screen.bezelImage.bare == "/simulators/UDID-1/bezel.png?buttons=false&panel=primary")
@@ -134,7 +134,7 @@ struct SimulatorDefinitionTests {
 
     // MARK: - buttons
 
-    @Test func `buttons list mirrors the chrome's input order`() {
+    @Test func `should list buttons in the chrome's order`() {
         let def = Self.composeFixtureWithButtons()
         // Apple's chrome.json `name` is already hyphenated lowercase —
         // `"power"`, `"volume-up"`, … — so the SDK `id` and the wire
@@ -143,7 +143,7 @@ struct SimulatorDefinitionTests {
         #expect(def.buttons.map(\.id) == ["power", "volume-up"])
     }
 
-    @Test func `each button carries its wire envelope as the SDK will send it`() {
+    @Test func `should give each button the wire envelope a press sends`() {
         let def = Self.composeFixtureWithButtons()
         // The JS SDK calls `button.press({hold: t})` which the SDK
         // serialises to `{type:"button", button:"<wire>", duration:t}`.
@@ -153,7 +153,7 @@ struct SimulatorDefinitionTests {
         #expect(def.buttons[1].envelope == ["type": "button", "button": "volume-up"])
     }
 
-    @Test func `button image URLs route through the per-udid chrome-button path`() {
+    @Test func `should serve button images from the simulator's chrome-button route`() {
         let def = Self.composeFixtureWithButtons()
         #expect(def.buttons[0].images.rest    == "/simulators/UDID-1/chrome-button/power.png?panel=primary")
         #expect(def.buttons[0].images.pressed == "/simulators/UDID-1/chrome-button/power-down.png?panel=primary")
@@ -162,13 +162,13 @@ struct SimulatorDefinitionTests {
         #expect(def.buttons[1].images.pressed == "/simulators/UDID-1/chrome-button/volume-up.png?panel=primary")
     }
 
-    @Test func `button z-order maps the chrome's onTop flag to a domain enum`() {
+    @Test func `should layer an iPhone's buttons below the bezel`() {
         let def = Self.composeFixtureWithButtons()
         #expect(def.buttons[0].z == .below)  // iPhone power: poke through bezel slot
         #expect(def.buttons[1].z == .below)
     }
 
-    @Test func `right-anchor button positions at the mirrored at-rest point`() {
+    @Test func `should place a right-edge button at its mirrored at-rest point`() {
         // power button: anchor=.right, normal=(−8, 320), rollover=(−3, 320)
         // image 10×30, bare bezel 400×800.
         // restX = 2·(−8) − (−3) = −13  →  left = (400 + (−13)) / 400 = 96.75%
@@ -182,7 +182,7 @@ struct SimulatorDefinitionTests {
         #expect(abs(power.box.heightPct - 3.75)  < 0.001)
     }
 
-    @Test func `top-anchor button protrudes above the bare composite, like right-anchor protrudes past the right edge`() {
+    @Test func `should let a top-edge button protrude above the bare bezel`() {
         // iPad Pro 13-inch (M4) data, abridged: tablet5 ships the
         // power button as anchor=.top, align=.trailing with
         // normal=(-74, 8), rollover=(-74, 3) and a 63×16 cap, on a
@@ -221,7 +221,7 @@ struct SimulatorDefinitionTests {
         #expect(power.box.topPct < 0)
     }
 
-    @Test func `left-anchor button positions at the rollover point, centred horizontally`() {
+    @Test func `should centre a left-edge button horizontally on its rollover point`() {
         // volume-up: anchor=.left, offset=(8, 240)  (normal == rollover)
         // image 10×30, bare bezel 400×800.
         // cx = 8 / 400 = 2%   halfW = 5 / 400 = 1.25%   →  left = 0.75%
@@ -232,7 +232,7 @@ struct SimulatorDefinitionTests {
         #expect(abs(vol.box.topPct  - 30.0) < 0.001)
     }
 
-    @Test func `button transforms drive the at-rest -> hover -> pressed animation as image-space percents`() {
+    @Test func `should animate a button from rest to hover to pressed in image-space percents`() {
         // power: normal=(−8, 320), rollover=(−3, 320), image 10×30
         // outDx = (−3 − (−8)) / 10 = 50%    outDy = 0
         // hover translates outward (+50%, 0%); pressed receded (-50%, 0%);
@@ -244,19 +244,19 @@ struct SimulatorDefinitionTests {
         #expect(t.pressed == "translate(-50%, 0%)")
     }
 
-    @Test func `omitted buttons section yields an empty list, not nil`() {
+    @Test func `should list no buttons when the chrome has none`() {
         let def = Self.composeFixture()  // no buttons in chrome
         #expect(def.buttons == [])
     }
 
     // MARK: - keyboard
 
-    @Test func `iPhone-class chrome carries a keyboard part`() {
+    @Test func `should offer a keyboard on an iPhone`() {
         let def = Self.composeFixture()  // phone17 identifier
         #expect(def.keyboard != nil)
     }
 
-    @Test func `Apple TV chrome omits the keyboard part`() {
+    @Test func `should offer no keyboard on an Apple TV`() {
         // tv5 / tv6 chrome identifier — Apple TV's screen isn't a
         // touch surface and software keyboard input is mediated by
         // the Siri Remote, not the device. Definition omits the
@@ -447,7 +447,7 @@ struct SimulatorDefinitionTests {
 }
 
 extension SimulatorDefinitionTests {
-    @Test func `a device definition composes from a picked chrome with device identity`() {
+    @Test func `should describe a device from a picked chrome and its own identity`() {
         let chrome = DeviceChrome(
             identifier: "phone17",
             screenInsets: Insets(top: 20, left: 10, bottom: 20, right: 10),

@@ -5,7 +5,7 @@ import VideoToolbox
 
 @Suite("H264 reference chain")
 struct H264ReferenceChainTests {
-    @Test func `normal VideoToolbox drops produce no frame while actual errors propagate`() throws {
+    @Test func `should produce no frame for a normal encoder drop but surface a real encoder error until stopped`() throws {
         let encoder = H264Encoder(fps: 20)
         for flags in [VTEncodeInfoFlags.frameDropped, []] {
             #expect(try encoder.output(generation: 0, status: noErr, flags: flags, sampleBuffer: nil).get() == nil)
@@ -18,7 +18,7 @@ struct H264ReferenceChainTests {
             try encoder.output(generation: 0, status: kVTInvalidSessionErr, flags: [], sampleBuffer: nil).get() == nil)
     }
 
-    @Test func `a replacement session rejects old callbacks and waits for its own decoder configuration`() {
+    @Test func `should ignore an old session's frames and wait for a keyframe with its own description when the session is replaced`() {
         var chain = H264ReferenceChain()
         let old = chain.generation
         let accepted1 = chain.accepts(generation: old, keyframe: true, hasDescription: true)

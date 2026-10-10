@@ -21,7 +21,7 @@ struct SimulatorKitFrameworkTests {
     private static let sharedPath =
         "/Applications/Xcode.app/Contents/SharedFrameworks/SimulatorKit.framework/SimulatorKit"
 
-    @Test func `finds SimulatorKit under PrivateFrameworks in the Xcode 26 layout`() {
+    @Test func `should find SimulatorKit under PrivateFrameworks in the Xcode 26 layout`() {
         let found = SimulatorKitFramework.path(developerDir: Self.dev) {
             $0 == Self.privatePath
         }
@@ -29,7 +29,7 @@ struct SimulatorKitFrameworkTests {
         #expect(found == Self.privatePath)
     }
 
-    @Test func `finds SimulatorKit under SharedFrameworks in the Xcode 27 layout`() {
+    @Test func `should find SimulatorKit under SharedFrameworks in the Xcode 27 layout`() {
         let found = SimulatorKitFramework.path(developerDir: Self.dev) {
             $0 == Self.sharedPath
         }
@@ -37,7 +37,7 @@ struct SimulatorKitFrameworkTests {
         #expect(found == Self.sharedPath)
     }
 
-    @Test func `prefers the PrivateFrameworks location when both exist`() {
+    @Test func `should prefer the PrivateFrameworks location when both exist`() {
         // Belt-and-braces: an Xcode carrying both layouts must keep
         // resolving to the path that shipped working input on 26.
         let found = SimulatorKitFramework.path(developerDir: Self.dev) { _ in true }
@@ -45,13 +45,13 @@ struct SimulatorKitFrameworkTests {
         #expect(found == Self.privatePath)
     }
 
-    @Test func `finds nothing when neither location exists`() {
+    @Test func `should find no SimulatorKit when neither location exists`() {
         let found = SimulatorKitFramework.path(developerDir: Self.dev) { _ in false }
 
         #expect(found == nil)
     }
 
-    @Test func `offers both known locations as candidates`() {
+    @Test func `should offer both known SimulatorKit locations as candidates in order`() {
         // The diagnostic path prints these, so both the order and the
         // absence of a `..` segment are part of the contract.
         #expect(

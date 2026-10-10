@@ -37,7 +37,7 @@ struct CompanionScreensRouteTests {
         return sim
     }
 
-    @Test func `a device with both screens answers with both`() {
+    @Test func `should offer both CarPlay and the watch when the device has both screens`() {
         let sim = simulator(
             carPlayBinds: true,
             watch: PairedWatch(udid: "WATCH-1", name: "Apple Watch Ultra 3", state: .booted)
@@ -55,7 +55,7 @@ struct CompanionScreensRouteTests {
         )
     }
 
-    @Test func `a plain device answers that it has neither`() {
+    @Test func `should offer neither companion screen when the device has none`() {
         let sim = simulator(carPlayBinds: false, watch: nil)
 
         let simulators = MockSimulators()
@@ -67,7 +67,7 @@ struct CompanionScreensRouteTests {
         )
     }
 
-    @Test func `an unknown udid is the only failure`() {
+    @Test func `should fail only when the udid is unknown`() {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
 
@@ -86,7 +86,7 @@ struct CompanionScreensRouteTests {
     /// opens a pane that can never paint, which is exactly the black
     /// rectangle this route exists to prevent. The bind is the same
     /// resolve the stream itself does, so the two can't disagree.
-    @Test func `a CarPlay screen that is registered but won't bind is not available`() {
+    @Test func `should not offer a CarPlay screen that is registered but won't bind`() {
         let sim = simulator(carPlayBinds: false, watch: nil)
 
         let simulators = MockSimulators()
@@ -107,7 +107,7 @@ struct CompanionScreensRouteTests {
     /// exactly how the first draft of the reattach route shipped
     /// (`/simulators/:udid/companion-screens/carplay` → "unknown udid:
     /// companion-screens"). Pin the paths against the rule.
-    @Test func `every companion-screens route keeps the udid where udidParam looks`() {
+    @Test func `should keep the udid second-to-last in every companion-screens route path`() {
         for path in [
             "/simulators/UDID-1/companion-screens.json",
             "/simulators/UDID-1/carplay-display",
@@ -116,11 +116,11 @@ struct CompanionScreensRouteTests {
         }
     }
 
-    @Test func `a percent-encoded udid decodes out of the path`() {
+    @Test func `should decode a percent-encoded udid out of the path`() {
         #expect(Server.udid(inPath: "/simulators/A%2FB/carplay-display") == "A/B")
     }
 
-    @Test func `a path too short to carry a udid yields none`() {
+    @Test func `should find no udid in a path too short to carry one`() {
         #expect(Server.udid(inPath: "/simulators") == "")
     }
 
@@ -135,7 +135,7 @@ struct CompanionScreensRouteTests {
     /// way the rail reads it. A caller that just asked for a display
     /// needs to know whether it got one, and the menu click succeeding
     /// says nothing about whether a framebuffer appeared behind it.
-    @Test func `reattaching answers with what the display can do afterwards`() throws {
+    @Test func `should answer a CarPlay reattach with the display's availability afterwards`() throws {
         let sim = simulator(carPlayBinds: true, watch: nil)
         let external = MockExternalDisplays()
         given(external).reattachCarPlay().willReturn()
@@ -155,7 +155,7 @@ struct CompanionScreensRouteTests {
     /// that as success would send the rail back to a pane that cannot
     /// paint — the exact failure the bind probe exists to prevent — so
     /// the honest answer is the unchanged availability.
-    @Test func `a reattach that attaches nothing reports the display still unavailable`() throws {
+    @Test func `should report the display still unavailable when a reattach attaches nothing`() throws {
         let sim = simulator(carPlayBinds: false, watch: nil)
         let external = MockExternalDisplays()
         given(external).reattachCarPlay().willReturn()
@@ -173,7 +173,7 @@ struct CompanionScreensRouteTests {
     /// Driving another app's menus needs Automation permission the user
     /// may never have granted. That is a thing to say out loud, not a
     /// silent no-op — the button would otherwise look broken.
-    @Test func `a reattach the host refuses reports why`() throws {
+    @Test func `should say why when the host refuses a CarPlay reattach`() throws {
         let sim = simulator(carPlayBinds: false, watch: nil)
         let external = MockExternalDisplays()
         given(external).reattachCarPlay()
@@ -192,7 +192,7 @@ struct CompanionScreensRouteTests {
         #expect(message.contains("enableFailed"))
     }
 
-    @Test func `reattaching an unknown udid is a not-found`() {
+    @Test func `should report an unknown device when reattaching CarPlay on an unknown udid`() {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
 
@@ -201,7 +201,7 @@ struct CompanionScreensRouteTests {
 
     /// A shutdown device resolves nothing at all. That is an answer the
     /// rail renders as instructions, not a 500.
-    @Test func `a device that resolves no display at all still answers`() {
+    @Test func `should still answer when the device resolves no display at all`() {
         let sim = MockSimulator()
         let displays = MockDisplays()
         let display = MockDisplay()

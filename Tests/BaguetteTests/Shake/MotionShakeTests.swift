@@ -8,7 +8,7 @@ import Foundation
 @Suite("MotionShake")
 struct MotionShakeTests {
 
-    @Test func `posts the UIKit shake notification via simctl spawn notifyutil into the guest namespace`() {
+    @Test func `should shake by posting the UIKit shake notification into the guest with simctl spawn notifyutil`() {
         let shake = MotionShake()
         #expect(shake.simctlArguments(udid: "ABC-123") == [
             "simctl", "spawn", "ABC-123", "notifyutil", "-p",
@@ -16,7 +16,7 @@ struct MotionShakeTests {
         ])
     }
 
-    @Test func `carries the private UIKit Darwin notification name`() {
+    @Test func `should shake through UIKit's private simulator-shake Darwin notification`() {
         #expect(MotionShake.notificationName == "com.apple.UIKit.SimulatorShake")
     }
 }

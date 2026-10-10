@@ -18,7 +18,7 @@ struct BezelRoutesTests {
 
     // MARK: - bezel image
 
-    @Test func `bezelImage default returns the merged composite bytes`() throws {
+    @Test func `should serve the bezel with its buttons merged in by default`() throws {
         let (sim, chromes) = Self.fixture()
         let bytes = Server.bezelImage(
             udid: "UDID-1",
@@ -29,7 +29,7 @@ struct BezelRoutesTests {
         #expect(bytes == Data("MERGED-PNG".utf8))
     }
 
-    @Test func `bezelImage with buttons false returns the bare composite bytes`() throws {
+    @Test func `should serve the bare bezel when buttons is false`() throws {
         let (sim, chromes) = Self.fixture()
         let bytes = Server.bezelImage(
             udid: "UDID-1",
@@ -45,7 +45,7 @@ struct BezelRoutesTests {
     /// With `?panel=` the route serves that panel's chrome regardless of
     /// the hinge — the definition named it, and the URL must stay
     /// stable for the browser cache to be right.
-    @Test func `bezelImage serves the named panel's chrome`() throws {
+    @Test func `should serve the named panel's bezel without consulting the hinge`() throws {
         let (sim, chromes) = Self.fixture()
         let unfolded = DeviceChromeAssets(
             chrome: DeviceChrome(
@@ -62,7 +62,7 @@ struct BezelRoutesTests {
         verify(sim as! MockSimulator).hinge().called(0)
     }
 
-    @Test func `parsing the panel query accepts primary and secondary only`() {
+    @Test func `should accept only primary and secondary as the panel query`() {
         #expect(Server.panelQuery("secondary") == .secondary)
         #expect(Server.panelQuery("primary") == .primary)
         #expect(Server.panelQuery(nil) == nil)
@@ -72,7 +72,7 @@ struct BezelRoutesTests {
     // MARK: - screen mask
 
     /// The lit panel's framebuffer mask, as the page's CSS mask.
-    @Test func `screenMaskImage returns the chrome's rasterized mask`() throws {
+    @Test func `should serve the lit panel's rasterized screen mask`() throws {
         let (sim, chromes) = Self.fixture(screenMask: ChromeImage(
             data: Data("MASK-PNG".utf8), size: Size(width: 466, height: 678)))
         let bytes = Server.screenMaskImage(
@@ -80,13 +80,13 @@ struct BezelRoutesTests {
         #expect(bytes == Data("MASK-PNG".utf8))
     }
 
-    @Test func `screenMaskImage is nil when the chrome carries no mask`() throws {
+    @Test func `should serve no screen mask when the chrome carries none`() throws {
         let (sim, chromes) = Self.fixture()
         #expect(Server.screenMaskImage(
             udid: "UDID-1", simulators: Self.simulators(with: sim), chromes: chromes) == nil)
     }
 
-    @Test func `applyOrientation routes a valid value through the simulator's orientation surface`() {
+    @Test func `should rotate the simulator to a valid orientation`() {
         let host = MockSimulators()
         let sim = MockSimulator()
         let orientation = MockOrientation()
@@ -98,23 +98,23 @@ struct BezelRoutesTests {
         verify(orientation).set(.value(.landscapeRight)).called(1)
     }
 
-    @Test func `applyOrientation reports invalidValue for unrecognised spellings`() {
+    @Test func `should report an invalid value for an unrecognised orientation spelling`() {
         let host = MockSimulators()
         #expect(Server.applyOrientation(udid: "U", value: "sideways", simulators: host) == .invalidValue)
     }
 
-    @Test func `applyOrientation reports unknownDevice when the simulator can't be found`() {
+    @Test func `should report an unknown device when rotating a simulator that can't be found`() {
         let host = MockSimulators()
         given(host).find(udid: .value("ghost")).willReturn(nil)
         #expect(Server.applyOrientation(udid: "ghost", value: "portrait", simulators: host) == .unknownDevice)
     }
 
-    @Test func `applyOrientation reports unknownDevice when the udid is empty`() {
+    @Test func `should report an unknown device when rotating with an empty udid`() {
         let host = MockSimulators()
         #expect(Server.applyOrientation(udid: "", value: "portrait", simulators: host) == .unknownDevice)
     }
 
-    @Test func `applyOrientation reports dispatchFailed when the orientation surface rejects the change`() {
+    @Test func `should report a failed dispatch when the device rejects the orientation change`() {
         let host = MockSimulators()
         let sim = MockSimulator()
         let orientation = MockOrientation()
@@ -125,7 +125,7 @@ struct BezelRoutesTests {
         #expect(Server.applyOrientation(udid: "U", value: "portrait", simulators: host) == .dispatchFailed)
     }
 
-    @Test func `applyOrientation reports unconfirmed when the helper timed out`() {
+    @Test func `should report the rotation unconfirmed when the helper times out`() {
         let host = MockSimulators()
         let sim = MockSimulator()
         let orientation = MockOrientation()
@@ -136,7 +136,7 @@ struct BezelRoutesTests {
         #expect(Server.applyOrientation(udid: "U", value: "portrait", simulators: host) == .unconfirmed)
     }
 
-    @Test func `applyShake dispatches through the simulator's shake surface`() async {
+    @Test func `should shake the simulator`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let shake = MockShake()
@@ -148,18 +148,18 @@ struct BezelRoutesTests {
         verify(shake).shake().called(1)
     }
 
-    @Test func `applyShake reports unknownDevice when the simulator can't be found`() async {
+    @Test func `should report an unknown device when shaking a simulator that can't be found`() async {
         let host = MockSimulators()
         given(host).find(udid: .value("ghost")).willReturn(nil)
         #expect(await Server.applyShake(udid: "ghost", simulators: host) == .unknownDevice)
     }
 
-    @Test func `applyShake reports unknownDevice when the udid is empty`() async {
+    @Test func `should report an unknown device when shaking with an empty udid`() async {
         let host = MockSimulators()
         #expect(await Server.applyShake(udid: "", simulators: host) == .unknownDevice)
     }
 
-    @Test func `applyShake reports dispatchFailed when the shake surface throws`() async {
+    @Test func `should report a failed dispatch when the shake fails`() async {
         let host = MockSimulators()
         let sim = MockSimulator()
         let shake = MockShake()
@@ -170,7 +170,7 @@ struct BezelRoutesTests {
         #expect(await Server.applyShake(udid: "U", simulators: host) == .dispatchFailed)
     }
 
-    @Test func `bezelImage returns nil for an unknown udid`() {
+    @Test func `should serve no bezel for an unknown udid`() {
         let chromes = MockChromes()
         given(chromes).panels(forDeviceName: .any).willReturn([.primary])
         let sims = MockSimulators()
@@ -187,7 +187,7 @@ struct BezelRoutesTests {
 
     // MARK: - chrome-button image
 
-    @Test func `chromeButtonImage returns the per-button png for a known name`() throws {
+    @Test func `should serve a chrome button's png for a known button name`() throws {
         let (sim, chromes) = Self.fixture()
         let bytes = Server.chromeButtonImage(
             udid: "UDID-1",
@@ -198,7 +198,7 @@ struct BezelRoutesTests {
         #expect(bytes == Data("POWER-PNG".utf8))
     }
 
-    @Test func `chromeButtonImage returns nil for a name no button advertises`() {
+    @Test func `should serve no image for a name no chrome button advertises`() {
         let (sim, chromes) = Self.fixture()
         let bytes = Server.chromeButtonImage(
             udid: "UDID-1",
@@ -209,7 +209,7 @@ struct BezelRoutesTests {
         #expect(bytes == nil)
     }
 
-    @Test func `chromeButtonImage tolerates a missing png extension`() throws {
+    @Test func `should serve a chrome button's png when the extension is missing`() throws {
         // The URL parser yields the raw last path segment. If the
         // front end forgets the extension the handler should still
         // resolve the button name — keeps the API forgiving.
@@ -227,7 +227,7 @@ struct BezelRoutesTests {
 
     // MARK: - definition.json (SDK bootstrap)
 
-    @Test func `definitionJSONString returns nil for an unknown udid`() {
+    @Test func `should serve no device definition for an unknown udid`() {
         let sims = MockSimulators()
         given(sims).find(udid: .value("ghost")).willReturn(nil)
         let chromes = MockChromes()
@@ -237,7 +237,7 @@ struct BezelRoutesTests {
         ) == nil)
     }
 
-    @Test func `definitionJSONString carries identity + screen + buttons for the SDK bootstrap`() throws {
+    @Test func `should describe the device's identity, screen and buttons for the SDK bootstrap`() throws {
         let (sim, chromes) = Self.fixture()
         let json = try #require(Server.definitionJSONString(
             udid: "UDID-1", simulators: Self.simulators(with: sim), chromes: chromes
@@ -266,7 +266,7 @@ struct BezelRoutesTests {
         #expect(images["rest"] == "/simulators/UDID-1/chrome-button/power.png?panel=primary")
     }
 
-    @Test func `chromeJSONString includes imageUrl per button under the per-udid prefix`() throws {
+    @Test func `should give every chrome button an image URL under the device's own path`() throws {
         let (sim, chromes) = Self.fixture()
         let json = try #require(Server.chromeJSONString(
             udid: "UDID-1",

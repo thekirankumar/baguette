@@ -8,17 +8,17 @@ struct PluginTests {
 
     // MARK: - namespacing
 
-    @Test func `a command's qualified id joins the plugin name and the command id`() throws {
+    @Test func `should qualify a command's id with its plugin's name`() throws {
         let plugin = Self.make(name: "a11y", commandIDs: ["audit"])
         #expect(plugin.qualifiedCommandIDs == ["a11y:audit"])
     }
 
-    @Test func `a command is found by its qualified id`() throws {
+    @Test func `should find a command by its qualified id`() throws {
         let plugin = Self.make(name: "a11y", commandIDs: ["audit"])
         #expect(plugin.command(qualified: "a11y:audit")?.id == "audit")
     }
 
-    @Test func `a command is not found under another plugin's namespace`() throws {
+    @Test func `should not find a command under another plugin's namespace or unqualified`() throws {
         // Two plugins may both contribute `reload`; the namespace is
         // what keeps them apart, so a bare or foreign prefix must miss.
         let plugin = Self.make(name: "expo", commandIDs: ["reload"])
@@ -26,20 +26,20 @@ struct PluginTests {
         #expect(plugin.command(qualified: "reload") == nil)
     }
 
-    @Test func `an unknown command id is not found`() throws {
+    @Test func `should find no command when its id is unknown`() throws {
         let plugin = Self.make(name: "a11y", commandIDs: ["audit"])
         #expect(plugin.command(qualified: "a11y:nope") == nil)
     }
 
     // MARK: - the rail icon
 
-    @Test func `a plugin is represented in the rail by the icon it names`() throws {
+    @Test func `should show a plugin in the rail by the icon it names`() throws {
         let plugin = Self.make(name: "expo", commandIDs: ["reload"], icon: .wrench,
                                panelIcons: [.reload])
         #expect(plugin.railIcon == .wrench)
     }
 
-    @Test func `a plugin with no icon of its own falls back to its first panel's`() throws {
+    @Test func `should show a plugin in the rail by its first panel's icon when it names none of its own`() throws {
         // Most existing manifests predate the group icon. Rather than
         // leave them faceless in the collapsed rail, they wear the
         // glyph of the panel they lead with.
@@ -47,7 +47,7 @@ struct PluginTests {
         #expect(plugin.railIcon == .accessibility)
     }
 
-    @Test func `a plugin that ships neither an icon nor a panel has none`() throws {
+    @Test func `should show no rail icon when a plugin ships neither an icon nor a panel`() throws {
         // A command-only plugin contributes nothing to the rail, so the
         // host has no glyph to draw — it decides what to show, not us.
         let plugin = Self.make(name: "headless", commandIDs: ["run"])
@@ -56,7 +56,7 @@ struct PluginTests {
 
     // MARK: - the collection
 
-    @Test func `the collection finds a plugin by name`() throws {
+    @Test func `should find an installed plugin by name`() throws {
         let plugins = MockPlugins()
         given(plugins).all().willReturn([
             Self.make(name: "a11y", commandIDs: ["audit"]),
@@ -65,13 +65,13 @@ struct PluginTests {
         #expect(try plugins.plugin(named: "expo")?.id == "expo")
     }
 
-    @Test func `the collection returns nil for a plugin that isn't installed`() throws {
+    @Test func `should find no plugin when it is not installed`() throws {
         let plugins = MockPlugins()
         given(plugins).all().willReturn([])
         #expect(try plugins.plugin(named: "ghost") == nil)
     }
 
-    @Test func `the collection projects installed plugins as JSON`() throws {
+    @Test func `should list installed plugins as JSON without exposing their run commands`() throws {
         // Shape consumed by `GET /plugins.json`. Panels carry the
         // rendering instructions; the executable behind each command
         // is deliberately absent — the browser never needs it, and
@@ -92,7 +92,7 @@ struct PluginTests {
         #expect(commands[0]["run"] == nil)
     }
 
-    @Test func `the projection carries the icon that represents each plugin`() throws {
+    @Test func `should list the icon that represents each plugin`() throws {
         // The rail collapses a plugin to one entry, and the browser
         // must not have to re-derive which glyph that is — the host
         // resolves the fallback and states the answer.

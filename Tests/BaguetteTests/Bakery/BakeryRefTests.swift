@@ -7,7 +7,7 @@ struct BakeryRefTests {
 
     // MARK: - owner/repo shorthand
 
-    @Test func `owner slash repo defaults to github over https`() throws {
+    @Test func `should default an owner/repo reference to github over https`() throws {
         let ref = try BakeryRef.parse("tddworks/baguette-plugins")
         #expect(ref.host == "github.com")
         #expect(ref.owner == "tddworks")
@@ -16,20 +16,20 @@ struct BakeryRefTests {
         #expect(ref.cloneURL == "https://github.com/tddworks/baguette-plugins.git")
     }
 
-    @Test func `a third segment names a plugin inside the bakery`() throws {
+    @Test func `should take a third segment as the plugin inside the bakery`() throws {
         let ref = try BakeryRef.parse("tddworks/baguette-plugins/a11y")
         #expect(ref.owner == "tddworks")
         #expect(ref.repo == "baguette-plugins")
         #expect(ref.plugin == "a11y")
     }
 
-    @Test func `a trailing .git on the repo segment is dropped`() throws {
+    @Test func `should drop a trailing .git from the repo segment`() throws {
         let ref = try BakeryRef.parse("tddworks/baguette-plugins.git")
         #expect(ref.repo == "baguette-plugins")
         #expect(ref.cloneURL == "https://github.com/tddworks/baguette-plugins.git")
     }
 
-    @Test func `the github prefix is accepted as an explicit host`() throws {
+    @Test func `should accept the github: prefix as an explicit host`() throws {
         let ref = try BakeryRef.parse("github:acme/tools")
         #expect(ref.host == "github.com")
         #expect(ref.owner == "acme")
@@ -38,7 +38,7 @@ struct BakeryRefTests {
 
     // MARK: - full URLs (any host)
 
-    @Test func `an https URL keeps its own host`() throws {
+    @Test func `should keep the host of an https URL reference`() throws {
         let ref = try BakeryRef.parse("https://gitlab.com/acme/tools")
         #expect(ref.host == "gitlab.com")
         #expect(ref.owner == "acme")
@@ -46,7 +46,7 @@ struct BakeryRefTests {
         #expect(ref.cloneURL == "https://gitlab.com/acme/tools.git")
     }
 
-    @Test func `an explicit port survives into the clone URL`() throws {
+    @Test func `should keep an explicit port in the clone URL`() throws {
         // A self-hosted git on a non-default port is a normal
         // enterprise setup. Dropping the port sends `git clone` to
         // whatever answers on 443 instead — a different host as far as
@@ -58,7 +58,7 @@ struct BakeryRefTests {
         #expect(ref.cloneURL == "https://git.example:8443/acme/tools.git")
     }
 
-    @Test func `a plain-http reference clones over http`() throws {
+    @Test func `should clone a plain-http reference over http`() throws {
         // `parse` accepts http:// as a form, so rewriting it to https
         // is a silent substitution, not a policy — a self-hosted git
         // that only speaks http would fail with a TLS error naming a
@@ -67,7 +67,7 @@ struct BakeryRefTests {
         #expect(ref.cloneURL == "http://git.internal:8080/acme/tools.git")
     }
 
-    @Test func `the cache path ignores the port so one host is one directory`() throws {
+    @Test func `should keep one cache directory per host whatever the port`() throws {
         // The port disambiguates nothing on disk — `git.example` is one
         // source whether it's reached on 443 or 8443 — and a colon in a
         // path component is asking for trouble.
@@ -75,7 +75,7 @@ struct BakeryRefTests {
         #expect(ref.cacheSubpath == "git.example/acme/tools")
     }
 
-    @Test func `an scp-style git URL is understood`() throws {
+    @Test func `should understand an scp-style git URL reference`() throws {
         // `git@github.com:owner/repo.git` — the form GitHub prints for
         // SSH remotes. Kept verbatim as the clone URL so a user's SSH
         // keys carry through for private bakeries.
@@ -86,7 +86,7 @@ struct BakeryRefTests {
         #expect(ref.cloneURL == "git@github.com:acme/tools.git")
     }
 
-    @Test func `a file URL is a local bakery, host-less`() throws {
+    @Test func `should treat a file URL as a local, host-less bakery`() throws {
         // The reproducible test path and a handy way to develop a
         // bakery against a checkout without pushing.
         let ref = try BakeryRef.parse("file:///Users/me/my-bakery")
@@ -97,7 +97,7 @@ struct BakeryRefTests {
 
     // MARK: - identity + cache location
 
-    @Test func `two refs to the same repo compare equal regardless of plugin`() throws {
+    @Test func `should see two references to the same repo as one bakery whatever plugin they name`() throws {
         // The bakery is the repo; the plugin segment only picks what to
         // install. Adding the source is the same act either way.
         let bare = try BakeryRef.parse("acme/tools")
@@ -105,7 +105,7 @@ struct BakeryRefTests {
         #expect(bare.bakery == scoped.bakery)
     }
 
-    @Test func `the cache subpath is host and owner scoped so names can't collide`() throws {
+    @Test func `should scope the cache path by host and owner so names can't collide`() throws {
         let a = try BakeryRef.parse("acme/tools")
         let b = try BakeryRef.parse("https://gitlab.com/acme/tools")
         #expect(a.cacheSubpath == "github.com/acme/tools")
@@ -115,17 +115,17 @@ struct BakeryRefTests {
 
     // MARK: - rejections
 
-    @Test func `an empty reference is rejected`() throws {
+    @Test func `should reject an empty bakery reference`() throws {
         #expect(throws: BakeryRefError.empty) { try BakeryRef.parse("   ") }
     }
 
-    @Test func `a bare word with no owner is rejected`() throws {
+    @Test func `should reject a bare word with no owner`() throws {
         #expect(throws: BakeryRefError.malformed(reference: "justaname")) {
             try BakeryRef.parse("justaname")
         }
     }
 
-    @Test func `a shorthand with too many segments is rejected`() throws {
+    @Test func `should reject a shorthand reference with too many segments`() throws {
         #expect(throws: BakeryRefError.malformed(reference: "a/b/c/d")) {
             try BakeryRef.parse("a/b/c/d")
         }

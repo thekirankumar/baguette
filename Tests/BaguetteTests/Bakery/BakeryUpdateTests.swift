@@ -8,24 +8,24 @@ import Foundation
 @Suite("BakeryUpdate")
 struct BakeryUpdateTests {
 
-    @Test func `a bakery still on its pinned commit is up to date`() {
+    @Test func `should report a bakery still on its pinned commit as up to date`() {
         let update = BakeryUpdate(id: "github.com/acme/tools", pinned: "abc123", head: "abc123")
         #expect(update.state == .upToDate)
     }
 
-    @Test func `a bakery whose remote has moved has an update available`() {
+    @Test func `should report an update available when a bakery's remote has moved`() {
         let update = BakeryUpdate(id: "github.com/acme/tools", pinned: "abc123", head: "def456")
         #expect(update.state == .available)
     }
 
-    @Test func `a remote we could not reach is unknown, never up to date`() {
+    @Test func `should report a bakery as unreachable, never up to date, when its remote could not be reached`() {
         // The failure that matters: reporting "up to date" because the
         // network was down tells the user the opposite of the truth.
         let update = BakeryUpdate(id: "github.com/acme/tools", pinned: "abc123", head: nil)
         #expect(update.state == .unreachable)
     }
 
-    @Test func `only the moved ones are worth reporting`() {
+    @Test func `should flag only moved or unreachable bakeries as needing attention`() {
         let updates = [
             BakeryUpdate(id: "a", pinned: "1", head: "1"),
             BakeryUpdate(id: "b", pinned: "1", head: "2"),
@@ -38,14 +38,14 @@ struct BakeryUpdateTests {
 
     // MARK: - how it reads
 
-    @Test func `an available update names both commits so the change is visible`() {
+    @Test func `should name both commits when an update is available`() {
         let line = BakeryUpdate(id: "github.com/acme/tools", pinned: "abc123def", head: "999888777").line
         #expect(line.contains("github.com/acme/tools"))
         #expect(line.contains("abc123d"))
         #expect(line.contains("9998887"))
     }
 
-    @Test func `an unreachable bakery says so rather than showing a blank commit`() {
+    @Test func `should say the bakery could not be reached rather than show a blank commit`() {
         let line = BakeryUpdate(id: "github.com/acme/tools", pinned: "abc123def", head: nil).line
         #expect(line.lowercased().contains("could not reach"))
     }

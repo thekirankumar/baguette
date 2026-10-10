@@ -10,34 +10,34 @@ import Foundation
 @Suite("MediaItem")
 struct MediaItemTests {
 
-    @Test func `common image extensions are media`() {
+    @Test func `should treat a file as media when it has a common image extension`() {
         for ext in ["png", "jpg", "jpeg", "gif", "heic", "heif"] {
             let url = URL(fileURLWithPath: "/tmp/shot.\(ext)")
             #expect(MediaItem.at(url) == MediaItem(path: url))
         }
     }
 
-    @Test func `common video extensions are media`() {
+    @Test func `should treat a file as media when it has a common video extension`() {
         for ext in ["mov", "mp4", "m4v"] {
             let url = URL(fileURLWithPath: "/tmp/clip.\(ext)")
             #expect(MediaItem.at(url) == MediaItem(path: url))
         }
     }
 
-    @Test func `the extension match is case-insensitive`() {
+    @Test func `should recognise a media extension regardless of letter case`() {
         let url = URL(fileURLWithPath: "/tmp/shot.PNG")
         #expect(MediaItem.at(url) == MediaItem(path: url))
     }
 
-    @Test func `an app is not media`() {
+    @Test func `should not treat an app as media`() {
         #expect(MediaItem.at(URL(fileURLWithPath: "/tmp/MyApp.ipa")) == nil)
     }
 
-    @Test func `a generic document is not media`() {
+    @Test func `should not treat a generic document as media`() {
         #expect(MediaItem.at(URL(fileURLWithPath: "/tmp/notes.pdf")) == nil)
     }
 
-    @Test func `addMediaArguments projects the simctl addmedia argv tail`() {
+    @Test func `should hand simctl addmedia the udid and the media path`() {
         let media = MediaItem(path: URL(fileURLWithPath: "/tmp/My Clip.mov"))
         #expect(media.addMediaArguments(udid: "U") == ["simctl", "addmedia", "U", "/tmp/My Clip.mov"])
     }

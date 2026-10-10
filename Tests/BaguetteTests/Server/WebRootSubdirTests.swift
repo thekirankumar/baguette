@@ -10,8 +10,7 @@ import Foundation
 @Suite("WebRoot subdirectory lookup", .serialized)
 struct WebRootSubdirTests {
 
-    @Test("resolves a file in a subdirectory via BAGUETTE_WEB_DIR")
-    func resolvesNestedPathViaEnvOverride() throws {
+    @Test func `should serve a file in a subdirectory of the BAGUETTE_WEB_DIR web root`() throws {
         let tmp = try makeTempWebTree(files: [
             "farm/farm.html": "<!doctype html><title>farm</title>",
             "farm/farm.css":  "body{}",
@@ -27,8 +26,7 @@ struct WebRootSubdirTests {
         #expect(css == "body{}")
     }
 
-    @Test("returns nil for a missing nested file")
-    func returnsNilWhenMissing() throws {
+    @Test func `should find nothing when a nested asset is missing`() throws {
         let tmp = try makeTempWebTree(files: [:])
         defer { try? FileManager.default.removeItem(at: tmp) }
 
@@ -38,8 +36,7 @@ struct WebRootSubdirTests {
         #expect(WebRoot.data(named: "farm/does-not-exist.js") == nil)
     }
 
-    @Test("rejects traversal outside BAGUETTE_WEB_DIR")
-    func rejectsTraversalOutsideEnvOverride() throws {
+    @Test func `should refuse a path that escapes the BAGUETTE_WEB_DIR web root`() throws {
         let tmp = try makeTempWebTree(files: [
             "farm/farm.html": "<!doctype html><title>farm</title>",
         ])

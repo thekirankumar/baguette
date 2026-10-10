@@ -4,33 +4,33 @@ import Testing
 @Suite("PendingCapture")
 struct PendingCaptureTests {
 
-    @Test func `the first request must be scheduled`() {
+    @Test func `should schedule a capture on the first request`() {
         var pending = PendingCapture()
         #expect(pending.request() == true)
     }
 
-    @Test func `repeat requests coalesce onto the one already pending`() {
+    @Test func `should fold repeat requests into the capture already pending`() {
         var pending = PendingCapture()
         _ = pending.request()
         #expect(pending.request() == false)
         #expect(pending.request() == false)
     }
 
-    @Test func `a request once the capture has begun schedules a fresh one`() {
+    @Test func `should schedule a fresh capture when a request arrives after the last one began`() {
         var pending = PendingCapture()
         _ = pending.request()
         pending.begin()
         #expect(pending.request() == true)
     }
 
-    @Test func `a burst of notifications during one slow capture yields a single schedule`() {
+    @Test func `should schedule a single capture for a burst of frames during one slow capture`() {
         var pending = PendingCapture()
         var scheduled = 0
         for _ in 0..<10_000 where pending.request() { scheduled += 1 }
         #expect(scheduled == 1)
     }
 
-    @Test func `each capture cycle schedules exactly once however many frames arrive`() {
+    @Test func `should schedule exactly once per capture cycle however many frames arrive`() {
         var pending = PendingCapture()
         var scheduled = 0
         for cycle in 0..<5 {

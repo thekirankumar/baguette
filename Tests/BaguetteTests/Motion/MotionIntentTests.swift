@@ -26,7 +26,7 @@ struct MotionIntentTests {
         distanceBefore: 0
     )
 
-    @Test func `encodes as sorted-key JSON with the profile resolved`() throws {
+    @Test func `should publish the intent as sorted-key JSON with the profile resolved`() throws {
         // Sorted keys make this byte-comparable, the same discipline
         // `SharedFrameLayout.encodeHeader` holds for the camera's binary
         // header. The dylib parses this with NSJSONSerialization.
@@ -38,24 +38,24 @@ struct MotionIntentTests {
             """)
     }
 
-    @Test func `resolves the CoreMotion enum values so the dylib maps nothing`() {
+    @Test func `should resolve the Core Motion activity and confidence values so the dylib maps nothing`() {
         // `kind` is there for a human reading the file; `activityType` and
         // `confidence` are what the dylib actually copies into the struct.
         #expect(running.activityType == 8)
         #expect(running.confidence.coreMotionValue == 2)
     }
 
-    @Test func `derives its profile from the kind and speed it was given`() {
+    @Test func `should derive the gait profile from the kind and speed given`() {
         #expect(running.profile.strideMetres == 1.2)
         #expect(running.profile.cadenceHz == 3)
     }
 
-    @Test func `round-trips through its own encoding`() throws {
+    @Test func `should read back the same intent it published`() throws {
         let decoded = try MotionIntent(decoding: try running.encoded())
         #expect(decoded == running)
     }
 
-    @Test func `a cleared intent is stationary and accrues nothing`() {
+    @Test func `should report stationary and accrue nothing, keeping earlier totals, when motion is cleared`() {
         // What `motion stop` / `location clear` publishes: an app keeps
         // reading, and reads "not moving" rather than stale movement.
         let idle = MotionIntent.stationary(startedAt: 1000, stepsBefore: 812,

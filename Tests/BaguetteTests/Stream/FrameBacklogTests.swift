@@ -20,7 +20,7 @@ struct FrameBacklogTests {
         frame(AVCCEnvelope.descriptionTag, bytes: bytes, marker: marker)
     }
 
-    @Test func `keeps every frame while under budget`() {
+    @Test func `should keep every frame while the backlog is under budget`() {
         var backlog = FrameBacklog(byteBudget: 100)
         backlog.append(delta(20))
         backlog.append(delta(30))
@@ -29,7 +29,7 @@ struct FrameBacklogTests {
         #expect(backlog.droppedCount == 0)
     }
 
-    @Test func `discards the oldest frames once appending would exceed the budget`() {
+    @Test func `should discard the oldest frames when a new frame would exceed the budget`() {
         var backlog = FrameBacklog(byteBudget: 100)
         backlog.append(delta(40, marker: 1))
         backlog.append(delta(40, marker: 2))
@@ -42,7 +42,7 @@ struct FrameBacklogTests {
         #expect(backlog.popFirst() == delta(40, marker: 3))
     }
 
-    @Test func `never discards the avcC description a decoder needs to start`() {
+    @Test func `should never discard the decoder description a viewer needs to start`() {
         var backlog = FrameBacklog(byteBudget: 100)
         let desc = description(10)
         backlog.append(desc)
@@ -51,7 +51,7 @@ struct FrameBacklogTests {
         #expect(backlog.byteCount <= 100)
     }
 
-    @Test func `keeps the newest frame even when it alone exceeds the budget`() {
+    @Test func `should keep the newest frame even when it alone exceeds the budget`() {
         var backlog = FrameBacklog(byteBudget: 100)
         let huge = delta(500)
         backlog.append(huge)
@@ -59,7 +59,7 @@ struct FrameBacklogTests {
         #expect(backlog.popFirst() == huge)
     }
 
-    @Test func `drains frames in the order they arrived`() {
+    @Test func `should drain frames in the order they arrived`() {
         var backlog = FrameBacklog(byteBudget: 1000)
         let a = delta(10, marker: 1), b = delta(20, marker: 2), c = delta(30, marker: 3)
         backlog.append(a); backlog.append(b); backlog.append(c)
@@ -74,7 +74,7 @@ struct FrameBacklogTests {
     /// each rebuild emits a fresh description. Only the last one describes
     /// the frames still in the backlog — the earlier ones describe frames
     /// trimming has already taken, so they stop being worth protecting.
-    @Test func `supersedes an earlier description once the encoder emits a newer one`() {
+    @Test func `should drop an earlier decoder description when a newer one arrives`() {
         var backlog = FrameBacklog(byteBudget: 100)
         let stale = description(20, marker: 1)
         let current = description(20, marker: 2)
@@ -90,13 +90,13 @@ struct FrameBacklogTests {
         #expect(!survivors.contains(stale))
     }
 
-    @Test func `a rotating client cannot grow the backlog with descriptions alone`() {
+    @Test func `should stay within budget when a rotating client floods it with descriptions`() {
         var backlog = FrameBacklog(byteBudget: 100)
         for _ in 0..<10_000 { backlog.append(description(40)) }
         #expect(backlog.byteCount <= 100)
     }
 
-    @Test func `a stalled consumer cannot grow the backlog without bound`() {
+    @Test func `should stay within budget when the consumer stalls`() {
         var backlog = FrameBacklog(byteBudget: 4096)
         for _ in 0..<10_000 { backlog.append(delta(1024)) }
         #expect(backlog.byteCount <= 4096)

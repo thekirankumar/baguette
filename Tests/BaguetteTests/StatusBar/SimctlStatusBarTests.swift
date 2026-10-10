@@ -31,7 +31,7 @@ struct SimctlStatusBarTests {
         return (SimctlStatusBar(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `override spawns xcrun simctl status_bar override with the projected argv`() async throws {
+    @Test func `should override the status bar through xcrun simctl status_bar override with every set flag`() async throws {
         let (statusBar, captures) = makeStatusBar()
         try await statusBar.override(StatusBarOverride(batteryState: .charged, batteryLevel: 68))
 
@@ -42,7 +42,7 @@ struct SimctlStatusBarTests {
         ])
     }
 
-    @Test func `read runs simctl status_bar list and parses the output`() async throws {
+    @Test func `should read the current status bar back from simctl status_bar list`() async throws {
         let sub = MockSubprocess()
         let captures = Captures()
         given(sub).run(
@@ -63,13 +63,13 @@ struct SimctlStatusBarTests {
         #expect(reading.wifiBars == 2)
     }
 
-    @Test func `clear spawns xcrun simctl status_bar clear`() async throws {
+    @Test func `should clear the status bar through xcrun simctl status_bar clear`() async throws {
         let (statusBar, captures) = makeStatusBar()
         try await statusBar.clear()
         #expect(captures.arguments == ["simctl", "status_bar", "U", "clear"])
     }
 
-    @Test func `an empty override throws without spawning anything`() async {
+    @Test func `should reject an empty override without running simctl`() async {
         let (statusBar, captures) = makeStatusBar()
         var caught: StatusBarError?
         do {
@@ -81,7 +81,7 @@ struct SimctlStatusBarTests {
         #expect(captures.ran == false)
     }
 
-    @Test func `a non-zero simctl exit propagates as a status-bar failure`() async {
+    @Test func `should report a status-bar failure when simctl exits non-zero`() async {
         let (statusBar, _) = makeStatusBar(exitCode: 3)
         var caught: StatusBarError?
         do {

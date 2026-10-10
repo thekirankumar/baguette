@@ -6,7 +6,7 @@ import Testing
 struct DeviceRenderPlanTests {
 
     @Test(arguments: [(0.0, IntegratedPanel.primary), (89.0, .primary), (90.0, .secondary), (130.0, .secondary), (180.0, .secondary)])
-    func `saved fold poses select the corresponding screen`(angle: Double, panel: IntegratedPanel) throws {
+    func `should select the screen a saved fold pose lights`(angle: Double, panel: IntegratedPanel) throws {
         let plan = try Self.foldPlan(angle: angle)
         #expect(plan.screenPanel == panel)
         #expect(plan.hingeDegrees == angle)
@@ -26,7 +26,7 @@ struct DeviceRenderPlanTests {
         (0.0, .portraitUpsideDown, .half, 180.0),
         (0.0, .landscapeRight, .threeQuarters, 90.0),
     ])
-    func `a capture's orientation turns its image and rolls a foldable upright`(
+    func `should turn a capture's image by its orientation and roll a foldable upright`(
         angle: Double, orientation: DeviceOrientation, turn: ScreenRotation, roll: Double
     ) throws {
         let plan = try Self.foldPlan(angle: angle, orientation: orientation, rotation: DeviceRotation(x: 5, y: 10, z: 20))
@@ -34,7 +34,7 @@ struct DeviceRenderPlanTests {
         #expect(plan.rotation == DeviceRotation(x: 5, y: 10, z: 20 + roll))
     }
 
-    @Test func `an unfolded foldable rolls for its inner screen and a phone like a cover`() throws {
+    @Test func `should roll an unfolded foldable for its inner screen and a phone like a cover`() throws {
         #expect(try Self.foldPlan(angle: nil, orientation: .portrait).rotation.z == 90)
         let phone = try DeviceRenderPlan.build(
             model: Self.installed(), variants: [:], rotation: .zero,
@@ -44,14 +44,14 @@ struct DeviceRenderPlanTests {
         #expect(phone.rotation.z == -90)
     }
 
-    @Test func `without an orientation the image and model are left as they are`() throws {
+    @Test func `should leave the image and model as they are when no orientation is given`() throws {
         let plan = try Self.foldPlan(angle: 130, orientation: nil, rotation: DeviceRotation(x: 5, y: 10, z: 20))
         #expect(plan.screenRotation == .none)
         #expect(plan.rotation == DeviceRotation(x: 5, y: 10, z: 20))
     }
 
     @Test(arguments: [-1.0, 181.0, Double.infinity, Double.nan])
-    func `render plans reject invalid fold angles`(angle: Double) {
+    func `should reject invalid fold angles`(angle: Double) {
         #expect(throws: DeviceModelError.invalidHingeAngle) {
             _ = try Self.foldPlan(angle: angle)
         }
@@ -60,7 +60,7 @@ struct DeviceRenderPlanTests {
     /// The glass layer is shaped for the inner screen; over a pose that
     /// lights the cover it floated beside the shut book.
     @Test(arguments: [(nil as Double?, true), (180, true), (90, true), (89, false), (0, false)])
-    func `screen glass composites over the inner screen only`(angle: Double?, glass: Bool) throws {
+    func `should composite screen glass over the inner screen only`(angle: Double?, glass: Bool) throws {
         let plan = try DeviceRenderPlan.build(
             model: Self.installed(fold: DeviceModelFold(
                 clip: "fold", shutTime: 5, coverMaterial: "Cover",
@@ -72,7 +72,7 @@ struct DeviceRenderPlanTests {
         #expect(plan.rendersScreenGlass == glass)
     }
 
-    @Test func `an unspecified fold keeps the existing screen selection`() throws {
+    @Test func `should keep the existing screen selection when no fold is given`() throws {
         #expect(try Self.foldPlan(angle: nil).screenPanel == nil)
     }
 
@@ -91,7 +91,7 @@ struct DeviceRenderPlanTests {
         )
     }
 
-    @Test func `builds a render plan with mapped variants and requested camera`() throws {
+    @Test func `should build a render plan with mapped variants and the requested camera`() throws {
         let model = Self.installed()
 
         let plan = try DeviceRenderPlan.build(
@@ -111,7 +111,7 @@ struct DeviceRenderPlanTests {
         #expect(plan.background == .color("#112233"))
     }
 
-    @Test func `rejects non-positive output dimensions`() {
+    @Test func `should reject non-positive output dimensions`() {
         #expect(throws: DeviceModelError.invalidOutputSize) {
             _ = try DeviceRenderPlan.build(
                 model: Self.installed(),
@@ -122,7 +122,7 @@ struct DeviceRenderPlanTests {
         }
     }
 
-    @Test func `rejects a non-finite camera rotation`() {
+    @Test func `should reject a non-finite camera rotation`() {
         #expect(throws: DeviceModelError.invalidRotation) {
             _ = try DeviceRenderPlan.build(
                 model: Self.installed(),
@@ -133,7 +133,7 @@ struct DeviceRenderPlanTests {
         }
     }
 
-    @Test func `rejects an invalid background color`() {
+    @Test func `should reject an invalid background color`() {
         #expect(throws: DeviceModelError.invalidBackground("blue")) {
             _ = try DeviceRenderPlan.build(
                 model: Self.installed(),
@@ -195,7 +195,7 @@ private extension DeviceRenderPlanTests {
 
 @Suite("ScreenQuadProjection attitude")
 struct ScreenQuadProjectionAttitudeTests {
-    @Test func `a quaternion pose projects identically to its euler twin`() {
+    @Test func `should project a quaternion pose identically to its euler twin`() {
         let corners = ScreenLocalCorners(
             topLeft: Vector3(x: -0.4, y: 0.9, z: 0.05),
             topRight: Vector3(x: 0.4, y: 0.9, z: 0.05),

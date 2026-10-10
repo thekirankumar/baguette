@@ -21,7 +21,7 @@ struct PasteDispatchTests {
 
     // MARK: - routing
 
-    @Test func `a non-paste line falls through as notPaste`() async {
+    @Test func `should leave a line that is not a paste for the gesture pipeline`() async {
         let (pasteboard, input) = surfaces()
         for line in [
             #"{"type":"tap","x":1,"y":2,"width":390,"height":844}"#,
@@ -36,7 +36,7 @@ struct PasteDispatchTests {
         verify(pasteboard).setText(.any).called(0)
     }
 
-    @Test func `a valid paste line sets the pasteboard and acks ok`() async {
+    @Test func `should set the pasteboard, press Cmd+V and ack ok for a paste line`() async {
         let (pasteboard, input) = surfaces()
         let outcome = await PasteDispatch.dispatch(
             line: #"{"type":"paste","text":"hello"}"#,
@@ -47,7 +47,7 @@ struct PasteDispatchTests {
         verify(input).key(.any, modifiers: .value([.command]), duration: .any).called(1)
     }
 
-    @Test func `dispatches with a pasteboard vended by the simulator`() async {
+    @Test func `should paste using the pasteboard of the simulator`() async {
         let sim = MockSimulator()
         let (pasteboard, input) = surfaces()
         given(sim).pasteboard().willReturn(pasteboard)
@@ -59,7 +59,7 @@ struct PasteDispatchTests {
         #expect(outcome == .ok)
     }
 
-    @Test func `a malformed paste line acks the parse error`() async {
+    @Test func `should report the parse error and paste nothing when a paste line is malformed`() async {
         let (pasteboard, input) = surfaces()
         let outcome = await PasteDispatch.dispatch(
             line: #"{"type":"paste"}"#,
@@ -69,7 +69,7 @@ struct PasteDispatchTests {
         verify(pasteboard).setText(.any).called(0)
     }
 
-    @Test func `a simctl failure surfaces in the outcome`() async {
+    @Test func `should report a simctl failure when pasting`() async {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any)
@@ -82,7 +82,7 @@ struct PasteDispatchTests {
         #expect(outcome == .failed("xcrun simctl pasteboard command exited 1"))
     }
 
-    @Test func `a failed command-V press surfaces in the outcome`() async {
+    @Test func `should report a failed Cmd+V press when pasting`() async {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any).willReturn(())
@@ -97,7 +97,7 @@ struct PasteDispatchTests {
 
     // MARK: - projections
 
-    @Test func `outcomes project to stdin acks and typed paste_result frames`() {
+    @Test func `should answer a paste with a stdin ack and a paste_result frame`() {
         #expect(PasteDispatch.Outcome.notPaste.ackJSON == nil)
         #expect(PasteDispatch.Outcome.notPaste.resultFrame == nil)
 

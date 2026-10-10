@@ -13,14 +13,14 @@ import Foundation
 @Suite("InstallDecision")
 struct InstallDecisionTests {
 
-    @Test func `a plugin its bakery offers is installable`() {
+    @Test func `should allow installing a plugin its trusted bakery offers`() {
         let decision = InstallDecision.decide(
             bakery: "github.com/acme/tools", plugin: "hello", among: [Self.tools]
         )
         #expect(decision == .install(Self.tools, plugin: "hello"))
     }
 
-    @Test func `a bakery that was never trusted is refused`() {
+    @Test func `should refuse a bakery that was never trusted`() {
         // The whole point: the id has to already be in bakeries.json.
         // A page naming a source the user never accepted gets nothing,
         // and nothing is cloned to find out.
@@ -30,12 +30,12 @@ struct InstallDecisionTests {
         #expect(decision == .notTrusted(bakery: "github.com/evil/pack"))
     }
 
-    @Test func `an empty trusted list refuses everything`() {
+    @Test func `should refuse everything when no bakery is trusted`() {
         #expect(InstallDecision.decide(bakery: "github.com/acme/tools", plugin: "hello", among: [])
                 == .notTrusted(bakery: "github.com/acme/tools"))
     }
 
-    @Test func `a plugin the bakery does not offer is refused`() {
+    @Test func `should refuse a plugin the bakery does not offer`() {
         // Trusting a bakery is not trusting an arbitrary path inside
         // it — only the names its recorded menu lists.
         let decision = InstallDecision.decide(
@@ -44,14 +44,14 @@ struct InstallDecisionTests {
         #expect(decision == .notOffered(plugin: "not-on-the-menu", by: Self.tools))
     }
 
-    @Test func `an empty plugin name is refused rather than resolved`() {
+    @Test func `should refuse an empty plugin name rather than resolve it`() {
         // A missing field in the request body arrives as "", and an
         // empty name must never fall through to "install the only one".
         #expect(InstallDecision.decide(bakery: "github.com/acme/tools", plugin: "", among: [Self.tools])
                 == .notOffered(plugin: "", by: Self.tools))
     }
 
-    @Test func `each refusal says what was wrong without echoing back what was asked for`() {
+    @Test func `should say what was wrong in each refusal without echoing back what was asked for`() {
         // The message reaches a browser modal. It names the bakery the
         // user trusted and what it offers — both already theirs — and
         // never reflects an unknown id into the page.

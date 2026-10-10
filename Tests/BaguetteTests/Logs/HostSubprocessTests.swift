@@ -32,7 +32,7 @@ struct HostSubprocessTests {
     /// rather than on behaviour, and do it invisibly on a dev machine.
     static let childDeadline: Duration = .seconds(90)
 
-    @Test func `stdout reaches the byte handler and the exit code is reported`() async throws {
+    @Test func `should deliver the child's output and report its exit code`() async throws {
         let run = try await Self.spawn(
             executable: "/bin/echo", arguments: ["hello from the child"]
         )
@@ -40,14 +40,14 @@ struct HostSubprocessTests {
         #expect(run.output.contains("hello from the child"))
     }
 
-    @Test func `a non-zero exit is reported as its own status`() async throws {
+    @Test func `should report a non-zero exit as its own status`() async throws {
         // Every caller's failure branch keys off this — `SimctlInterface`
         // and `SimctlStatusBar` both turn it into a typed error.
         let run = try await Self.spawn(executable: "/bin/sh", arguments: ["-c", "exit 7"])
         #expect(run.status == 7)
     }
 
-    @Test func `stderr is folded into the same stream as stdout`() async throws {
+    @Test func `should fold the child's stderr into the same output as stdout`() async throws {
         // Both pipes share one handle, so a tool that diagnoses on
         // stderr still reaches the caller rather than vanishing.
         let run = try await Self.spawn(
@@ -63,7 +63,7 @@ struct HostSubprocessTests {
     /// A child that exits on its own (every one-shot `simctl`, a
     /// `devicectl` monitor whose timeout lands) must not leave one
     /// behind: `serve` was found pinned at 100% by two of these.
-    @Test func `a child that exits on its own stops being read`() async throws {
+    @Test func `should stop reading a child that exits on its own`() async throws {
         let sub = HostSubprocess()
         let finished = Finished()
         try sub.run(
@@ -86,7 +86,7 @@ struct HostSubprocessTests {
     /// stranger instead: `xcode-select -p`'s pipe died of
     /// `readDataOfLength: Bad file descriptor` in `serve` once a
     /// long-lived hinge watch put terminates next to other spawns.
-    @Test func `terminating leaves a descriptor Process already gave back alone`() async throws {
+    @Test func `should leave a reused file descriptor open when the child is stopped`() async throws {
         let sub = HostSubprocess()
         try sub.run(
             executable: URL(fileURLWithPath: "/bin/sleep"), arguments: ["30"],
@@ -110,7 +110,7 @@ struct HostSubprocessTests {
     /// its number is free and the next pipe takes it. When the
     /// `HostSubprocess` is then released, its `deinit` must not close
     /// that end a second time — that is the stranger's descriptor now.
-    @Test func `releasing a terminated subprocess does not close its old descriptor again`() async throws {
+    @Test func `should not close reused file descriptors when a stopped child is released`() async throws {
         var sub: HostSubprocess? = HostSubprocess()
         try sub!.run(
             executable: URL(fileURLWithPath: "/bin/sleep"), arguments: ["30"],
@@ -132,7 +132,7 @@ struct HostSubprocessTests {
 
     // MARK: - stdin
 
-    @Test func `a stdin payload is delivered to the child`() async throws {
+    @Test func `should deliver a stdin payload to the child`() async throws {
         // This is the channel a plugin command reads its context and
         // `args` from — the path where a dropped payload looks like a
         // click that did nothing.
@@ -144,7 +144,7 @@ struct HostSubprocessTests {
         #expect(run.output == payload)
     }
 
-    @Test func `a stdin payload past the pipe buffer doesn't deadlock`() async throws {
+    @Test func `should not deadlock when the stdin payload exceeds the pipe buffer`() async throws {
         // Written off the calling thread on purpose: anything past the
         // ~64 KB pipe buffer would otherwise block the spawn until the
         // child drained it, and the child can't run until the spawn
@@ -157,7 +157,7 @@ struct HostSubprocessTests {
         #expect(run.output.count == payload.count)
     }
 
-    @Test func `closing stdin delivers EOF so the child can finish`() async throws {
+    @Test func `should end stdin after the payload so the child can finish`() async throws {
         // `wc -c` only answers once the stream ends. If the handle were
         // left open the child would hang and the test would time out.
         let run = try await Self.spawn(
@@ -169,7 +169,7 @@ struct HostSubprocessTests {
 
     // MARK: - working directory and environment
 
-    @Test func `the child runs in the working directory it was given`() async throws {
+    @Test func `should run the child in the working directory it was given`() async throws {
         // A plugin's command is spawned with its own directory as cwd,
         // which is what makes a relative `["python3", "bin/x.py"]` work.
         let tmp = try Self.makeTempDirectory()
@@ -185,7 +185,7 @@ struct HostSubprocessTests {
         ))
     }
 
-    @Test func `a supplied environment replaces the parent's rather than merging`() async throws {
+    @Test func `should replace the parent's environment rather than merge when one is supplied`() async throws {
         // The documented contract, and the reason a plugin sees exactly
         // the three BAGUETTE_ vars it was handed. A merge would leak the
         // server's whole environment into third-party code.
@@ -204,7 +204,7 @@ struct HostSubprocessTests {
 
     // MARK: - termination
 
-    @Test func `terminate stops a child that would otherwise outlive us`() async throws {
+    @Test func `should stop a child that would otherwise outlive baguette`() async throws {
         // The timeout path: `PluginDispatch` terminates a command that
         // overran, and `SimDeviceLogStream` terminates on teardown.
         let subprocess = HostSubprocess()
@@ -227,14 +227,14 @@ struct HostSubprocessTests {
         #expect(status != 0)
     }
 
-    @Test func `terminating an already-finished child is harmless`() async throws {
+    @Test func `should do no harm when stopping a child that already finished`() async throws {
         let run = try await Self.spawn(executable: "/usr/bin/true", arguments: [])
         #expect(run.status == 0)
         // The subprocess has already exited; this must not trap.
         run.subprocess.terminate()
     }
 
-    @Test func `a missing executable throws instead of reporting a fake exit`() async throws {
+    @Test func `should fail to start rather than report a fake exit when the executable is missing`() async throws {
         let subprocess = HostSubprocess()
         #expect(throws: (any Error).self) {
             try subprocess.run(

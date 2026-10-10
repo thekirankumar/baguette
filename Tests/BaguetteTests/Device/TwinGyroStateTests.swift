@@ -31,13 +31,13 @@ struct TwinGyroStateTests {
         }
     }
 
-    @Test func `the first sample announces`() {
+    @Test func `should announce the device on its first attitude sample only`() {
         let gyro = TwinGyroState(zoom: 1)
         #expect(gyro.add(upright(heading: 40, t: 0), arrivedAt: 100) == true)
         #expect(gyro.add(upright(heading: 41, t: 0.016), arrivedAt: 100.016) == false)
     }
 
-    @Test func `poses are absolute against gravity with heading-only calibration`() {
+    @Test func `should pose the model against gravity, calibrating only the heading`() {
         let gyro = TwinGyroState(zoom: 1)
         _ = gyro.add(upright(heading: 40, t: 0), arrivedAt: 100)
         _ = gyro.add(flat(yaw: 40, t: 0.016), arrivedAt: 100.016)
@@ -48,7 +48,7 @@ struct TwinGyroStateTests {
         ) == true)
     }
 
-    @Test func `ticks replay the true trajectory the delay budget behind`() {
+    @Test func `should replay the true trajectory one delay budget behind`() {
         // Ramp to 60° at t=0.16; clean 16 ms arrivals keep the budget
         // at its 50 ms floor, so the tick at the newest arrival plays
         // t=0.11 → heading 40 + 2·(0.11/0.016) = 53.75 → a 13.75° turn.
@@ -58,14 +58,14 @@ struct TwinGyroStateTests {
         #expect(applied?.attitude.isApproximately(turnY(13.75), tolerance: 0.000001) == true)
     }
 
-    @Test func `the clock advances between arrivals`() {
+    @Test func `should keep playback advancing between sample arrivals`() {
         let gyro = TwinGyroState(zoom: 1)
         feedRamp(gyro, count: 10)
         let applied = gyro.pose(at: 100.19) // playback t=0.14 → 17.5°
         #expect(applied?.attitude.isApproximately(turnY(17.5), tolerance: 0.000001) == true)
     }
 
-    @Test func `a delayed sample never snaps playback backwards`() {
+    @Test func `should never snap playback backwards when a sample arrives late`() {
         // Playback holds at the newest sample through a stall; when a
         // late sample lands, a clock rebased on its arrival would point
         // BEHIND the held pose. The monotonic clock shows nothing until
@@ -77,7 +77,7 @@ struct TwinGyroStateTests {
         #expect(gyro.pose(at: 100.30) == nil)
     }
 
-    @Test func `a held pose ticks to nothing so a resting phone emits no frames`() {
+    @Test func `should emit no frames while a resting phone holds its pose`() {
         let gyro = TwinGyroState(zoom: 1)
         feedRamp(gyro, count: 10)
         #expect(gyro.pose(at: 101) != nil)     // reaches the hold
@@ -85,7 +85,7 @@ struct TwinGyroStateTests {
         #expect(gyro.pose(at: 101.04) == nil)
     }
 
-    @Test func `sensor micro-noise stays inside the dead-band`() {
+    @Test func `should ignore sensor micro-noise inside the dead-band`() {
         let gyro = TwinGyroState(zoom: 1)
         _ = gyro.add(upright(heading: 40, t: 0), arrivedAt: 100)
         _ = gyro.pose(at: 100.06)
@@ -93,7 +93,7 @@ struct TwinGyroStateTests {
         #expect(gyro.pose(at: 100.08) == nil)
     }
 
-    @Test func `rezero recaptures the heading but never the tilt`() {
+    @Test func `should recapture the heading but never the tilt when re-zeroed`() {
         let gyro = TwinGyroState(zoom: 1)
         _ = gyro.add(upright(heading: 0, t: 0), arrivedAt: 100)
         gyro.rezero()
@@ -105,7 +105,7 @@ struct TwinGyroStateTests {
         ) == true)
     }
 
-    @Test func `the delay budget adapts to measured arrival jitter`() {
+    @Test func `should adapt the playback delay to measured arrival jitter`() {
         // Clean 16 ms arrivals: budget at the floor, tick plays 50 ms
         // back — ramp to 90° at t=0.4, playback 0.35 → 43.75° turn.
         let clean = TwinGyroState(zoom: 1)
@@ -129,7 +129,7 @@ struct TwinGyroStateTests {
             .isApproximately(turnY(0), tolerance: 0.00001) == true)
     }
 
-    @Test func `quad pushes are throttled by the host clock`() {
+    @Test func `should throttle screen quad pushes by the host clock`() {
         let gyro = TwinGyroState(zoom: 1)
         feedRamp(gyro, count: 25)
         #expect(gyro.pose(at: 100.10)?.pushQuad == true)
@@ -137,7 +137,7 @@ struct TwinGyroStateTests {
         #expect(gyro.pose(at: 100.40)?.pushQuad == true)
     }
 
-    @Test func `zoom updates ride along without disturbing the pose`() {
+    @Test func `should carry a zoom change without disturbing the pose`() {
         let gyro = TwinGyroState(zoom: 1)
         feedRamp(gyro, count: 10)
         gyro.set(zoom: 1.6)

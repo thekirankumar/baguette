@@ -55,7 +55,7 @@ struct GitCheckoutTests {
         return (GitCheckout(subprocess: { sub }), captures)
     }
 
-    @Test func `clone shallow-fetches the url with no submodules`() async throws {
+    @Test func `should shallow-clone the bakery's url with no submodules`() async throws {
         let (git, captures) = makeCheckout()
         let ref = try BakeryRef.parse("acme/tools")
         let cache = try TempCache()
@@ -88,7 +88,7 @@ struct GitCheckoutTests {
     // So nothing may touch the live directory until there is a finished
     // checkout to put there.
 
-    @Test func `a clone assembles the checkout elsewhere and only then moves it into place`() async throws {
+    @Test func `should assemble a clone elsewhere and only then move it into place`() async throws {
         let home = try TempCache()
         let dest = home.url.appendingPathComponent("github.com/acme/tools")
         let (git, captures) = makeCheckout()
@@ -109,7 +109,7 @@ struct GitCheckoutTests {
         #expect(!FileManager.default.fileExists(atPath: staged))
     }
 
-    @Test func `two clones of one bakery never write into each other's checkout`() async throws {
+    @Test func `should never let two clones of one bakery write into each other's checkout`() async throws {
         // The failure this whole arrangement exists to prevent: the
         // browser's preview and a terminal `bakery add` reaching the
         // same cache directory at once.
@@ -129,7 +129,7 @@ struct GitCheckoutTests {
             atPath: dest.appendingPathComponent("baguette.json").path))
     }
 
-    @Test func `a re-clone replaces the checkout that was there`() async throws {
+    @Test func `should replace the existing checkout when a bakery is cloned again`() async throws {
         // The ordinary second add. The new tree wins, and none of the
         // old one survives alongside it.
         let home = try TempCache()
@@ -147,7 +147,7 @@ struct GitCheckoutTests {
             atPath: dest.appendingPathComponent("stale.txt").path))
     }
 
-    @Test func `a failed clone names the directory you asked for, not the staging one`() async throws {
+    @Test func `should name the requested directory, not the staging one, when a clone fails`() async throws {
         // The staging directory is an implementation detail with a
         // UUID in its name, and it's deleted on the way out. Reporting
         // it sends the reader looking for a path that never existed as
@@ -181,7 +181,7 @@ struct GitCheckoutTests {
         }
     }
 
-    @Test func `a failed clone leaves the checkout you already had`() async throws {
+    @Test func `should leave the existing checkout in place when a clone fails`() async throws {
         // Deleting first meant a network blip took the working copy
         // with it, so the next command reported a missing bakery
         // rather than a failed fetch.
@@ -211,7 +211,7 @@ struct GitCheckoutTests {
         deinit { try? FileManager.default.removeItem(at: url) }
     }
 
-    @Test func `clone runs git non-interactively so a bad url fails fast`() async throws {
+    @Test func `should run git non-interactively so a bad url fails fast`() async throws {
         // GIT_TERMINAL_PROMPT=0 turns a private/missing repo into an
         // immediate failure instead of a hang on a credential prompt.
         let (git, captures) = makeCheckout()
@@ -222,7 +222,7 @@ struct GitCheckoutTests {
         #expect(captures.environments.first??["GIT_TERMINAL_PROMPT"] == "0")
     }
 
-    @Test func `clone reports the pinned commit via rev-parse`() async throws {
+    @Test func `should pin the cloned commit as git rev-parse reports it`() async throws {
         let (git, captures) = makeCheckout(commit: "deadbeef")
         let cache = try TempCache()
         let result = try await git.clone(
@@ -233,7 +233,7 @@ struct GitCheckoutTests {
         #expect(captures.calls.last?.contains("rev-parse") == true)
     }
 
-    @Test func `a failed clone throws rather than reporting a bogus commit`() async throws {
+    @Test func `should fail rather than report a bogus commit when a clone fails`() async throws {
         let (git, _) = makeCheckout(cloneExit: 128)
         let cache = try TempCache()
         await #expect(throws: (any Error).self) {
@@ -245,7 +245,7 @@ struct GitCheckoutTests {
 
     // MARK: - pull
 
-    @Test func `pull fast-forwards in place and reports the new commit`() async throws {
+    @Test func `should fast-forward a pulled bakery in place and report the new commit`() async throws {
         // What `bakery update` runs. `--ff-only` so an update can never
         // produce a merge commit in a cache directory nobody looks at,
         // and `-C` so it operates on the clone rather than the cwd.
@@ -259,7 +259,7 @@ struct GitCheckoutTests {
         #expect(captures.calls.last == ["-C", "/tmp/cache/acme/tools", "rev-parse", "HEAD"])
     }
 
-    @Test func `a pull that cannot fast-forward throws instead of pinning the old commit`() async throws {
+    @Test func `should fail rather than pin the old commit when a pull cannot fast-forward`() async throws {
         // A force-push upstream fails `--ff-only`. Reporting the stale
         // commit would record an update that didn't happen.
         let sub = MockSubprocess()
@@ -279,7 +279,7 @@ struct GitCheckoutTests {
 
     // MARK: - asking the remote without cloning
 
-    @Test func `head asks ls-remote and reads the sha off the answer`() async throws {
+    @Test func `should read the remote's head commit from git ls-remote`() async throws {
         // `bakery outdated` needs the remote's current commit, and
         // cloning every trusted bakery to find out would be absurd.
         let sub = MockSubprocess()
@@ -305,7 +305,7 @@ struct GitCheckoutTests {
 
     // MARK: - the pin
 
-    @Test func `an unpinned clone reports whatever HEAD was`() async throws {
+    @Test func `should report whatever HEAD was when a clone is unpinned`() async throws {
         // First contact with a bakery: there's nothing to demand yet, so
         // we take the default branch and record what we got. That
         // recorded sha is what every later fetch is held to.
@@ -318,7 +318,7 @@ struct GitCheckoutTests {
         #expect(captures.calls.allSatisfy { !$0.contains("checkout") })
     }
 
-    @Test func `a pinned clone whose branch has moved fetches the pin by name`() async throws {
+    @Test func `should fetch the pinned commit by name when the pinned branch has moved`() async throws {
         // The recorded commit has to *constrain* what we fetch, not just
         // describe it. A shallow clone of a moving branch hands back
         // whatever HEAD is today, so the pin is asked for by name and
@@ -356,7 +356,7 @@ struct GitCheckoutTests {
         #expect(captures.calls.contains { $0.contains("checkout") })
     }
 
-    @Test func `a pinned clone already sitting on the pin fetches nothing extra`() async throws {
+    @Test func `should fetch nothing extra when a pinned clone already sits on the pin`() async throws {
         // The common case — the bakery hasn't moved since it was
         // trusted. Paying for a second network round-trip to confirm
         // what the clone already told us would be waste.
@@ -381,7 +381,7 @@ struct GitCheckoutTests {
         }
     }
 
-    @Test func `a pin the remote will not serve fails rather than silently taking HEAD`() async throws {
+    @Test func `should fail rather than silently take HEAD when the remote won't serve the pin`() async throws {
         // The dangerous failure: the bakery force-pushed the pinned
         // commit away, and we quietly install whatever replaced it.
         let sub = MockSubprocess()
@@ -412,7 +412,7 @@ struct GitCheckoutTests {
 
     // MARK: - the deadline
 
-    @Test func `a git that stalls past its deadline is stopped and reported`() async throws {
+    @Test func `should stop and report a git that stalls past its deadline`() async throws {
         // GIT_TERMINAL_PROMPT=0 only rules out a *credential* hang. A
         // remote that accepts the connection and then stops sending
         // leaves git running and this continuation unresumed — and
@@ -479,7 +479,7 @@ struct GitCheckoutTests {
         }
     }
 
-    @Test func `a git that cannot be spawned surfaces its own error`() async throws {
+    @Test func `should surface the spawn error when git cannot be started`() async throws {
         // Distinct from a non-zero exit — git never ran.
         struct SpawnRefused: Error {}
         let sub = MockSubprocess()

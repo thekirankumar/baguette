@@ -16,7 +16,7 @@ struct DisplaysTests {
         size: Size(width: 800, height: 480)
     )
 
-    @Test func `resolve returns the live DisplayBinding for that plane`() throws {
+    @Test func `should resolve a display plane to its live binding`() throws {
         let display = MockDisplay()
         given(display).kind.willReturn(.carPlay)
         given(display).resolve().willReturn(carPlayBinding)
@@ -27,7 +27,7 @@ struct DisplaysTests {
         #expect(display.kind == .carPlay)
     }
 
-    @Test func `screen and input are obtainable from the same Display`() {
+    @Test func `should take screen and input from the same display`() {
         let display = MockDisplay()
         let screen = MockScreen()
         let input = MockInput()
@@ -38,7 +38,7 @@ struct DisplaysTests {
         #expect(display.input() as? MockInput === input)
     }
 
-    @Test func `Displays indexes phone and carPlay by kind`() {
+    @Test func `should look up the phone and carPlay displays by kind`() {
         let displays = MockDisplays()
         let phone = MockDisplay()
         let carPlay = MockDisplay()
@@ -55,7 +55,7 @@ struct DisplaysTests {
         #expect(displays[.carPlay] as? MockDisplay === carPlay)
     }
 
-    @Test func `Simulator vends Displays and ExternalDisplays`() {
+    @Test func `should offer a simulator's displays and its external displays`() {
         let sim = MockSimulator()
         let displays = MockDisplays()
         let external = MockExternalDisplays()
@@ -72,7 +72,7 @@ struct DisplaysTests {
 @Suite("ExternalDisplays")
 struct ExternalDisplaysTests {
 
-    @Test func `enableCarPlay is idempotent via mock connected state`() throws {
+    @Test func `should stay connected when CarPlay is enabled twice`() throws {
         let external = MockExternalDisplays()
         let state = ConnectedFlag()
         given(external).isCarPlayConnected.willProduce { state.value }

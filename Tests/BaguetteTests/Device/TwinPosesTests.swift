@@ -13,7 +13,7 @@ struct TwinPosesTests {
         func record(_ s: AttitudeSample) { samples.append(s) }
     }
 
-    @Test func `an update reaches every subscriber of that device`() {
+    @Test func `should deliver an attitude update to every subscriber of that device`() {
         let poses = TwinPoses()
         let first = Recorder()
         let second = Recorder()
@@ -24,7 +24,7 @@ struct TwinPosesTests {
         #expect(second.samples.count == 1)
     }
 
-    @Test func `updates for one device never reach another's subscribers`() {
+    @Test func `should never deliver one device's updates to another device's subscribers`() {
         let poses = TwinPoses()
         let other = Recorder()
         poses.subscribe(udid: "U2", id: "a") { other.record($0) }
@@ -32,7 +32,7 @@ struct TwinPosesTests {
         #expect(other.samples.isEmpty)
     }
 
-    @Test func `a late subscriber immediately receives the latest sample`() {
+    @Test func `should give a late subscriber the latest sample right away`() {
         let poses = TwinPoses()
         poses.update(udid: "U1", sample: sample)
         let late = Recorder()
@@ -40,7 +40,7 @@ struct TwinPosesTests {
         #expect(late.samples.count == 1)
     }
 
-    @Test func `unsubscribing detaches only that subscriber`() {
+    @Test func `should stop delivering only to the subscriber that unsubscribes`() {
         let poses = TwinPoses()
         let kept = Recorder()
         let dropped = Recorder()
@@ -52,7 +52,7 @@ struct TwinPosesTests {
         #expect(dropped.samples.isEmpty)
     }
 
-    @Test func `clearing a device forgets its latest sample`() {
+    @Test func `should forget a device's latest sample when it is cleared`() {
         let poses = TwinPoses()
         poses.update(udid: "U1", sample: sample)
         poses.clear(udid: "U1")

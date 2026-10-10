@@ -15,7 +15,7 @@ struct CameraSourceStagingTests {
         CameraSourceStaging(root: makeRoot())
     }
 
-    @Test func `staging writes the file and exposes its host path`() async throws {
+    @Test func `should store an uploaded camera source and expose its host path`() async throws {
         let staging = makeStaging()
         let url = try await staging.stage(udid: "U", filename: "pic.png", data: Data([1, 2, 3]))
         #expect(FileManager.default.fileExists(atPath: url.path))
@@ -23,7 +23,7 @@ struct CameraSourceStagingTests {
         await staging.clear(udid: "U")
     }
 
-    @Test func `a new upload replaces the previous staged file`() async throws {
+    @Test func `should replace the previously staged file when a new one is uploaded`() async throws {
         let staging = makeStaging()
         let first = try await staging.stage(udid: "U", filename: "a.png", data: Data([1]))
         let second = try await staging.stage(udid: "U", filename: "b.mp4", data: Data([2]))
@@ -33,7 +33,7 @@ struct CameraSourceStagingTests {
         await staging.clear(udid: "U")
     }
 
-    @Test func `clear removes the staged file and forgets the path`() async throws {
+    @Test func `should delete the staged file and forget its path when cleared`() async throws {
         let staging = makeStaging()
         let url = try await staging.stage(udid: "U", filename: "pic.png", data: Data([1]))
         await staging.clear(udid: "U")
@@ -41,7 +41,7 @@ struct CameraSourceStagingTests {
         #expect(staging.path(udid: "U") == nil)
     }
 
-    @Test func `each udid stages into its own slot`() async throws {
+    @Test func `should stage each simulator's upload in its own slot`() async throws {
         let staging = makeStaging()
         _ = try await staging.stage(udid: "A", filename: "a.png", data: Data([1]))
         _ = try await staging.stage(udid: "B", filename: "b.png", data: Data([2]))
@@ -52,7 +52,7 @@ struct CameraSourceStagingTests {
         await staging.clear(udid: "B")
     }
 
-    @Test func `a path-traversal filename is reduced to its last component`() async throws {
+    @Test func `should keep only the last component of a path-traversal filename`() async throws {
         let staging = makeStaging()
         let url = try await staging.stage(udid: "U", filename: "../../etc/evil.png", data: Data([1]))
         #expect(url.lastPathComponent == "evil.png")
@@ -65,7 +65,7 @@ struct CameraSourceStagingTests {
     /// a real `..`. Staging hands its slot directory to a *recursive*
     /// removal on every upload, so a udid that isn't slot-shaped has to
     /// be refused outright rather than deleting someone else's tree.
-    @Test func `a udid that escapes the root is refused and touches nothing`() async throws {
+    @Test func `should refuse an upload and touch nothing when the udid escapes the staging root`() async throws {
         let root = makeRoot()
         let staging = CameraSourceStaging(root: root)
 
@@ -87,7 +87,7 @@ struct CameraSourceStagingTests {
         #expect(staging.path(udid: escape) == nil)
     }
 
-    @Test func `clearing a udid that escapes the root removes nothing`() async throws {
+    @Test func `should remove nothing when clearing a udid that escapes the staging root`() async throws {
         let root = makeRoot()
         let staging = CameraSourceStaging(root: root)
 
@@ -102,7 +102,7 @@ struct CameraSourceStagingTests {
         #expect(FileManager.default.fileExists(atPath: precious.path), "the bystander must survive")
     }
 
-    @Test func `an empty udid is refused`() async {
+    @Test func `should refuse an upload when the udid is empty`() async {
         let staging = makeStaging()
         await #expect(throws: (any Error).self) {
             try await staging.stage(udid: "", filename: "pic.png", data: Data([1]))

@@ -16,44 +16,44 @@ struct HingeAngleTests {
 
     /// The monitor prints one line per sample; the first one is the
     /// current angle and arrives before any motion.
-    @Test func `parses the angle from a devicectl sample line`() {
+    @Test func `should read the angle from a devicectl sample line`() {
         let line = "• +0.000s : Angle:130.0°  Mech:130.0°  Velocity:+0.0°/s  AngleValid:Y  VelocityValid:N  Range:0-180°"
         #expect(HingeAngle.parse(devicectlLine: line) == HingeAngle(degrees: 130))
     }
 
-    @Test func `parses a padded small angle`() {
+    @Test func `should read a padded small angle`() {
         let line = "• +0.000s : Angle:  3.2°  Mech:  3.2°  Velocity:+0.0°/s  AngleValid:Y  VelocityValid:N  Range:0-180°"
         #expect(HingeAngle.parse(devicectlLine: line) == HingeAngle(degrees: 3.2))
     }
 
     /// The banner and anything else the tool prints is not a sample.
-    @Test func `ignores lines that are not samples`() {
+    @Test func `should ignore lines that are not samples`() {
         #expect(HingeAngle.parse(devicectlLine: "Hinge angle monitoring started. 60 seconds remaining:") == nil)
         #expect(HingeAngle.parse(devicectlLine: "") == nil)
         #expect(HingeAngle.parse(devicectlLine: "Angle:") == nil)
     }
 
     /// A sample whose angle the device itself flags invalid is no reading.
-    @Test func `an invalid sample is not an angle`() {
+    @Test func `should find no angle when the device flags the sample invalid`() {
         let line = "• +0.000s : Angle:  0.0°  Mech:  0.0°  Velocity:+0.0°/s  AngleValid:N  VelocityValid:N  Range:0-180°"
         #expect(HingeAngle.parse(devicectlLine: line) == nil)
     }
 
     // MARK: - lit panel
 
-    @Test func `closed lights the cover`() {
+    @Test func `should light the cover when closed`() {
         #expect(HingeAngle(degrees: 0).litPanel == .primary)
         #expect(HingeAngle(degrees: 3.2).litPanel == .primary)
         #expect(HingeAngle(degrees: 60).litPanel == .primary)
     }
 
-    @Test func `open lights the unfolded panel`() {
+    @Test func `should light the unfolded panel when open`() {
         #expect(HingeAngle(degrees: 180).litPanel == .secondary)
         #expect(HingeAngle(degrees: 130).litPanel == .secondary)
         #expect(HingeAngle(degrees: 90).litPanel == .secondary)
     }
 
-    @Test func `the swap boundary is where SpringBoard's partially-open region begins`() {
+    @Test func `should swap panels where SpringBoard's partially-open region begins`() {
         #expect(HingeAngle(degrees: HingeAngle.openBoundaryDegrees).litPanel == .secondary)
         #expect(HingeAngle(degrees: HingeAngle.openBoundaryDegrees - 1).litPanel == .primary)
     }

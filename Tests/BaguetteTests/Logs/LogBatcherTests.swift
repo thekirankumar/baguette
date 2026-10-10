@@ -17,26 +17,26 @@ struct LogBatcherTests {
 
     // MARK: - empty / no-op
 
-    @Test func `empty batcher returns nil on tick`() {
+    @Test func `should send no batch on a tick when no lines arrived`() {
         var b = LogBatcher(maxLines: 10, windowMs: 50)
         #expect(b.tick(now: Date()) == nil)
     }
 
-    @Test func `empty batcher returns nil on flush`() {
+    @Test func `should send no batch on a flush when no lines arrived`() {
         var b = LogBatcher(maxLines: 10, windowMs: 50)
         #expect(b.flush() == nil)
     }
 
     // MARK: - size cap
 
-    @Test func `ingest under size cap and inside window returns nil`() {
+    @Test func `should hold lines while under the size cap and inside the window`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 3, windowMs: 50)
         #expect(b.ingest("a", now: t0) == nil)
         #expect(b.ingest("b", now: t0.addingTimeInterval(0.001)) == nil)
     }
 
-    @Test func `ingest hitting size cap drains the batch`() {
+    @Test func `should send the batch as soon as it reaches the size cap`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 3, windowMs: 50)
         _ = b.ingest("a", now: t0)
@@ -45,7 +45,7 @@ struct LogBatcherTests {
         #expect(batch == ["a", "b", "c"])
     }
 
-    @Test func `ingest after size-cap drain starts a fresh window`() {
+    @Test func `should start a fresh window after a full batch is sent`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 2, windowMs: 50)
         _ = b.ingest("a", now: t0)
@@ -56,14 +56,14 @@ struct LogBatcherTests {
 
     // MARK: - time window
 
-    @Test func `tick before window elapses returns nil`() {
+    @Test func `should hold lines on a tick before the window elapses`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 100, windowMs: 50)
         _ = b.ingest("a", now: t0)
         #expect(b.tick(now: t0.addingTimeInterval(0.020)) == nil)
     }
 
-    @Test func `tick at or past window drains the batch`() {
+    @Test func `should send the batch on a tick once the window elapses`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 100, windowMs: 50)
         _ = b.ingest("a", now: t0)
@@ -72,7 +72,7 @@ struct LogBatcherTests {
         #expect(batch == ["a", "b"])
     }
 
-    @Test func `tick after a drain returns nil until a new line arrives`() {
+    @Test func `should send nothing on later ticks until a new line arrives`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 100, windowMs: 50)
         _ = b.ingest("a", now: t0)
@@ -82,7 +82,7 @@ struct LogBatcherTests {
 
     // MARK: - flush
 
-    @Test func `flush drains any partial batch regardless of window`() {
+    @Test func `should send a partial batch on flush regardless of the window`() {
         let t0 = Date(timeIntervalSince1970: 0)
         var b = LogBatcher(maxLines: 100, windowMs: 50)
         _ = b.ingest("only", now: t0)

@@ -13,14 +13,14 @@ struct TwinScreensTests {
         return decoder
     }
 
-    @Test func `opening a udid creates a findable hub`() {
+    @Test func `should find a device screen once its udid is opened, and none for another udid`() {
         let screens = TwinScreens { self.makeDecoder() }
         let hub = screens.open(udid: "U1")
         #expect(screens.find(udid: "U1") === hub)
         #expect(screens.find(udid: "U2") == nil)
     }
 
-    @Test func `closing removes the hub and tears down its decoder`() {
+    @Test func `should drop a device screen and stop its decoder when closed`() {
         let decoder = makeDecoder()
         let screens = TwinScreens { decoder }
         _ = screens.open(udid: "U1")
@@ -29,7 +29,7 @@ struct TwinScreensTests {
         verify(decoder).stop().called(1)
     }
 
-    @Test func `reopening a udid replaces the hub and closes the old one`() {
+    @Test func `should replace a device screen and close the old one when its udid is reopened`() {
         let first = makeDecoder()
         let second = makeDecoder()
         let decoders = LockedQueue(items: [first, second])

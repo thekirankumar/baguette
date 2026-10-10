@@ -20,24 +20,24 @@ struct LitPanelTests {
         return (sim, chromes)
     }
 
-    @Test func `folded, the cover is lit`() {
+    @Test func `should light the cover when folded`() {
         let (sim, chromes) = duo(angle: HingeAngle(degrees: 3))
         #expect(sim.litPanel(in: chromes) == .primary)
     }
 
-    @Test func `open, the unfolded panel is lit`() {
+    @Test func `should light the unfolded panel when open`() {
         let (sim, chromes) = duo(angle: HingeAngle(degrees: 130))
         #expect(sim.litPanel(in: chromes) == .secondary)
     }
 
     /// No reading means as booted: folded.
-    @Test func `without a hinge reading the cover is lit`() {
+    @Test func `should light the cover when there is no hinge reading`() {
         let (sim, chromes) = duo(angle: nil)
         #expect(sim.litPanel(in: chromes) == .primary)
     }
 
     /// The hinge read is a devicectl round-trip; a phone must not pay it.
-    @Test func `a single-panel device never asks its hinge`() {
+    @Test func `should never ask the hinge of a single-panel device`() {
         let sim = MockSimulator()
         let chromes = MockChromes()
         given(sim).deviceTypeName.willReturn("iPhone 17 Pro")
@@ -46,7 +46,7 @@ struct LitPanelTests {
         verify(sim).hinge().called(0)
     }
 
-    @Test func `the chrome is the lit panel's`() {
+    @Test func `should show the lit panel's chrome`() {
         let (sim, chromes) = duo(angle: HingeAngle(degrees: 130))
         let unfolded = DeviceChromeAssets(
             chrome: DeviceChrome(

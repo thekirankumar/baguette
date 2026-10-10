@@ -8,23 +8,23 @@ struct PasteTests {
 
     // MARK: - parse
 
-    @Test func `parses text and defaults press to true`() throws {
+    @Test func `should read the paste text and press Cmd+V by default`() throws {
         let p = try Paste.parse(["type": "paste", "text": "hello"])
         #expect(p.text == "hello")
         #expect(p.press == true)
     }
 
-    @Test func `parses press false`() throws {
+    @Test func `should read an explicit press false from a paste envelope`() throws {
         let p = try Paste.parse(["text": "hello", "press": false])
         #expect(p.press == false)
     }
 
-    @Test func `parses non-ASCII text verbatim`() throws {
+    @Test func `should keep non-ASCII paste text verbatim`() throws {
         let p = try Paste.parse(["text": "héllo 🥖"])
         #expect(p.text == "héllo 🥖")
     }
 
-    @Test func `rejects a missing text field`() {
+    @Test func `should reject a paste envelope with no text`() {
         #expect(throws: GestureError.missingField("text")) {
             try Paste.parse([:])
         }
@@ -32,7 +32,7 @@ struct PasteTests {
 
     // MARK: - execute
 
-    @Test func `execute sets the pasteboard text then presses command-V`() async throws {
+    @Test func `should set the pasteboard text then press Cmd+V`() async throws {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any).willReturn(())
@@ -50,7 +50,7 @@ struct PasteTests {
         ).called(1)
     }
 
-    @Test func `execute skips the keystroke when press is false`() async throws {
+    @Test func `should set the pasteboard without a keystroke when press is false`() async throws {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any).willReturn(())
@@ -63,7 +63,7 @@ struct PasteTests {
         verify(input).key(.any, modifiers: .any, duration: .any).called(0)
     }
 
-    @Test func `execute propagates a pasteboard failure without pressing`() async {
+    @Test func `should fail without pressing Cmd+V when the pasteboard cannot be set`() async {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any)
@@ -81,7 +81,7 @@ struct PasteTests {
         verify(input).key(.any, modifiers: .any, duration: .any).called(0)
     }
 
-    @Test func `execute reports false when the command-V press fails`() async throws {
+    @Test func `should report not-ok when the Cmd+V press fails`() async throws {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).setText(.any).willReturn(())

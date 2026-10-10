@@ -7,7 +7,7 @@ import Testing
 @Suite("ScreenImageRotation")
 struct ScreenImageRotationTests {
     @Test(arguments: ScreenRotation.allCases)
-    func `quarter turns preserve pixel locations and swap dimensions`(rotation: ScreenRotation) throws {
+    func `should preserve pixel locations and swap dimensions across quarter turns`(rotation: ScreenRotation) throws {
         // Distinct red intensities in a nonsquare 2 by 3 image expose mirroring and cropping.
         let values: [UInt8] = [20, 50, 80, 110, 140, 170]
         let data = Data(values.flatMap { [$0, 0, 0, 255] })
@@ -32,7 +32,7 @@ struct ScreenImageRotationTests {
     }
 
     @Test(arguments: ScreenRotation.allCases)
-    func `CMYK source images convert into RGB while rotating`(rotation: ScreenRotation) throws {
+    func `should convert CMYK source images into RGB while rotating`(rotation: ScreenRotation) throws {
         let provider = try #require(CGDataProvider(data: Data(repeating: 0, count: 24) as CFData))
         let image = try #require(CGImage(width: 2, height: 3, bitsPerComponent: 8,
             bitsPerPixel: 32, bytesPerRow: 8, space: CGColorSpaceCreateDeviceCMYK(), bitmapInfo: [],

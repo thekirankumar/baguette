@@ -4,7 +4,7 @@ import Testing
 
 @Suite("SeedFilter")
 struct SeedFilterTests {
-    @Test func `emits distinct rendered surfaces that share a seed`() throws {
+    @Test func `should pass along distinct rendered frames even when they share a seed`() throws {
         var filter = SeedFilter()
         let first = try #require(Self.surface())
         let second = try #require(Self.surface())

@@ -12,14 +12,14 @@ import Foundation
 @Suite("NetworkSchedule")
 struct NetworkScheduleTests {
 
-    @Test func `paces a 3g body in fifty millisecond ticks`() {
+    @Test func `should pace a 3g body in fifty millisecond ticks`() {
         // 780 kbps is 97 500 bytes/second; a twentieth of that per tick.
         let schedule = NetworkSchedule(bandwidthKbps: 780)
         #expect(schedule?.bytesPerTick == 4_875)
         #expect(schedule?.tickIntervalMs == 50)
     }
 
-    @Test func `delivers exactly the bandwidth it was given`() {
+    @Test func `should deliver exactly the bandwidth it was given`() {
         // The property that actually matters. Rounding a fractional
         // bytes-per-tick and then keeping a 50 ms tick would quietly
         // deliver the wrong rate, so the interval is derived from the
@@ -32,7 +32,7 @@ struct NetworkScheduleTests {
         }
     }
 
-    @Test func `never schedules less than a whole byte per tick`() {
+    @Test func `should never pace less than a whole byte per tick`() {
         // A zero-byte tick is a stall that never ends. Below roughly
         // 0.08 kbps a 50 ms tick works out to less than half a byte and
         // would round to nothing, so the byte count floors at one and the
@@ -43,26 +43,26 @@ struct NetworkScheduleTests {
         #expect(schedule?.tickIntervalMs == 160)
     }
 
-    @Test func `releases more per tick on a faster link`() {
+    @Test func `should release more per tick on a faster link`() {
         let slow = NetworkSchedule(bandwidthKbps: 240)!
         let fast = NetworkSchedule(bandwidthKbps: 50_000)!
         #expect(fast.bytesPerTick > slow.bytesPerTick)
     }
 
-    @Test func `has no schedule when the link is unmetered`() {
+    @Test func `should not pace anything when the link is unmetered`() {
         // Nil bandwidth means "let bytes arrive at full speed", so there is
         // nothing to pace and the dylib must not invent a tick.
         #expect(NetworkCondition(latencyMs: 300)?.schedule == nil)
         #expect(NetworkCondition(bandwidthKbps: 400)?.schedule != nil)
     }
 
-    @Test func `refuses a bandwidth that is not a rate`() {
+    @Test func `should refuse to pace a bandwidth that is not a rate`() {
         #expect(NetworkSchedule(bandwidthKbps: 0) == nil)
         #expect(NetworkSchedule(bandwidthKbps: -1) == nil)
         #expect(NetworkSchedule(bandwidthKbps: .infinity) == nil)
     }
 
-    @Test func `refuses a bandwidth too large to pace`() {
+    @Test func `should refuse to pace a bandwidth too large to pace`() {
         // `Int(Double)` **traps** on a value outside Int's range, so a
         // finite-but-absurd bandwidth doesn't produce a bad schedule — it
         // takes the process down. A number this size can arrive from the
@@ -71,7 +71,7 @@ struct NetworkScheduleTests {
         #expect(NetworkSchedule(bandwidthKbps: .greatestFiniteMagnitude) == nil)
     }
 
-    @Test func `a condition never carries a bandwidth it cannot pace`() {
+    @Test func `should never accept a condition with a bandwidth it cannot pace`() {
         // The invariant that makes `schedule` safe to reach for anywhere: if
         // a condition validated, its bandwidth can be turned into a schedule.
         #expect(NetworkCondition(bandwidthKbps: 1e300) == nil)

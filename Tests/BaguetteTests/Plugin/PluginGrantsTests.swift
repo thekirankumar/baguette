@@ -5,13 +5,13 @@ import Foundation
 @Suite("PluginGrants")
 struct PluginGrantsTests {
 
-    @Test func `a grant resolves to exactly the plugin's declared capabilities`() throws {
+    @Test func `should grant exactly the capabilities the plugin declared`() throws {
         let grants = PluginGrants()
         let token = grants.issue(plugin: "a11y", capabilities: [.describeUI, .screenshot])
         #expect(grants.capabilities(for: token) == [.describeUI, .screenshot])
     }
 
-    @Test func `each grant gets its own unguessable token`() throws {
+    @Test func `should give each grant its own unguessable token`() throws {
         let grants = PluginGrants()
         let a = grants.issue(plugin: "a11y", capabilities: [.describeUI])
         let b = grants.issue(plugin: "expo", capabilities: [.input])
@@ -22,7 +22,7 @@ struct PluginGrantsTests {
         #expect(grants.capabilities(for: b) == [.input])
     }
 
-    @Test func `a revoked token stops working`() throws {
+    @Test func `should stop honouring a token once it is revoked`() throws {
         // The grant lives exactly as long as the command invocation, so
         // a leaked token is useless once the command exits.
         let grants = PluginGrants()
@@ -31,20 +31,20 @@ struct PluginGrantsTests {
         #expect(grants.capabilities(for: token) == nil)
     }
 
-    @Test func `an unknown token grants nothing`() throws {
+    @Test func `should grant nothing to an unknown token`() throws {
         let grants = PluginGrants()
         #expect(grants.capabilities(for: "made-up") == nil)
     }
 
     // MARK: - the authorization question
 
-    @Test func `a token is allowed a capability its plugin declared`() throws {
+    @Test func `should allow a token a capability its plugin declared`() throws {
         let grants = PluginGrants()
         let token = grants.issue(plugin: "expo", capabilities: [.input])
         #expect(grants.allows(token: token, capability: .input))
     }
 
-    @Test func `a token is refused a capability its plugin did not declare`() throws {
+    @Test func `should refuse a token a capability its plugin did not declare`() throws {
         // The whole point: the a11y plugin reads the screen, so it must
         // not be able to drive the device.
         let grants = PluginGrants()
@@ -52,7 +52,7 @@ struct PluginGrantsTests {
         #expect(!grants.allows(token: token, capability: .input))
     }
 
-    @Test func `no token is refused everything`() throws {
+    @Test func `should refuse every capability when no token is presented`() throws {
         let grants = PluginGrants()
         #expect(!grants.allows(token: nil, capability: .describeUI))
         #expect(!grants.allows(token: "", capability: .describeUI))

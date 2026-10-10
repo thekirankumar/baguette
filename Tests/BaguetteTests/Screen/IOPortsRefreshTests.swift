@@ -6,11 +6,11 @@ import Testing
 /// resets guest display services and wedges the external surface.
 @Suite("IOPortsRefresh")
 struct IOPortsRefreshTests {
-    @Test func doesNotRefreshWhenFramebufferDisplayPortsAlreadyExist() {
+    @Test func `should not refresh IO ports when framebuffer displays already exist`() {
         #expect(IOPortsRefresh.shouldUpdate(hasFramebufferDisplayPorts: true) == false)
     }
 
-    @Test func refreshesOnlyWhenNoFramebufferDisplayPortsExist() {
+    @Test func `should refresh IO ports when no framebuffer displays exist`() {
         #expect(IOPortsRefresh.shouldUpdate(hasFramebufferDisplayPorts: false) == true)
     }
 }

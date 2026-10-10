@@ -8,21 +8,21 @@ struct LiveDevicesTests {
         udid: "U1", name: "iPhone", model: "iPhone17,2", capabilities: ["motion"]
     )
 
-    @Test func `a registered companion appears in the list`() {
+    @Test func `should list a companion once it registers`() {
         let devices = LiveDevices()
         devices.register(hello: hello)
         #expect(devices.all == [Device(hello: hello)])
         #expect(devices.find(udid: "U1") != nil)
     }
 
-    @Test func `unregistering removes the device`() {
+    @Test func `should drop a device from the list when it unregisters`() {
         let devices = LiveDevices()
         devices.register(hello: hello)
         devices.unregister(udid: "U1")
         #expect(devices.all.isEmpty)
     }
 
-    @Test func `re-registering a udid replaces the earlier identity`() {
+    @Test func `should replace the earlier identity when a udid registers again`() {
         let devices = LiveDevices()
         devices.register(hello: hello)
         devices.register(hello: TwinHello(
@@ -32,7 +32,7 @@ struct LiveDevicesTests {
         #expect(devices.find(udid: "U1")?.name == "Renamed")
     }
 
-    @Test func `devices list in registration order`() {
+    @Test func `should list devices in registration order`() {
         let devices = LiveDevices()
         devices.register(hello: hello)
         devices.register(hello: TwinHello(
@@ -43,7 +43,7 @@ struct LiveDevicesTests {
 }
 
 extension LiveDevicesTests {
-    @Test func `a device stays listed while any of its sockets is connected`() {
+    @Test func `should keep a device listed while any of its sockets is connected`() {
         let devices = LiveDevices()
         let hello = TwinHello(udid: "U9", name: "iPhone", model: "iPhone14,3", capabilities: [])
         devices.register(hello: hello)   // video socket

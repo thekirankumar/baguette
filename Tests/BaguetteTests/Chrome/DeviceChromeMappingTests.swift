@@ -60,7 +60,7 @@ struct DeviceChromeMappingTests {
     ]
 
     @Test(arguments: cases)
-    func `device name resolves to expected chrome bundle and composite size`(
+    func `should dress each device in its expected chrome bundle at its expected bezel size`(
         _ row: (deviceName: String, expectedBundle: String, compositeSize: Size)
     ) throws {
         let store = FileSystemChromeStore()

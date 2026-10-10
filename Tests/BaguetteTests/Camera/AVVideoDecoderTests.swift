@@ -46,21 +46,21 @@ struct AVVideoDecoderTests {
     /// 320×240 — comfortably under the canvas cap, so nothing is scaled.
     private func smallVideo() throws -> String { try fixture("ramp-320x240") }
 
-    @Test func `nextFrame before start reports the decoder isn't started`() {
+    @Test func `should report the decoder not started when a frame is read before start`() {
         let decoder = AVVideoDecoder()
         #expect(throws: VideoDecoderError.notStarted) {
             _ = try decoder.nextFrame()
         }
     }
 
-    @Test func `starting on a file that isn't a readable asset throws`() async {
+    @Test func `should fail to start when the file is not a readable video`() async {
         let decoder = AVVideoDecoder()
         await #expect(throws: (any Error).self) {
             try await decoder.start(path: "/tmp/does-not-exist-\(UUID().uuidString).mp4", maxDimension: 1280)
         }
     }
 
-    @Test func `starting on a file with no video track names the file`() async throws {
+    @Test func `should fail to start when the file has no video track`() async throws {
         // A .mp4 extension over bytes that aren't a movie at all.
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("baguette-notavideo-\(UUID().uuidString).mp4")
@@ -73,7 +73,7 @@ struct AVVideoDecoderTests {
         }
     }
 
-    @Test func `decoded frames arrive fitted to the canvas as tightly-packed BGRA`() async throws {
+    @Test func `should decode video frames fitted to the canvas as tightly packed BGRA`() async throws {
         let path = try wideVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -91,7 +91,7 @@ struct AVVideoDecoderTests {
         #expect(frame.pixels.count == 1280 * 640 * 4)
     }
 
-    @Test func `a smaller-than-canvas asset is not upscaled`() async throws {
+    @Test func `should not upscale a video smaller than the canvas`() async throws {
         let path = try smallVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -104,7 +104,7 @@ struct AVVideoDecoderTests {
         #expect(frame.height == 240)
     }
 
-    @Test func `frames arrive in presentation order and run out at the end of the asset`() async throws {
+    @Test func `should decode frames in presentation order and run out at the end of the video`() async throws {
         let path = try smallVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -124,7 +124,7 @@ struct AVVideoDecoderTests {
         #expect(try decoder.nextFrame() == nil)
     }
 
-    @Test func `rewind replays the asset from its first frame`() async throws {
+    @Test func `should replay the video from its first frame when rewound`() async throws {
         let path = try smallVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -141,7 +141,7 @@ struct AVVideoDecoderTests {
         #expect(replayed.pixels == first.pixels)
     }
 
-    @Test func `stop ends the stream and leaves the decoder restartable`() async throws {
+    @Test func `should end decoding when stopped and allow starting again`() async throws {
         let path = try smallVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 
@@ -162,7 +162,7 @@ struct AVVideoDecoderTests {
 
     /// `start` on a live decoder must cancel the reader it replaces
     /// rather than orphan it — so a restart reads from the top.
-    @Test func `starting again while streaming restarts from the first frame`() async throws {
+    @Test func `should restart from the first frame when started again while decoding`() async throws {
         let path = try smallVideo()
         defer { try? FileManager.default.removeItem(atPath: path) }
 

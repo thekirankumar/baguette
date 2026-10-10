@@ -10,16 +10,16 @@ import Foundation
 @Suite("StatusBarOverride")
 struct StatusBarOverrideTests {
 
-    @Test func `empty override produces no arguments`() {
+    @Test func `should pass no flags when the override sets nothing`() {
         #expect(StatusBarOverride().overrideArguments == [])
     }
 
-    @Test func `battery state and level emit paired flags in order`() {
+    @Test func `should pass battery state and level as paired flags in order`() {
         let o = StatusBarOverride(batteryState: .charged, batteryLevel: 68)
         #expect(o.overrideArguments == ["--batteryState", "charged", "--batteryLevel", "68"])
     }
 
-    @Test func `a full override emits every flag in a stable order`() {
+    @Test func `should pass every flag in a stable order for a full override`() {
         let o = StatusBarOverride(
             time: "9:41",
             operatorName: "Baguette",
@@ -44,37 +44,37 @@ struct StatusBarOverrideTests {
         ])
     }
 
-    @Test func `data network wire names match simctl spellings`() {
+    @Test func `should spell data networks the way simctl does`() {
         #expect(StatusBarOverride(dataNetwork: .lteA).overrideArguments == ["--dataNetwork", "lte-a"])
         #expect(StatusBarOverride(dataNetwork: .fiveGPlus).overrideArguments == ["--dataNetwork", "5g+"])
         #expect(StatusBarOverride(dataNetwork: .fiveGUWB).overrideArguments == ["--dataNetwork", "5g-uwb"])
         #expect(StatusBarOverride(dataNetwork: .hide).overrideArguments == ["--dataNetwork", "hide"])
     }
 
-    @Test func `cellular mode notSupported keeps its camelCase wire spelling`() {
+    @Test func `should keep the camelCase notSupported spelling for cellular mode`() {
         #expect(StatusBarOverride(cellularMode: .notSupported).overrideArguments
             == ["--cellularMode", "notSupported"])
     }
 
-    @Test func `wifi bars clamp to 0 through 3`() {
+    @Test func `should clamp wifi bars to 0 through 3`() {
         #expect(StatusBarOverride(wifiBars: 9).overrideArguments == ["--wifiBars", "3"])
         #expect(StatusBarOverride(wifiBars: -2).overrideArguments == ["--wifiBars", "0"])
     }
 
-    @Test func `cellular bars clamp to 0 through 4`() {
+    @Test func `should clamp cellular bars to 0 through 4`() {
         #expect(StatusBarOverride(cellularBars: 9).overrideArguments == ["--cellularBars", "4"])
     }
 
-    @Test func `battery level clamps to 0 through 100`() {
+    @Test func `should clamp battery level to 0 through 100`() {
         #expect(StatusBarOverride(batteryLevel: 250).overrideArguments == ["--batteryLevel", "100"])
         #expect(StatusBarOverride(batteryLevel: -5).overrideArguments == ["--batteryLevel", "0"])
     }
 
-    @Test func `an empty operator name is still emitted so the carrier can be blanked`() {
+    @Test func `should still pass an empty operator name so the carrier can be blanked`() {
         #expect(StatusBarOverride(operatorName: "").overrideArguments == ["--operatorName", ""])
     }
 
-    @Test func `isEmpty is true only when no field is set`() {
+    @Test func `should count an override as empty only when no field is set`() {
         #expect(StatusBarOverride().isEmpty)
         #expect(!StatusBarOverride(batteryLevel: 50).isEmpty)
     }

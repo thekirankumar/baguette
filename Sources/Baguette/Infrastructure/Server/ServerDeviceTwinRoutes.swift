@@ -494,7 +494,7 @@ extension Server {
         }
 
         let sink = WebSocketFrameSink(outbound: outbound, format: format)
-        // Format-aware pacing, unlike the simulator's 3D stage at 20:
+        // Format-aware pacing, unlike the simulator's 3D stage (a flat 60):
         // the gyro repositions the model continuously, so the pose
         // clock below ticks at the STREAM's fps — one pacing authority,
         // and a `set_fps` from the browser retunes both together. The

@@ -11,7 +11,7 @@ struct PluginsCommandTests {
 
     // MARK: - list
 
-    @Test func `listing names each plugin with its version`() throws {
+    @Test func `should list each installed plugin with its version`() throws {
         let text = PluginsCommand.listing([
             Self.plugin(name: "a11y", version: "1.2.0"),
             Self.plugin(name: "expo", version: "0.3.1"),
@@ -20,7 +20,7 @@ struct PluginsCommandTests {
         #expect(text.contains("expo  0.3.1"))
     }
 
-    @Test func `listing says so when nothing is installed`() throws {
+    @Test func `should say where to install plugins when none are installed`() throws {
         // An empty toolbar with no explanation reads as a bug. Name
         // the roots so the user knows where a plugin would go.
         let text = PluginsCommand.listing([])
@@ -30,7 +30,7 @@ struct PluginsCommandTests {
 
     // MARK: - show
 
-    @Test func `show spells out what a plugin contributes before you trust it`() throws {
+    @Test func `should spell out what a plugin contributes before you trust it`() throws {
         // This is the pre-install inspection step: a manifest is data,
         // so baguette can say exactly what a plugin would add without
         // running a line of it.
@@ -40,7 +40,7 @@ struct PluginsCommandTests {
         #expect(text.contains("node bin/audit.js"))
     }
 
-    @Test func `show names the capabilities a plugin may use`() throws {
+    @Test func `should name the capabilities a plugin may use`() throws {
         // The security-relevant line — what this plugin can ask
         // baguette to do, before you install it.
         let text = PluginsCommand.detail(
@@ -49,19 +49,19 @@ struct PluginsCommandTests {
         #expect(text.contains("capabilities: input"))
     }
 
-    @Test func `show says so when a plugin asks for nothing`() throws {
+    @Test func `should say a plugin asks for no capabilities when it declares none`() throws {
         let text = PluginsCommand.detail(Self.plugin(name: "inert", version: "1.0.0"))
         #expect(text.contains("capabilities: none"))
     }
 
     // MARK: - validate
 
-    @Test func `validate accepts a well-formed manifest and counts its contributions`() throws {
+    @Test func `should accept a well-formed manifest and count its commands and panels`() throws {
         let outcome = PluginsCommand.validate(json: Self.manifestJSON)
         #expect(outcome == .valid(name: "a11y", commands: 1, panels: 1))
     }
 
-    @Test func `validate explains exactly why a manifest was rejected`() throws {
+    @Test func `should explain exactly why a manifest was rejected`() throws {
         // The failure mode of a misplaced or mistyped manifest is a
         // silent no-op, which is why this verb exists at all.
         let outcome = PluginsCommand.validate(json: Data("""
@@ -75,7 +75,7 @@ struct PluginsCommandTests {
         ))
     }
 
-    @Test func `validate reports a mistyped icon even though it no longer refuses one`() throws {
+    @Test func `should warn about a mistyped icon while still accepting the manifest`() throws {
         // Icons degrade so a plugin naming a future glyph still runs.
         // That must not swallow the authoring feedback: "nope" is a
         // typo, and validate is the one place an author finds out.

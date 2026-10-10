@@ -11,26 +11,26 @@ struct SimulatorKitScreenOrientationTests {
         (3, .landscapeLeft),
         (4, .landscapeRight),
     ])
-    func `SimulatorKit orientation is mapped to the measured native rotation`(
+    func `should read each simulator orientation as its measured native rotation`(
         raw: UInt32, expected: DeviceOrientation
     ) throws {
         #expect(try SimulatorKitScreenOrientation.read(properties: ScreenProperties(raw)) == expected)
     }
 
     @Test(arguments: [UInt32(0), 5, .max])
-    func `unknown orientation fails instead of assuming portrait`(raw: UInt32) {
+    func `should reject an unknown orientation rather than assume portrait`(raw: UInt32) {
         #expect(throws: SimulatorKitScreenOrientation.Failure.unknown(raw)) {
             try SimulatorKitScreenOrientation.read(properties: ScreenProperties(raw))
         }
     }
 
-    @Test func `missing screen properties fail explicitly`() {
+    @Test func `should fail when the screen properties are missing`() {
         #expect(throws: SimulatorKitScreenOrientation.Failure.unavailable) {
             try SimulatorKitScreenOrientation.read(properties: NSObject())
         }
     }
 
-    @Test func `readScreen reports identity pixels points and rotation from one properties snapshot`() throws {
+    @Test func `should describe the screen identity, pixels, points and rotation from one snapshot`() throws {
         let properties = LiveProperties()
         let screen = try SimulatorKitScreenOrientation.readScreen(properties: properties, panel: nil)
         #expect(
@@ -49,7 +49,7 @@ struct SimulatorKitScreenOrientationTests {
         #expect(changed.target == ScreenTarget(screenId: 2, litPanel: .secondary, pixelSize: Size(width: 744, height: 1133)))
     }
 
-    @Test func `readScreen rejects a zero scale instead of dividing by it`() {
+    @Test func `should reject a screen with a zero scale rather than divide by it`() {
         let properties = LiveProperties()
         properties.currentMode.preferredUIScale = 0
         #expect(throws: SimulatorKitScreenOrientation.Failure.unavailable) {

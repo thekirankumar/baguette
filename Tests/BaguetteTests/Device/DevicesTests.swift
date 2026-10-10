@@ -10,7 +10,7 @@ struct DevicesTests {
         capabilities: ["motion", "screen"]
     )
 
-    @Test func `a device is built from the companion's hello`() {
+    @Test func `should know a device by the identity its companion says hello with`() {
         let device = Device(hello: hello)
         #expect(device == Device(
             udid: "U1", name: "Baguette's iPhone", model: "iPhone17,2",
@@ -18,14 +18,14 @@ struct DevicesTests {
         ))
     }
 
-    @Test func `find locates a connected device by udid`() {
+    @Test func `should find a connected device by udid and nothing for an unknown one`() {
         let devices = MockDevices()
         given(devices).all.willReturn([Device(hello: hello)])
         #expect(devices.find(udid: "U1")?.name == "Baguette's iPhone")
         #expect(devices.find(udid: "nope") == nil)
     }
 
-    @Test func `listJSON projects the connected devices with sorted keys`() {
+    @Test func `should list connected devices as JSON with sorted keys`() {
         let devices = MockDevices()
         given(devices).all.willReturn([Device(hello: hello)])
         #expect(devices.listJSON == """
@@ -33,7 +33,7 @@ struct DevicesTests {
         """)
     }
 
-    @Test func `listJSON with no companions is an empty connected list`() {
+    @Test func `should list an empty connected array when no companions are connected`() {
         let devices = MockDevices()
         given(devices).all.willReturn([])
         #expect(devices.listJSON == #"{"connected":[]}"#)

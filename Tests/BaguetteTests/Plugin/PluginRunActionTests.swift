@@ -19,7 +19,7 @@ struct PluginRunActionTests {
 
     // MARK: - the manifest side
 
-    @Test func `a panel may declare the run row action`() throws {
+    @Test func `should let a panel declare the run row action`() throws {
         let body = try PanelBody.parsing(
             dict: ["kind": "list", "source": "settings", "rowAction": "run"],
             declaredCommands: ["settings"]
@@ -27,7 +27,7 @@ struct PluginRunActionTests {
         #expect(body == .list(ListBody(source: "settings", rowAction: .run)))
     }
 
-    @Test func `an unknown row action is still refused`() {
+    @Test func `should reject an unknown row action`() {
         #expect(throws: PluginManifestError.unknownRowAction(name: "detonate")) {
             _ = try PanelBody.parsing(
                 dict: ["kind": "list", "source": "settings", "rowAction": "detonate"],
@@ -38,7 +38,7 @@ struct PluginRunActionTests {
 
     // MARK: - the row side
 
-    @Test func `a row names the command to run and the arguments to run it with`() throws {
+    @Test func `should let a row name the command to run and the arguments to run it with`() throws {
         let row = try ResultRow.parsing(
             dict: [
                 "title": "Dark",
@@ -51,13 +51,13 @@ struct PluginRunActionTests {
         #expect(row.args?["appearance"] as? String == "dark")
     }
 
-    @Test func `a row without run carries no command, which is most rows`() throws {
+    @Test func `should carry no command or arguments when a row names no run`() throws {
         let row = try ResultRow.parsing(dict: ["title": "Button has no label"], index: 0)
         #expect(row.run == nil)
         #expect(row.args == nil)
     }
 
-    @Test func `args without a command to run is refused`() {
+    @Test func `should reject a row's args when it names no command to run`() {
         // Arguments to nothing is a manifest bug, and silently dropping
         // them would make the row look clickable and do nothing.
         #expect(throws: PluginResultError.argsWithoutRun(index: 0)) {
@@ -67,13 +67,13 @@ struct PluginRunActionTests {
         }
     }
 
-    @Test func `a run that isn't a command id is refused`() {
+    @Test func `should reject a row's run when it is not a command id`() {
         #expect(throws: PluginResultError.malformedRun(index: 2)) {
             _ = try ResultRow.parsing(dict: ["title": "Dark", "run": 42], index: 2)
         }
     }
 
-    @Test func `args must be an object, not a bare value`() {
+    @Test func `should reject a row's args when they are a bare value rather than an object`() {
         #expect(throws: PluginResultError.malformedArgs(index: 1)) {
             _ = try ResultRow.parsing(
                 dict: ["title": "Dark", "run": "set", "args": "appearance=dark"], index: 1
@@ -83,7 +83,7 @@ struct PluginRunActionTests {
 
     // MARK: - reaching the command
 
-    @Test func `args reach the command in the context it reads on stdin`() throws {
+    @Test func `should hand a row's args to the command in the context it reads on stdin`() throws {
         // The command already receives its context as JSON on stdin;
         // arguments ride the same channel rather than inventing a second
         // one. Env vars would mean flattening a nested object into
@@ -104,7 +104,7 @@ struct PluginRunActionTests {
         #expect(parsed["udid"] as? String == "U")
     }
 
-    @Test func `a command invoked with no args still gets a well-formed context`() throws {
+    @Test func `should hand the command a well-formed context with no args when invoked without any`() throws {
         // Every existing plugin is in this case — the field is absent
         // rather than an empty object it would have to special-case.
         let context = PluginDispatch.Context(
@@ -117,7 +117,7 @@ struct PluginRunActionTests {
         #expect(parsed["args"] == nil)
     }
 
-    @Test func `args survive the swap to a per-invocation grant token`() async throws {
+    @Test func `should keep a row's args when the context's token is swapped for a per-invocation grant`() async throws {
         // Dispatch re-issues the context with a scoped token before
         // spawning. That rewrite dropped `args` on the first cut — the
         // panel rendered, the click posted, and nothing happened. The
@@ -181,14 +181,14 @@ struct PluginRunActionTests {
 
     // MARK: - the route side
 
-    @Test func `the run route reads args off the request body`() {
+    @Test func `should read the command's args off the run route's request body`() {
         #expect(
             Server.parseCommandArgs(body: #"{"args":{"appearance":"dark"}}"#)?["appearance"]
                 as? String == "dark"
         )
     }
 
-    @Test func `an empty or absent body means no args`() {
+    @Test func `should find no args when the run route's request body is empty, bare or not JSON`() {
         // The browser posts bodiless for a plain panel open, and that
         // must stay a valid invocation.
         #expect(Server.parseCommandArgs(body: "") == nil)

@@ -6,7 +6,7 @@ import Testing
 @Suite("VerifiedDeviceAssets")
 struct VerifiedDeviceAssetsTests {
 
-    @Test func `existing local asset wins without downloading`() throws {
+    @Test func `should use an existing local asset without downloading`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let bundle = scratch.appending(path: "bundle")
@@ -24,7 +24,7 @@ struct VerifiedDeviceAssetsTests {
         #expect(downloads == 0)
     }
 
-    @Test func `verified download is atomically cached`() throws {
+    @Test func `should cache a verified download atomically`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let bytes = Data("VERIFIED-USDZ".utf8)
@@ -49,7 +49,7 @@ struct VerifiedDeviceAssetsTests {
         #expect(downloads == 1)
     }
 
-    @Test func `hash mismatch never installs downloaded bytes`() throws {
+    @Test func `should never install downloaded bytes whose hash mismatches`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let expected = String(repeating: "0", count: 64)
@@ -117,7 +117,7 @@ private extension VerifiedDeviceAssetsTests {
 // DeviceKit's plug-in — is read from the selected Xcode, the way the 2D
 // chromes are read from `/Library/Developer/DeviceKit`.
 extension VerifiedDeviceAssetsTests {
-    @Test func `an asset that lives in Xcode resolves under the selected Xcode's Contents`() throws {
+    @Test func `should resolve an asset that lives in Xcode under the selected Xcode's Contents`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let contents = scratch.appending(path: "Xcode.app/Contents")
@@ -135,7 +135,7 @@ extension VerifiedDeviceAssetsTests {
         #expect(try assets.resolve(Self.model(directory: scratch, xcodeResource: resource)) == asset)
     }
 
-    @Test func `a missing Xcode asset names the resource it looked for`() throws {
+    @Test func `should name the resource it looked for when an Xcode asset is missing`() throws {
         let scratch = try Self.makeScratch()
         defer { try? FileManager.default.removeItem(at: scratch) }
         let assets = VerifiedDeviceAssets(

@@ -8,21 +8,21 @@ import Testing
 @Suite("DeviceHubAttachment")
 struct DeviceHubAttachmentTests {
 
-    @Test func `reads the notify state Device Hub's HID daemon publishes`() {
+    @Test func `should watch the notify state Device Hub's HID daemon publishes`() {
         #expect(DeviceHubAttachment.stateKey == "com.apple.coredevice.dtuhidd.active")
     }
 
-    @Test func `an active state means Device Hub has attached`() {
+    @Test func `should see Device Hub attached when its state is active`() {
         let attachment = DeviceHubAttachment.parsing("com.apple.coredevice.dtuhidd.active 1\n")
         #expect(attachment.attached)
     }
 
-    @Test func `a zero state means the surface is unshadowed`() {
+    @Test func `should see the surface unshadowed when the state is zero`() {
         let attachment = DeviceHubAttachment.parsing("com.apple.coredevice.dtuhidd.active 0\n")
         #expect(!attachment.attached)
     }
 
-    @Test func `a device without the state has never seen Device Hub`() {
+    @Test func `should see no Device Hub when the device has no readable state`() {
         // Xcode 26 runtimes never publish the key; `notifyutil -g` on a
         // key nothing set prints 0, and a failed spawn prints nothing.
         #expect(!DeviceHubAttachment.parsing(nil).attached)
@@ -30,17 +30,17 @@ struct DeviceHubAttachmentTests {
         #expect(!DeviceHubAttachment.parsing("garbage").attached)
     }
 
-    @Test func `only the named key counts`() {
+    @Test func `should ignore any notify key other than Device Hub's`() {
         #expect(!DeviceHubAttachment.parsing("com.apple.something.else 1\n").attached)
     }
 
-    @Test func `an attached surface advises the heal command`() {
+    @Test func `should advise baguette heal when Device Hub has attached`() {
         let advisory = DeviceHubAttachment(attached: true).advisory(udid: "ABC")
         #expect(advisory?.contains("baguette heal --udid ABC") == true)
         #expect(advisory?.contains("Device Hub") == true)
     }
 
-    @Test func `an unshadowed surface has nothing to advise`() {
+    @Test func `should give no advice when the surface is unshadowed`() {
         #expect(DeviceHubAttachment(attached: false).advisory(udid: "ABC") == nil)
     }
 }

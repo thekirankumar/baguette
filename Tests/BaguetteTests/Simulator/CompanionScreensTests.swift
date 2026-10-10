@@ -10,7 +10,7 @@ import Testing
 @Suite("CompanionScreens")
 struct CompanionScreensTests {
 
-    @Test func `a device with neither screen reports both absent`() {
+    @Test func `should report both companion screens absent when a device has neither`() {
         let screens = CompanionScreens(externalSize: nil, watch: nil)
 
         #expect(screens.json == #"{"external":{"available":false},"watch":{"available":false}}"#)
@@ -21,7 +21,7 @@ struct CompanionScreensTests {
     /// Displays menu attached. Reporting its size lets the rail label
     /// what is actually on screen instead of promising CarPlay and
     /// showing a 800×480 TVOut under that name.
-    @Test func `an attached external reports the size it bound`() {
+    @Test func `should report the bound size when an external display is attached`() {
         let screens = CompanionScreens(
             externalSize: Size(width: 800, height: 480), watch: nil
         )
@@ -32,7 +32,7 @@ struct CompanionScreensTests {
             """)
     }
 
-    @Test func `a non-integral size still round-trips as a number`() {
+    @Test func `should report a non-integral external size as a number`() {
         let screens = CompanionScreens(
             externalSize: Size(width: 720.5, height: 480), watch: nil
         )
@@ -42,7 +42,7 @@ struct CompanionScreensTests {
         #expect(external?["width"] as? Double == 720.5)
     }
 
-    @Test func `a paired watch names itself so the rail can label and stream it`() {
+    @Test func `should name a paired watch so the rail can label and stream it`() {
         let screens = CompanionScreens(
             externalSize: nil,
             watch: PairedWatch(
@@ -58,7 +58,7 @@ struct CompanionScreensTests {
             """)
     }
 
-    @Test func `a paired watch that isn't booted is still available, and says so`() {
+    @Test func `should offer a paired watch with its shut-down state when it isn't booted`() {
         let screens = CompanionScreens(
             externalSize: Size(width: 800, height: 480),
             watch: PairedWatch(udid: "WATCH-2", name: "Apple Watch Ultra 3", state: .shutdown)
@@ -70,7 +70,7 @@ struct CompanionScreensTests {
             """)
     }
 
-    @Test func `a name carrying JSON punctuation stays one string`() {
+    @Test func `should keep a watch name intact when it carries JSON punctuation`() {
         let screens = CompanionScreens(
             externalSize: nil,
             watch: PairedWatch(udid: "W", name: #"Watch "Test" \ 1"#, state: .booted)

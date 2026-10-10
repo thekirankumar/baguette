@@ -5,7 +5,7 @@ import Testing
 
 @Suite("MetalRenderTargetRing")
 struct MetalRenderTargetRingTests {
-    @Test func `provides single-sample render targets the engine antialiases into`() throws {
+    @Test func `should provide single-sample render targets the engine antialiases into`() throws {
         let device = try #require(MTLCreateSystemDefaultDevice())
         let ring = try MetalRenderTargetRing(
             width: 320,
@@ -21,7 +21,7 @@ struct MetalRenderTargetRingTests {
         #expect(IOSurfaceGetHeight(target.surface) == 240)
     }
 
-    @Test func `cycles through three stable codec surfaces`() throws {
+    @Test func `should cycle through three stable codec surfaces`() throws {
         let device = try #require(MTLCreateSystemDefaultDevice())
         let ring = try MetalRenderTargetRing(
             width: 320,

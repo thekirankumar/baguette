@@ -5,7 +5,7 @@ import Foundation
 @Suite("BGRAConverter")
 struct BGRAConverterTests {
 
-    @Test func `passes through a tightly packed buffer`() throws {
+    @Test func `should keep a tightly packed frame's pixels as they are`() throws {
         // 2×2 BGRA: 4 pixels × 4 bytes = 16 bytes. bytesPerRow == width*4.
         let raw = Data([0x11, 0x22, 0x33, 0xFF,  0x44, 0x55, 0x66, 0xFF,
                         0x77, 0x88, 0x99, 0xFF,  0xAA, 0xBB, 0xCC, 0xFF])
@@ -24,7 +24,7 @@ struct BGRAConverterTests {
         #expect(frame.height == 2)
     }
 
-    @Test func `strips trailing row padding when bytesPerRow exceeds width times four`() throws {
+    @Test func `should strip trailing row padding from a frame's pixels`() throws {
         // 2×2 with bytesPerRow == 12 (8 pixel bytes + 4 padding).
         // Row 0: 11 22 33 FF | 44 55 66 FF | <pad>00 00 00 00
         // Row 1: 77 88 99 FF | AA BB CC FF | <pad>00 00 00 00

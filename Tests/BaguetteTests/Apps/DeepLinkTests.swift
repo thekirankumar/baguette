@@ -16,41 +16,41 @@ import Foundation
 @Suite("DeepLink")
 struct DeepLinkTests {
 
-    @Test func `a custom scheme link routes to the app that registered it`() {
+    @Test func `should route a custom scheme link to the app that registered it`() {
         let link = DeepLink.from("myapp://profile/42")
         #expect(link?.scheme == "myapp")
         #expect(link?.routing == .app)
     }
 
-    @Test func `an https link routes to the browser, not the app`() {
+    @Test func `should route an https link to the browser, not the app`() {
         let link = DeepLink.from("https://example.com/profile/42")
         #expect(link?.scheme == "https")
         #expect(link?.routing == .browser)
     }
 
-    @Test func `an http link routes to the browser too`() {
+    @Test func `should route an http link to the browser too`() {
         #expect(DeepLink.from("http://example.com")?.routing == .browser)
     }
 
-    @Test func `a scheme is normalised to lower case`() {
+    @Test func `should normalise a link scheme to lower case`() {
         let link = DeepLink.from("MyApp://Profile")
         #expect(link?.scheme == "myapp")
         #expect(link?.routing == .app)
     }
 
-    @Test func `a pasted link is trimmed before parsing`() {
+    @Test func `should trim whitespace around a pasted link`() {
         #expect(DeepLink.from("  myapp://profile\n")?.scheme == "myapp")
     }
 
-    @Test func `a bare word is not a deep link`() {
+    @Test func `should not treat a bare word as a deep link`() {
         #expect(DeepLink.from("profile") == nil)
     }
 
-    @Test func `empty input is not a deep link`() {
+    @Test func `should not treat blank input as a deep link`() {
         #expect(DeepLink.from("   ") == nil)
     }
 
-    @Test func `openArguments projects the simctl openurl argv tail`() {
+    @Test func `should open a deep link with simctl openurl on the device`() {
         let link = DeepLink.from("myapp://profile/42")
         #expect(link?.openArguments(udid: "U") == ["simctl", "openurl", "U", "myapp://profile/42"])
     }

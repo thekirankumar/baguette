@@ -5,7 +5,7 @@ import Testing
 
 @Suite("SimctlCapture")
 struct SimctlCaptureTests {
-    @Test func `enumeration preserves the resolved custom device set`() throws {
+    @Test func `should enumerate displays inside the resolved custom device set`() throws {
         let script = try Script("printf '%s\\n' \"$@\"")
         defer { script.remove() }
         let output = try SimctlCapture.enumerate(
@@ -13,7 +13,7 @@ struct SimctlCaptureTests {
         #expect(output == "simctl\n--set\n/custom set/Devices\nio\ndevice-id\nenumerate\n")
     }
 
-    @Test func `default enumeration does not override the device set`() throws {
+    @Test func `should leave the device set alone when enumerating the default set`() throws {
         let script = try Script("printf '%s\\n' \"$@\"")
         defer { script.remove() }
         #expect(
@@ -21,7 +21,7 @@ struct SimctlCaptureTests {
                 == "simctl\nio\ndevice-id\nenumerate\n")
     }
 
-    @Test func `output larger than the pipe buffer is drained completely`() throws {
+    @Test func `should capture all output when it is larger than the pipe buffer`() throws {
         let script = try Script("/usr/bin/head -c 262144 /dev/zero; printf end")
         defer { script.remove() }
         let output = try SimctlCapture.enumerate(udid: "device-id", xcrun: script.url, timeout: 10)
@@ -29,7 +29,7 @@ struct SimctlCaptureTests {
         #expect(output.hasSuffix("end"))
     }
 
-    @Test func `capture finishes while every dispatch worker is blocked`() async {
+    @Test func `should finish a capture when every dispatch worker is blocked`() async {
         // Isolate process-wide worker starvation from other subprocess deadline tests.
         await #expect(processExitsWith: .success) {
             try Self.expectCaptureWithBlockedWorkers()
@@ -59,7 +59,7 @@ struct SimctlCaptureTests {
             ).combined == "ready")
     }
 
-    @Test func `a child that closes output but ignores termination is killed at the deadline`() throws {
+    @Test func `should kill a child at the deadline when it closes its output but ignores termination`() throws {
         let script = try Script("trap '' TERM; exec 1>&- 2>&-; exec /bin/sleep 30")
         defer { script.remove() }
         let process = Process()
@@ -80,7 +80,7 @@ struct SimctlCaptureTests {
         #expect(errno == ESRCH)
     }
 
-    @Test func `failed enumeration retains the device status and diagnostics`() throws {
+    @Test func `should report the device, exit status and diagnostics when enumeration fails`() throws {
         let script = try Script("echo 'CoreSimulator unavailable' >&2; exit 7")
         defer { script.remove() }
         #expect(
@@ -91,7 +91,7 @@ struct SimctlCaptureTests {
         }
     }
 
-    @Test func `timeout cancels an open output pipe and releases its reader`() async throws {
+    @Test func `should close the output pipes and release their readers when a capture times out`() async throws {
         let script = try Script("printf started; exec /bin/sleep 30")
         defer { script.remove() }
         let process = Process()
@@ -113,7 +113,7 @@ struct SimctlCaptureTests {
         try await Self.expectClosed(errorPipe.fileHandleForReading)
     }
 
-    @Test func `launch failure releases the output reader without waiting for the deadline`() async throws {
+    @Test func `should release the output readers without waiting for the deadline when launch fails`() async throws {
         let script = try Script("exit 0")
         defer { script.remove() }
         let process = Process()
@@ -130,7 +130,7 @@ struct SimctlCaptureTests {
         try await Self.expectClosed(errorPipe.fileHandleForReading)
     }
 
-    @Test func `both output channels drain beyond pipe capacity without mixing`() throws {
+    @Test func `should capture stdout and stderr separately when both exceed the pipe capacity`() throws {
         let script = try Script(
             "/usr/bin/head -c 262144 /dev/zero; /usr/bin/head -c 262144 /dev/zero >&2; printf out; printf err >&2")
         defer { script.remove() }
@@ -141,13 +141,13 @@ struct SimctlCaptureTests {
         #expect(output.stderr.hasSuffix("err"))
     }
 
-    @Test func `display enumeration keeps successful stderr output`() throws {
+    @Test func `should keep stderr output when display enumeration succeeds`() throws {
         let script = try Script("printf display; printf diagnostic >&2")
         defer { script.remove() }
         #expect(try SimctlCapture.enumerate(udid: "device-id", xcrun: script.url) == "displaydiagnostic")
     }
 
-    @Test func `failed commands retain both output channels`() throws {
+    @Test func `should keep both output channels when a command fails`() throws {
         let script = try Script("printf output; printf diagnostic >&2; exit 7")
         defer { script.remove() }
         #expect(throws: SimctlCapture.Failure.failed(udid: "device-id", status: 7, output: "outputdiagnostic")) {
@@ -155,7 +155,7 @@ struct SimctlCaptureTests {
         }
     }
 
-    @Test func `timeout retains partial output from both channels`() throws {
+    @Test func `should keep partial output from both channels when a command times out`() throws {
         let script = try Script("printf output; printf diagnostic >&2; exec 1>&- 2>&-; exec /bin/sleep 30")
         defer { script.remove() }
         #expect(
@@ -168,7 +168,7 @@ struct SimctlCaptureTests {
         }
     }
 
-    @Test func `an inherited stderr writer cannot hold the caller past its deadline`() async throws {
+    @Test func `should give up at the deadline when an inherited stderr writer outlives the command`() async throws {
         let script = try Script("/bin/sleep 30 >/dev/null & printf '%s' $! >\"$0.child\"; printf diagnostic >&2")
         let childFile = script.url.appendingPathExtension("child")
         defer {

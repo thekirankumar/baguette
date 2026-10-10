@@ -11,7 +11,7 @@ struct CommandParsingTests {
 
     // MARK: - root
 
-    @Test func `baguette root lists every subcommand`() {
+    @Test func `should offer every subcommand from the baguette root`() {
         let cfg = Baguette.configuration
         #expect(cfg.commandName == "baguette")
         let names = cfg.subcommands.map { $0.configuration.commandName }
@@ -30,7 +30,7 @@ struct CommandParsingTests {
 
     // MARK: - hinge
 
-    @Test func `hinge takes a pose or an angle, and a sweep duration`() throws {
+    @Test func `should let hinge take a pose or an angle, and a sweep duration`() throws {
         let pose = try HingeCLICommand.parse(["--udid", "U", "--pose", "open"])
         #expect(pose.pose == "open" && pose.angle == nil)
         let angle = try HingeCLICommand.parse(["--udid", "U", "--angle", "95", "--duration", "1.2"])
@@ -41,7 +41,7 @@ struct CommandParsingTests {
 
     // MARK: - openurl / schemes
 
-    @Test func `openurl parses the url argument`() throws {
+    @Test func `should open the url given to openurl on the chosen simulator`() throws {
         let cmd = try OpenURLCommand.parse(["--udid", "U", "myapp://profile/42"])
         #expect(cmd.url == "myapp://profile/42")
         // The udid too, or this passes unchanged if `DeviceOption` ever
@@ -51,17 +51,17 @@ struct CommandParsingTests {
         #expect(OpenURLCommand.configuration.commandName == "openurl")
     }
 
-    @Test func `openurl requires a url`() {
+    @Test func `should reject openurl when no url is given`() {
         #expect(throws: (any Error).self) { try OpenURLCommand.parse(["--udid", "U"]) }
     }
 
-    @Test func `schemes parses --udid`() throws {
+    @Test func `should take the simulator for schemes from --udid`() throws {
         let cmd = try SchemesCommand.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(SchemesCommand.configuration.commandName == "schemes")
     }
 
-    @Test func `bakery exposes the whole source lifecycle`() {
+    @Test func `should offer the whole source lifecycle under bakery`() {
         // Pinned so a verb can't be added without a deliberate edit
         // here — `outdated` in particular is the only way a user learns
         // a trusted source has moved, and it must not quietly vanish.
@@ -71,53 +71,53 @@ struct CommandParsingTests {
         )
     }
 
-    @Test func `baguette root exposes version`() {
+    @Test func `should report the baguette version from the root`() {
         #expect(Baguette.configuration.version == baguetteVersion)
         #expect(!baguetteVersion.isEmpty)
     }
 
     // MARK: - list
 
-    @Test func `list parses --device-set`() throws {
+    @Test func `should take the device set for list from --device-set`() throws {
         let cmd = try ListCommand.parse(["--device-set", "/tmp/set"])
         #expect(cmd.deviceSet == "/tmp/set")
         #expect(ListCommand.configuration.commandName == "list")
     }
 
-    @Test func `list defaults device-set to nil`() throws {
+    @Test func `should list the default device set as text when list has no flags`() throws {
         let cmd = try ListCommand.parse([])
         #expect(cmd.deviceSet == nil)
         #expect(cmd.json == false)
     }
 
-    @Test func `list parses --json flag`() throws {
+    @Test func `should list as JSON when --json is given`() throws {
         let cmd = try ListCommand.parse(["--json"])
         #expect(cmd.json == true)
     }
 
     // MARK: - boot / shutdown share DeviceOption
 
-    @Test func `boot requires --udid`() throws {
+    @Test func `should take the simulator to boot from --udid`() throws {
         let cmd = try BootCommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(cmd.options.deviceSet == nil)
         #expect(BootCommand.configuration.commandName == "boot")
     }
 
-    @Test func `boot rejects argv without --udid`() {
+    @Test func `should reject boot when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try BootCommand.parse([])
         }
     }
 
-    @Test func `boot heals the input surface unless told not to`() throws {
+    @Test func `should heal the input surface on boot unless --no-heal is given`() throws {
         #expect(try BootCommand.parse(["--udid", "ABC"]).noHeal == false)
         #expect(try BootCommand.parse(["--udid", "ABC", "--no-heal"]).noHeal == true)
     }
 
     // MARK: - heal
 
-    @Test func `heal requires --udid`() throws {
+    @Test func `should take the simulator to heal from --udid and reject heal without it`() throws {
         let cmd = try HealCommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(HealCommand.configuration.commandName == "heal")
@@ -126,7 +126,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `shutdown carries udid + device-set`() throws {
+    @Test func `should take the simulator and device set to shut down from --udid and --device-set`() throws {
         let cmd = try ShutdownCommand.parse([
             "--udid", "XYZ", "--device-set", "/var/sims",
         ])
@@ -137,26 +137,26 @@ struct CommandParsingTests {
 
     // MARK: - lifetime
 
-    @Test func `lifetime with no flags is read-only`() throws {
+    @Test func `should only read the lifetime policy when lifetime has no flags`() throws {
         let cmd = try LifetimeCommand.parse([])
         #expect(cmd.detach == false)
         #expect(cmd.shutdown == false)
         #expect(LifetimeCommand.configuration.commandName == "lifetime")
     }
 
-    @Test func `lifetime parses --detach`() throws {
+    @Test func `should set the lifetime policy to detach on --detach`() throws {
         let cmd = try LifetimeCommand.parse(["--detach"])
         #expect(cmd.detach == true)
         #expect(cmd.shutdown == false)
     }
 
-    @Test func `lifetime parses --shutdown`() throws {
+    @Test func `should set the lifetime policy to shut down on --shutdown`() throws {
         let cmd = try LifetimeCommand.parse(["--shutdown"])
         #expect(cmd.shutdown == true)
         #expect(cmd.detach == false)
     }
 
-    @Test func `lifetime rejects both directions at once`() {
+    @Test func `should reject lifetime when both --detach and --shutdown are given`() {
         // --detach and --shutdown are opposite ends of one policy;
         // accepting both would silently pick one.
         #expect(throws: (any Error).self) {
@@ -164,7 +164,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `lifetime takes no udid because the policy is machine-wide`() {
+    @Test func `should reject a --udid on lifetime because the policy is machine-wide`() {
         // These are Simulator.app's preferences, not a device's, so a
         // per-device flag would be a lie.
         #expect(throws: (any Error).self) {
@@ -174,7 +174,7 @@ struct CommandParsingTests {
 
     // MARK: - input
 
-    @Test func `input parses --udid`() throws {
+    @Test func `should take the simulator for input from --udid`() throws {
         let cmd = try InputCommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(InputCommand.configuration.commandName == "input")
@@ -182,35 +182,35 @@ struct CommandParsingTests {
 
     // MARK: - orientation
 
-    @Test func `orientation parses portrait`() throws {
+    @Test func `should rotate to portrait on orientation portrait`() throws {
         let cmd = try OrientationCommand.parse(["--udid", "U", "portrait"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.value == .portrait)
         #expect(OrientationCommand.configuration.commandName == "orientation")
     }
 
-    @Test func `orientation parses landscape-left`() throws {
+    @Test func `should rotate to landscape-left on orientation landscape-left`() throws {
         let cmd = try OrientationCommand.parse(["--udid", "U", "landscape-left"])
         #expect(cmd.value == .landscapeLeft)
     }
 
-    @Test func `orientation parses landscape-right`() throws {
+    @Test func `should rotate to landscape-right on orientation landscape-right`() throws {
         let cmd = try OrientationCommand.parse(["--udid", "U", "landscape-right"])
         #expect(cmd.value == .landscapeRight)
     }
 
-    @Test func `orientation parses portrait-upside-down`() throws {
+    @Test func `should rotate to portrait-upside-down on orientation portrait-upside-down`() throws {
         let cmd = try OrientationCommand.parse(["--udid", "U", "portrait-upside-down"])
         #expect(cmd.value == .portraitUpsideDown)
     }
 
-    @Test func `orientation rejects unknown values`() {
+    @Test func `should reject an unknown orientation`() {
         #expect(throws: (any Error).self) {
             try OrientationCommand.parse(["--udid", "U", "sideways"])
         }
     }
 
-    @Test func `orientation rejects argv without --udid`() {
+    @Test func `should reject orientation when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try OrientationCommand.parse(["portrait"])
         }
@@ -218,13 +218,13 @@ struct CommandParsingTests {
 
     // MARK: - shake
 
-    @Test func `shake parses --udid`() throws {
+    @Test func `should take the simulator to shake from --udid`() throws {
         let cmd = try ShakeCommand.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(ShakeCommand.configuration.commandName == "shake")
     }
 
-    @Test func `shake rejects argv without --udid`() {
+    @Test func `should reject shake when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try ShakeCommand.parse([])
         }
@@ -232,7 +232,7 @@ struct CommandParsingTests {
 
     // MARK: - status-bar
 
-    @Test func `status-bar lists override and clear leaves`() {
+    @Test func `should offer override and clear under status-bar`() {
         let names = StatusBarCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["override", "clear"])
         #expect(StatusBarCommand.configuration.commandName == "status-bar")
@@ -240,39 +240,39 @@ struct CommandParsingTests {
 
     // MARK: - interface
 
-    @Test func `interface lists one leaf per simctl ui option`() {
+    @Test func `should offer one interface subcommand per simctl ui option`() {
         let names = InterfaceCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["appearance", "contrast", "text-size"])
         #expect(InterfaceCommand.configuration.commandName == "interface")
     }
 
-    @Test func `interface appearance parses a value to set`() throws {
+    @Test func `should set the interface appearance to the value given`() throws {
         let cmd = try InterfaceCommand.Appearance.parse(["--udid", "U", "dark"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.value == .dark)
     }
 
-    @Test func `interface appearance with no value is a read`() throws {
+    @Test func `should read the interface appearance when no value is given`() throws {
         // The same leaf reads and writes, matching `simctl ui` itself —
         // no separate `get` verb to remember.
         let cmd = try InterfaceCommand.Appearance.parse(["--udid", "U"])
         #expect(cmd.value == nil)
     }
 
-    @Test func `interface appearance rejects a value that can only be read`() {
+    @Test func `should reject an interface appearance that can only be read back`() {
         // "unknown" is an answer simctl gives, not one it takes.
         #expect(throws: (any Error).self) {
             try InterfaceCommand.Appearance.parse(["--udid", "U", "unknown"])
         }
     }
 
-    @Test func `interface contrast parses enabled and disabled`() throws {
+    @Test func `should set interface contrast to enabled or disabled, or read it when no value is given`() throws {
         #expect(try InterfaceCommand.Contrast.parse(["--udid", "U", "enabled"]).value == .enabled)
         #expect(try InterfaceCommand.Contrast.parse(["--udid", "U", "disabled"]).value == .disabled)
         #expect(try InterfaceCommand.Contrast.parse(["--udid", "U"]).value == nil)
     }
 
-    @Test func `interface text-size takes a category or a relative step`() throws {
+    @Test func `should let interface text-size take a category or a relative step`() throws {
         #expect(
             try InterfaceCommand.TextSize.parse(["--udid", "U", "accessibility-large"]).value
                 == .size(.accessibilityLarge)
@@ -282,13 +282,13 @@ struct CommandParsingTests {
         #expect(try InterfaceCommand.TextSize.parse(["--udid", "U"]).value == nil)
     }
 
-    @Test func `interface text-size rejects a size that isn't a category`() {
+    @Test func `should reject an interface text-size that is not a category`() {
         #expect(throws: (any Error).self) {
             try InterfaceCommand.TextSize.parse(["--udid", "U", "gigantic"])
         }
     }
 
-    @Test func `status-bar override parses every field into a typed override`() throws {
+    @Test func `should override every status-bar field given on the command line`() throws {
         let cmd = try StatusBarCommand.Override.parse([
             "--udid", "U",
             "--time", "9:41",
@@ -315,24 +315,24 @@ struct CommandParsingTests {
         ))
     }
 
-    @Test func `status-bar override with no fields builds an empty override`() throws {
+    @Test func `should build an empty status-bar override when no fields are given`() throws {
         let cmd = try StatusBarCommand.Override.parse(["--udid", "U"])
         #expect(cmd.override.isEmpty)
     }
 
-    @Test func `status-bar override rejects an unknown data network`() {
+    @Test func `should reject a status-bar override with an unknown data network`() {
         #expect(throws: (any Error).self) {
             try StatusBarCommand.Override.parse(["--udid", "U", "--data-network", "6g"])
         }
     }
 
-    @Test func `status-bar override requires --udid`() {
+    @Test func `should reject status-bar override when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try StatusBarCommand.Override.parse(["--battery-level", "50"])
         }
     }
 
-    @Test func `status-bar clear parses --udid`() throws {
+    @Test func `should take the simulator for status-bar clear from --udid`() throws {
         let cmd = try StatusBarCommand.Clear.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(StatusBarCommand.Clear.configuration.commandName == "clear")
@@ -340,19 +340,19 @@ struct CommandParsingTests {
 
     // MARK: - motion
 
-    @Test func `motion lists start set and stop leaves`() {
+    @Test func `should offer start, set and stop under motion`() {
         let names = MotionCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["start", "set", "stop"])
         #expect(MotionCommand.configuration.commandName == "motion")
     }
 
-    @Test func `motion start parses an activity kind`() throws {
+    @Test func `should start motion with the activity given`() throws {
         let cmd = try MotionCommand.Start.parse(["--udid", "U", "--activity", "walking"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.kind == .walking)
     }
 
-    @Test func `motion start defaults to walking at a walking pace`() throws {
+    @Test func `should start walking at a walking pace when motion start has no flags`() throws {
         // The overwhelmingly common case is "make this app think I'm
         // walking", so it needs no flags at all.
         let cmd = try MotionCommand.Start.parse(["--udid", "U"])
@@ -360,7 +360,7 @@ struct CommandParsingTests {
         #expect(cmd.resolvedSpeed == 1.4)
     }
 
-    @Test func `motion start takes the speed for the kind when none is given`() throws {
+    @Test func `should start motion at the activity's own speed when no speed is given`() throws {
         // Each kind has a representative speed — the same presets the
         // browser's Walk mode offers — so `--activity running` alone means
         // a plausible run rather than a run at 0 m/s.
@@ -372,13 +372,13 @@ struct CommandParsingTests {
             ["--udid", "U", "--activity", "stationary"]).resolvedSpeed == 0)
     }
 
-    @Test func `motion start honours an explicit speed`() throws {
+    @Test func `should start motion at the speed given`() throws {
         let cmd = try MotionCommand.Start.parse(
             ["--udid", "U", "--activity", "walking", "--speed", "2.2"])
         #expect(cmd.resolvedSpeed == 2.2)
     }
 
-    @Test func `motion rejects a negative speed`() {
+    @Test func `should reject a negative motion speed`() {
         // A negative speed classifies as `unknown`, so it would arm a session
         // reporting no motion — a confusing way to spell "invalid input".
         #expect(throws: (any Error).self) {
@@ -386,14 +386,14 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `motion rejects an unknown activity`() {
+    @Test func `should reject an unknown motion activity`() {
         // Failing loudly beats silently reporting `unknown` motion.
         #expect(throws: (any Error).self) {
             try MotionCommand.Start.parse(["--udid", "U", "--activity", "swimming"])
         }
     }
 
-    @Test func `motion stop requires --udid`() {
+    @Test func `should reject motion stop when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try MotionCommand.Stop.parse([])
         }
@@ -401,13 +401,13 @@ struct CommandParsingTests {
 
     // MARK: - network
 
-    @Test func `network lists set clear and status leaves`() {
+    @Test func `should offer set, clear and status under network`() {
         let names = NetworkCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["set", "clear", "status"])
         #expect(NetworkCommand.configuration.commandName == "network")
     }
 
-    @Test func `network answers with the current condition when no verb is named`() {
+    @Test func `should report the current network condition when no network verb is named`() {
         // A forgotten throttle reads as "the app is slow", days later. The
         // cheapest defence is that the bare command answers "is anything
         // on?" rather than printing usage.
@@ -415,13 +415,13 @@ struct CommandParsingTests {
         #expect(fallback?.configuration.commandName == "status")
     }
 
-    @Test func `network set resolves a named preset`() throws {
+    @Test func `should set the network to a named preset`() throws {
         let cmd = try NetworkCommand.Set.parse(["--udid", "U", "--profile", "3g"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.condition.condition == NetworkProfile.threeG.condition)
     }
 
-    @Test func `network set builds a condition from explicit numbers`() throws {
+    @Test func `should set the network from explicit latency, bandwidth and loss`() throws {
         let cmd = try NetworkCommand.Set.parse(
             ["--udid", "U", "--latency", "300", "--bandwidth", "400", "--loss", "5"])
         #expect(cmd.condition.condition?.latencyMs == 300)
@@ -429,19 +429,19 @@ struct CommandParsingTests {
         #expect(cmd.condition.condition?.lossPercent == 5)
     }
 
-    @Test func `network set leaves an unnamed bandwidth unmetered`() throws {
+    @Test func `should leave the network bandwidth unmetered when none is given`() throws {
         // "Make every request wait, but let bytes arrive at full speed" is
         // a normal thing to ask for, and must not become a bandwidth of 0.
         let cmd = try NetworkCommand.Set.parse(["--udid", "U", "--latency", "300"])
         #expect(cmd.condition.condition?.bandwidthKbps == nil)
     }
 
-    @Test func `network set parses offline`() throws {
+    @Test func `should take the network offline on --offline`() throws {
         let cmd = try NetworkCommand.Set.parse(["--udid", "U", "--offline"])
         #expect(cmd.condition.condition == .offline)
     }
 
-    @Test func `network rejects a preset nobody has heard of`() {
+    @Test func `should reject a network preset nobody has heard of`() {
         // A silent fallback would arm a condition nobody asked for, and the
         // afternoon would go on wondering why the app was slow.
         #expect(throws: (any Error).self) {
@@ -449,7 +449,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `network refuses to mix a preset with anything else`() {
+    @Test func `should refuse to mix a network preset with any other setting`() {
         // One source of truth per invocation. "3g but lossier" reads like
         // it should work, and deciding whether the preset or the flag wins
         // is a coin toss the user would have to remember.
@@ -464,7 +464,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `network refuses a set that would condition nothing`() {
+    @Test func `should refuse a network set that would condition nothing`() {
         // Arming the dylib while changing nothing costs an app relaunch and
         // achieves nothing visible — far more likely a forgotten flag than
         // an intention.
@@ -473,7 +473,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `network rejects numbers that describe no network`() {
+    @Test func `should reject network numbers that describe no network`() {
         #expect(throws: (any Error).self) {
             try NetworkCommand.Set.parse(["--udid", "U", "--latency", "-1"])
         }
@@ -485,7 +485,7 @@ struct CommandParsingTests {
         }
     }
 
-    @Test func `network clear requires --udid`() {
+    @Test func `should reject network clear when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try NetworkCommand.Clear.parse([])
         }
@@ -493,31 +493,31 @@ struct CommandParsingTests {
 
     // MARK: - location
 
-    @Test func `location lists set start walk and clear leaves`() {
+    @Test func `should offer set, start, walk and clear under location`() {
         let names = LocationCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["set", "start", "walk", "clear"])
         #expect(LocationCommand.configuration.commandName == "location")
     }
 
-    @Test func `location set parses a lat,lon token into a coordinate`() throws {
+    @Test func `should set the location to the lat,lon given`() throws {
         let cmd = try LocationCommand.Set.parse(["--udid", "U", "37.3318,-122.0312"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.coordinate == Coordinate(latitude: 37.3318, longitude: -122.0312))
         #expect(LocationCommand.Set.configuration.commandName == "set")
     }
 
-    @Test func `location set rejects an out-of-range coordinate`() throws {
+    @Test func `should set no location when the coordinate is out of range`() throws {
         let cmd = try LocationCommand.Set.parse(["--udid", "U", "120,0"])
         #expect(cmd.coordinate == nil)
     }
 
-    @Test func `location set requires --udid`() {
+    @Test func `should reject location set when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try LocationCommand.Set.parse(["1,2"])
         }
     }
 
-    @Test func `location start parses waypoints and tuning into a route`() throws {
+    @Test func `should start a location route through the waypoints at the speed and distance given`() throws {
         let cmd = try LocationCommand.Start.parse([
             "--udid", "U", "--speed", "260", "--distance", "1000",
             "37.6,-122.4", "40.6,-73.8",
@@ -531,12 +531,12 @@ struct CommandParsingTests {
         ))
     }
 
-    @Test func `location start with a single waypoint builds no route`() throws {
+    @Test func `should start no location route when only one waypoint is given`() throws {
         let cmd = try LocationCommand.Start.parse(["--udid", "U", "37.6,-122.4"])
         #expect(cmd.route == nil)
     }
 
-    @Test func `location walk parses a bearing and speed into a vector`() throws {
+    @Test func `should walk the location from an origin at the bearing and speed given`() throws {
         let cmd = try LocationCommand.Walk.parse([
             "--udid", "U", "--bearing", "90", "--speed", "5", "37.3349,-122.0090",
         ])
@@ -549,28 +549,28 @@ struct CommandParsingTests {
         #expect(LocationCommand.Walk.configuration.commandName == "walk")
     }
 
-    @Test func `location walk normalises a bearing off the compass circle`() throws {
+    @Test func `should bring a walk bearing off the compass circle back onto it`() throws {
         let cmd = try LocationCommand.Walk.parse([
             "--udid", "U", "--bearing", "450", "--speed", "5", "1,2",
         ])
         #expect(cmd.walk?.bearing == Bearing(degrees: 90))
     }
 
-    @Test func `location walk builds no vector for a non-positive speed`() throws {
+    @Test func `should not walk the location when the speed is not positive`() throws {
         let cmd = try LocationCommand.Walk.parse([
             "--udid", "U", "--bearing", "0", "--speed", "0", "1,2",
         ])
         #expect(cmd.walk == nil)
     }
 
-    @Test func `location walk builds no vector from an out-of-range origin`() throws {
+    @Test func `should not walk the location from an out-of-range origin`() throws {
         let cmd = try LocationCommand.Walk.parse([
             "--udid", "U", "--bearing", "0", "--speed", "5", "120,0",
         ])
         #expect(cmd.walk == nil)
     }
 
-    @Test func `location clear parses --udid`() throws {
+    @Test func `should take the simulator for location clear from --udid`() throws {
         let cmd = try LocationCommand.Clear.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(LocationCommand.Clear.configuration.commandName == "clear")
@@ -578,7 +578,7 @@ struct CommandParsingTests {
 
     // MARK: - paste
 
-    @Test func `paste parses --text and defaults to pressing`() throws {
+    @Test func `should paste the text given and press Cmd+V by default`() throws {
         let cmd = try PasteCommand.parse(["--udid", "U", "--text", "héllo 🥖"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.text == "héllo 🥖")
@@ -586,18 +586,18 @@ struct CommandParsingTests {
         #expect(PasteCommand.configuration.commandName == "paste")
     }
 
-    @Test func `paste parses --no-press`() throws {
+    @Test func `should paste without pressing Cmd+V when --no-press is given`() throws {
         let cmd = try PasteCommand.parse(["--udid", "U", "--text", "x", "--no-press"])
         #expect(cmd.press == false)
     }
 
-    @Test func `paste requires --text`() {
+    @Test func `should reject paste when --text is missing`() {
         #expect(throws: (any Error).self) {
             try PasteCommand.parse(["--udid", "U"])
         }
     }
 
-    @Test func `paste requires --udid`() {
+    @Test func `should reject paste when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try PasteCommand.parse(["--text", "x"])
         }
@@ -605,25 +605,25 @@ struct CommandParsingTests {
 
     // MARK: - clipboard
 
-    @Test func `clipboard lists get, sync and copy leaves`() {
+    @Test func `should offer get, sync and copy under clipboard`() {
         let names = ClipboardCommand.configuration.subcommands.map { $0.configuration.commandName }
         #expect(Set(names) == ["get", "sync", "copy"])
         #expect(ClipboardCommand.configuration.commandName == "clipboard")
     }
 
-    @Test func `clipboard copy parses --udid`() throws {
+    @Test func `should take the simulator for clipboard copy from --udid`() throws {
         let cmd = try ClipboardCommand.Copy.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(ClipboardCommand.Copy.configuration.commandName == "copy")
     }
 
-    @Test func `clipboard get parses --udid`() throws {
+    @Test func `should take the simulator for clipboard get from --udid`() throws {
         let cmd = try ClipboardCommand.Get.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(ClipboardCommand.Get.configuration.commandName == "get")
     }
 
-    @Test func `clipboard sync parses --udid`() throws {
+    @Test func `should take the simulator for clipboard sync from --udid`() throws {
         let cmd = try ClipboardCommand.Sync.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(ClipboardCommand.Sync.configuration.commandName == "sync")
@@ -631,33 +631,33 @@ struct CommandParsingTests {
 
     // MARK: - install / add-media
 
-    @Test func `install parses --udid and a file path`() throws {
+    @Test func `should install the file at the path given on the chosen simulator`() throws {
         let cmd = try InstallCommand.parse(["--udid", "U", "/tmp/MyApp.ipa"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.path == "/tmp/MyApp.ipa")
         #expect(InstallCommand.configuration.commandName == "install")
     }
 
-    @Test func `install requires --udid`() {
+    @Test func `should reject install when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try InstallCommand.parse(["/tmp/MyApp.ipa"])
         }
     }
 
-    @Test func `install requires a path argument`() {
+    @Test func `should reject install when no path is given`() {
         #expect(throws: (any Error).self) {
             try InstallCommand.parse(["--udid", "U"])
         }
     }
 
-    @Test func `add-media parses --udid and a file path`() throws {
+    @Test func `should add the media file at the path given to the chosen simulator`() throws {
         let cmd = try AddMediaCommand.parse(["--udid", "U", "/tmp/clip.mov"])
         #expect(cmd.options.udid == "U")
         #expect(cmd.path == "/tmp/clip.mov")
         #expect(AddMediaCommand.configuration.commandName == "add-media")
     }
 
-    @Test func `add-media requires --udid`() {
+    @Test func `should reject add-media when --udid is missing`() {
         #expect(throws: (any Error).self) {
             try AddMediaCommand.parse(["/tmp/clip.mov"])
         }
@@ -665,7 +665,7 @@ struct CommandParsingTests {
 
     // MARK: - diag-digitizer-trackpad
 
-    @Test func `diag-digitizer-trackpad parses --udid`() throws {
+    @Test func `should take the simulator for diag-digitizer-trackpad from --udid`() throws {
         let cmd = try DiagDigitizerTrackpadCommand.parse(["--udid", "U"])
         #expect(cmd.options.udid == "U")
         #expect(DiagDigitizerTrackpadCommand.configuration.commandName == "diag-digitizer-trackpad")
@@ -673,7 +673,7 @@ struct CommandParsingTests {
 
     // MARK: - stream
 
-    @Test func `stream defaults match StreamConfig.default`() throws {
+    @Test func `should stream mjpeg at 60 fps with the default bitrate and scale when no knobs are given`() throws {
         let cmd = try StreamCommand.parse(["--udid", "ABC"])
         #expect(cmd.format == "mjpeg")
         #expect(cmd.fps == 60)
@@ -683,7 +683,7 @@ struct CommandParsingTests {
         #expect(StreamCommand.configuration.commandName == "stream")
     }
 
-    @Test func `stream accepts every tunable knob`() throws {
+    @Test func `should stream with every tunable knob given`() throws {
         let cmd = try StreamCommand.parse([
             "--udid", "ABC",
             "--format", "avcc",
@@ -701,7 +701,7 @@ struct CommandParsingTests {
 
     // MARK: - gesture commands
 
-    @Test func `tap parses point + size + duration`() throws {
+    @Test func `should tap at the point, screen size and duration given`() throws {
         let cmd = try TapCommand.parse([
             "--udid", "ABC",
             "--x", "10", "--y", "20",
@@ -714,7 +714,7 @@ struct CommandParsingTests {
         #expect(TapCommand.configuration.commandName == "tap")
     }
 
-    @Test func `tap duration defaults to 0.05`() throws {
+    @Test func `should hold a tap for 0.05 seconds when no duration is given`() throws {
         let cmd = try TapCommand.parse([
             "--udid", "ABC",
             "--x", "1", "--y", "2",
@@ -723,7 +723,7 @@ struct CommandParsingTests {
         #expect(cmd.duration == 0.05)
     }
 
-    @Test func `double-tap parses point + size + interval + duration`() throws {
+    @Test func `should double-tap at the point, screen size, interval and duration given`() throws {
         let cmd = try DoubleTapCommand.parse([
             "--udid", "ABC",
             "--x", "220", "--y", "480",
@@ -738,7 +738,7 @@ struct CommandParsingTests {
         #expect(DoubleTapCommand.configuration.commandName == "double-tap")
     }
 
-    @Test func `double-tap interval and duration default to observed-working cadence`() throws {
+    @Test func `should double-tap at the observed-working cadence when no interval or duration is given`() throws {
         let cmd = try DoubleTapCommand.parse([
             "--udid", "ABC",
             "--x", "1", "--y", "2",
@@ -748,7 +748,7 @@ struct CommandParsingTests {
         #expect(cmd.duration == 0.08)
     }
 
-    @Test func `swipe parses start + end + size`() throws {
+    @Test func `should swipe from start to end on the screen size given over 0.25 seconds by default`() throws {
         let cmd = try SwipeCommand.parse([
             "--udid", "ABC",
             "--start-x", "0", "--start-y", "0",
@@ -761,7 +761,7 @@ struct CommandParsingTests {
         #expect(SwipeCommand.configuration.commandName == "swipe")
     }
 
-    @Test func `pinch parses centre + spread`() throws {
+    @Test func `should pinch around the centre from the start spread to the end spread given`() throws {
         let cmd = try PinchCommand.parse([
             "--udid", "ABC",
             "--cx", "100", "--cy", "200",
@@ -774,7 +774,7 @@ struct CommandParsingTests {
         #expect(PinchCommand.configuration.commandName == "pinch")
     }
 
-    @Test func `pan parses two contacts + delta`() throws {
+    @Test func `should pan two fingers by the delta given`() throws {
         let cmd = try PanCommand.parse([
             "--udid", "ABC",
             "--x1", "10", "--y1", "20",
@@ -789,7 +789,7 @@ struct CommandParsingTests {
         #expect(PanCommand.configuration.commandName == "pan")
     }
 
-    @Test func `press parses --button`() throws {
+    @Test func `should press the button given`() throws {
         let cmd = try PressCommand.parse(["--udid", "ABC", "--button", "home"])
         #expect(cmd.button == "home")
         #expect(PressCommand.configuration.commandName == "press")
@@ -797,7 +797,7 @@ struct CommandParsingTests {
 
     // MARK: - screenshot
 
-    @Test func `screenshot defaults match snapshot helper`() throws {
+    @Test func `should take a screenshot to stdout at quality 0.85 and scale 1 by default`() throws {
         let cmd = try ScreenshotCommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(cmd.output == nil)
@@ -806,7 +806,7 @@ struct CommandParsingTests {
         #expect(ScreenshotCommand.configuration.commandName == "screenshot")
     }
 
-    @Test func `screenshot accepts --output --quality --scale`() throws {
+    @Test func `should take a screenshot with the output, quality and scale given`() throws {
         let cmd = try ScreenshotCommand.parse([
             "--udid", "ABC",
             "--output", "/tmp/x.jpg",
@@ -820,7 +820,7 @@ struct CommandParsingTests {
 
     // MARK: - render-3d
 
-    @Test func `render-3d parses simulator render options`() throws {
+    @Test func `should render a live simulator in 3D with every render option given`() throws {
         let cmd = try Render3DCommand.parse([
             "--udid", "ABC",
             "--variant", "finish=space-black",
@@ -844,7 +844,7 @@ struct CommandParsingTests {
         #expect(cmd.output == "device.png")
     }
 
-    @Test func `render-3d accepts an existing screen with explicit model`() throws {
+    @Test func `should render an existing screen image in 3D on the device model given`() throws {
         let cmd = try Render3DCommand.parse([
             "--screen", "screen.png", "--device", "iphone-17-pro",
         ])
@@ -853,7 +853,7 @@ struct CommandParsingTests {
         #expect(cmd.screenGlass == false)
     }
 
-    @Test func `render-3d rejects both input sources`() {
+    @Test func `should reject render-3d given both a simulator and a screen image`() {
         #expect(throws: (any Error).self) {
             try Render3DCommand.parse([
                 "--udid", "ABC", "--screen", "screen.png",
@@ -864,7 +864,7 @@ struct CommandParsingTests {
 
     // MARK: - describe-ui
 
-    @Test func `describe-ui requires --udid and defaults to full tree`() throws {
+    @Test func `should describe the full UI tree to stdout by default`() throws {
         let cmd = try DescribeUICommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(cmd.x == nil && cmd.y == nil)
@@ -872,7 +872,7 @@ struct CommandParsingTests {
         #expect(DescribeUICommand.configuration.commandName == "describe-ui")
     }
 
-    @Test func `describe-ui accepts --x --y --output`() throws {
+    @Test func `should describe the UI at the point given into the output file given`() throws {
         let cmd = try DescribeUICommand.parse([
             "--udid", "ABC",
             "--x", "120", "--y", "400",
@@ -884,26 +884,26 @@ struct CommandParsingTests {
 
     // MARK: - help lists what the command accepts
 
-    @Test func `stream --format help lists only the formats a stream accepts`() {
+    @Test func `should list only the formats a stream accepts in the --format help`() {
         let help = StreamCommand.helpMessage(columns: 400)
         #expect(help.contains("Output format: mjpeg | avcc"))
         #expect(!help.contains("h264"))
     }
 
-    @Test func `logs --level help lists only the levels the simulator log accepts`() {
+    @Test func `should list only the levels the simulator log accepts in the --level help`() {
         let help = LogsCommand.helpMessage(columns: 400)
         #expect(help.contains("Minimum log level: default | info | debug"))
         #expect(!help.contains("notice"))
     }
 
-    @Test func `logs --style help lists every style the log stream accepts`() {
+    @Test func `should list every style the log stream accepts in the --style help`() {
         let help = LogsCommand.helpMessage(columns: 400)
         #expect(help.contains("Output style: default | compact | json | syslog | ndjson"))
     }
 
     // MARK: - logs
 
-    @Test func `logs requires --udid and defaults level + style`() throws {
+    @Test func `should stream info-level logs in the default style when only --udid is given`() throws {
         let cmd = try LogsCommand.parse(["--udid", "ABC"])
         #expect(cmd.options.udid == "ABC")
         #expect(cmd.level == "info")
@@ -913,7 +913,7 @@ struct CommandParsingTests {
         #expect(LogsCommand.configuration.commandName == "logs")
     }
 
-    @Test func `logs accepts --level --style --predicate --bundle-id`() throws {
+    @Test func `should stream logs with the level, style, predicate and bundle id given`() throws {
         let cmd = try LogsCommand.parse([
             "--udid", "ABC",
             "--level", "debug",
@@ -929,7 +929,7 @@ struct CommandParsingTests {
 
     // MARK: - serve
 
-    @Test func `serve defaults bind to 127.0.0.1:8421`() throws {
+    @Test func `should serve on 127.0.0.1:8421 by default`() throws {
         let cmd = try ServeCommand.parse([])
         #expect(cmd.host == "127.0.0.1")
         #expect(cmd.port == 8421)
@@ -937,7 +937,7 @@ struct CommandParsingTests {
         #expect(ServeCommand.configuration.commandName == "serve")
     }
 
-    @Test func `serve overrides host + port + device-set`() throws {
+    @Test func `should serve on the host, port and device set given`() throws {
         let cmd = try ServeCommand.parse([
             "--host", "0.0.0.0",
             "--port", "9000",
@@ -956,27 +956,27 @@ struct CommandParsingTests {
     /// which meant an absent udid masked the typo and the operator was
     /// told the wrong thing about which of the two was broken.
 
-    @Test func `screenshot binds --display and defaults it to nil`() throws {
+    @Test func `should capture the --display plane given in a screenshot, and no plane by default`() throws {
         #expect(try ScreenshotCommand.parse(["--udid", "U"]).display == nil)
         #expect(try ScreenshotCommand.parse(
             ["--udid", "U", "--display", "carplay"]
         ).display == "carplay")
     }
 
-    @Test func `input binds --display and defaults it to nil`() throws {
+    @Test func `should drive the --display plane given with input, and no plane by default`() throws {
         #expect(try InputCommand.parse(["--udid", "U"]).display == nil)
         #expect(try InputCommand.parse(
             ["--udid", "U", "--display", "carplay"]
         ).display == "carplay")
     }
 
-    @Test func `screenshot rejects a display value no plane answers to`() {
+    @Test func `should reject a screenshot --display that no plane answers to`() {
         #expect(throws: (any Error).self) {
             try ScreenshotCommand.parse(["--udid", "U", "--display", "carply"])
         }
     }
 
-    @Test func `input rejects a display value no plane answers to`() {
+    @Test func `should reject an input --display that no plane answers to`() {
         #expect(throws: (any Error).self) {
             try InputCommand.parse(["--udid", "U", "--display", "carply"])
         }

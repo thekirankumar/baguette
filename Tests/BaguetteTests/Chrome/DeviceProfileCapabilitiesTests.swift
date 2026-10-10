@@ -102,7 +102,7 @@ struct DeviceProfileCapabilitiesTests {
         )
     }
 
-    @Test func `a foldable's screen size is the primary panel's`() throws {
+    @Test func `should size a foldable's screen to its primary panel whatever the listing order`() throws {
         for unfoldedFirst in [false, true] {
             let profile = try DeviceProfile.parsing(
                 plistData: modernProfile(),
@@ -116,7 +116,7 @@ struct DeviceProfileCapabilitiesTests {
     /// Each panel has its own DeviceKit chrome and its own size; the
     /// unfolded panel is what the bezel and the tap space become once
     /// the hinge opens.
-    @Test func `a foldable's profile carries the unfolded panel's chrome and size`() throws {
+    @Test func `should give a foldable's unfolded panel its own chrome, size and mask`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(),
             capabilitiesData: foldableCapabilities(unfoldedFirst: false)
@@ -136,14 +136,14 @@ struct DeviceProfileCapabilitiesTests {
         #expect(cover.framebufferMaskIdentifier == "1C896A2B-F0D7-405C-8D0F-66E4B80AD044")
     }
 
-    @Test func `a panel without a mask identifier has none`() throws {
+    @Test func `should leave a panel's mask unset when the device lists none`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(), capabilitiesData: capabilities()
         )
         #expect(profile.panel(.primary)?.framebufferMaskIdentifier == nil)
     }
 
-    @Test func `a single-panel device has no secondary panel`() throws {
+    @Test func `should offer only the primary panel on a single-panel device`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(), capabilitiesData: capabilities()
         )
@@ -152,7 +152,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.panel(.primary)?.screenSize == Size(width: 834, height: 1210))
     }
 
-    @Test func `reads the screen size from the profile on Xcode 26`() throws {
+    @Test func `should read the screen size from the profile on Xcode 26`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: legacyProfile(), capabilitiesData: nil
         )
@@ -160,7 +160,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.screenSize == Size(width: 834, height: 1210))
     }
 
-    @Test func `reads the screen size from capabilities on Xcode 27`() throws {
+    @Test func `should read the screen size from capabilities on Xcode 27`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(), capabilitiesData: capabilities()
         )
@@ -169,7 +169,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.screenSize == Size(width: 834, height: 1210))
     }
 
-    @Test func `ignores non-integrated displays when reading capabilities`() throws {
+    @Test func `should ignore non-integrated displays when reading capabilities`() throws {
         // The scene display is 7680x4320 and listed last; picking it
         // would size a bezel off a resizable canvas rather than the
         // device panel.
@@ -181,7 +181,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.screenSize != Size(width: 2560, height: 1440))
     }
 
-    @Test func `prefers the profile's own keys when both shapes are present`() throws {
+    @Test func `should prefer the profile's own screen size when both shapes are present`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: legacyProfile(), capabilitiesData: capabilities()
         )
@@ -189,7 +189,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.screenSize == Size(width: 834, height: 1210))
     }
 
-    @Test func `has no screen size when neither shape carries one`() throws {
+    @Test func `should leave the screen size unknown when neither shape carries one`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(), capabilitiesData: nil
         )
@@ -197,7 +197,7 @@ struct DeviceProfileCapabilitiesTests {
         #expect(profile.screenSize == nil)
     }
 
-    @Test func `still reads the chrome identifier on Xcode 27`() throws {
+    @Test func `should still read the chrome identifier on Xcode 27`() throws {
         let profile = try DeviceProfile.parsing(
             plistData: modernProfile(), capabilitiesData: capabilities()
         )

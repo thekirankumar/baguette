@@ -7,7 +7,7 @@ import Testing
 @Suite("IndigoHIDMessageTests", .serialized)
 struct IndigoHIDMessageTests {
     @Test(arguments: [false, true])
-    func `waits for asynchronous transport completion and reports its result`(fails: Bool) async throws {
+    func `should wait for the simulator to confirm a sent message and report its outcome`(fails: Bool) async throws {
         let (sends, received) = AsyncStream<Void>.makeStream()
         let client = DeferredHIDClient(onSend: {
             received.yield()
@@ -40,19 +40,19 @@ struct IndigoHIDMessageTests {
     }
 
     @Test @MainActor
-    func `transport completion does not need the waiting main actor`() throws {
+    func `should confirm a sent message without needing the waiting main actor`() throws {
         let client = DeferredHIDClient(automaticResults: [nil])
         let message = try #require(malloc(8))
         #expect(IndigoHIDMessage.send(message, to: client))
         #expect(client.sentCount == 1)
     }
 
-    @Test func `rejects a client without the send selector`() throws {
+    @Test func `should refuse to send a message to a client that cannot send`() throws {
         let message = try #require(malloc(8))
         #expect(!IndigoHIDMessage.send(message, to: NSObject()))
     }
 
-    @Test func `timeout leaves framework ownership intact and accepts a late completion`() throws {
+    @Test func `should fail a send on timeout yet still accept the late confirmation`() throws {
         let client = DeferredHIDClient()
         let message = try #require(malloc(8))
         #expect(!IndigoHIDMessage.send(message, to: client, deadline: .now()))
@@ -62,7 +62,7 @@ struct IndigoHIDMessageTests {
         #expect(client.sentCount == 1)
     }
 
-    @Test func `digitizer dispatch reports a transport failure`() {
+    @Test func `should fail a touch when the simulator reports a transport failure`() {
         let client = DeferredHIDClient(automaticResults: [Self.error])
         let ok = IOHIDDigitizerDispatch.send(
             point: CGPoint(x: 0.25, y: 0.5), identifier: 1, phase: .up, edge: .none,
@@ -73,7 +73,7 @@ struct IndigoHIDMessageTests {
     }
 
     @Test(arguments: [false, true])
-    func `tap attempts release and fails when either transport completion fails`(downFails: Bool) {
+    func `should still try to lift a tap and fail it when either half fails to deliver`(downFails: Bool) {
         let client = DeferredHIDClient(automaticResults: downFails ? [Self.error, nil] : [nil, Self.error])
         let ok = IOHIDDigitizerDispatch.tap(
             point: CGPoint(x: 0.25, y: 0.5), holdSeconds: 0.02, edge: .none,
@@ -84,7 +84,7 @@ struct IndigoHIDMessageTests {
     }
 
     @Test(arguments: [false, true])
-    func `swipe stops movement after a transport failure and still attempts release`(failsDuringDwell: Bool) {
+    func `should stop a swipe's movement after a delivery failure and still try to lift`(failsDuringDwell: Bool) {
         // Two moves and three dwell pulses would normally make seven sends.
         let failedIndex = failsDuringDwell ? 3 : 1
         var completions = [NSError?](repeating: nil, count: 7)

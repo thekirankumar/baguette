@@ -51,7 +51,7 @@ struct MotionSessionTests {
                       captures: captures)
     }
 
-    @Test func `set publishes the requested kind`() async {
+    @Test func `should publish the requested kind when motion is set`() async {
         let w = makeWiring()
 
         await w.session.set(kind: .walking, confidence: .high, speed: 1.5, on: w.sim)
@@ -61,7 +61,7 @@ struct MotionSessionTests {
         #expect(w.captures.last?.speed == 1.5)
     }
 
-    @Test func `a location walk cannot drive motion while motion is off`() async {
+    @Test func `should not let a location walk drive motion while motion is off`() async {
         // Arming rewrites a sim-wide env var and only takes effect on the
         // next app launch, so it must never happen as a silent side effect
         // of moving the device. Motion is opt-in; until it's on, a walk
@@ -74,7 +74,7 @@ struct MotionSessionTests {
         verify(w.motion).publish(.any, on: .any).called(0)
     }
 
-    @Test func `a location walk classifies its speed once motion is on`() async {
+    @Test func `should classify a location walk's speed once motion is on`() async {
         let w = makeWiring()
         await w.session.set(kind: .walking, confidence: .high, speed: 1.5, on: w.sim)
 
@@ -85,7 +85,7 @@ struct MotionSessionTests {
         #expect(w.captures.last?.kind == .cycling)
     }
 
-    @Test func `changing legs banks what the previous leg walked`() async {
+    @Test func `should bank what the previous leg walked when changing legs`() async {
         // 10 s of walking at 1.5 m/s over a 0.75 m stride = 20 steps, and
         // the next leg must carry them so an app's daily total keeps
         // climbing instead of restarting.
@@ -100,7 +100,7 @@ struct MotionSessionTests {
         #expect(w.session.steps == 20)
     }
 
-    @Test func `skips a republish when the speed barely moved`() async {
+    @Test func `should skip a republish when the speed barely moved`() async {
         // Each publish costs a `launchctl` spawn, and the browser's joystick
         // sends a fresh vector several times a second. 0.1 m/s is the same
         // epsilon `sim-location.js` already throttles its own sends with.
@@ -113,7 +113,7 @@ struct MotionSessionTests {
         verify(w.motion).publish(.any, on: .any).called(1)
     }
 
-    @Test func `republishes when the kind changes even if the speed barely moved`() async {
+    @Test func `should republish when the kind changes even if the speed barely moved`() async {
         // Crossing a band boundary matters however small the step: an app
         // gating on `stationary` must see the transition.
         let w = makeWiring()
@@ -126,7 +126,7 @@ struct MotionSessionTests {
         verify(w.motion).publish(.any, on: .any).called(2)
     }
 
-    @Test func `stop parks the device as stationary before disarming`() async {
+    @Test func `should park the device as stationary before disarming when motion stops`() async {
         // An app already running still has the dylib loaded, so the last
         // thing it reads must say "not moving" rather than a stale walk.
         let w = makeWiring()
@@ -140,7 +140,7 @@ struct MotionSessionTests {
         verify(w.motion).clear(on: .any).called(1)
     }
 
-    @Test func `stop keeps the totals already walked`() async {
+    @Test func `should keep the totals already walked when motion stops`() async {
         let w = makeWiring()
         await w.session.set(kind: .walking, confidence: .high, speed: 1.5, on: w.sim)
 
@@ -153,7 +153,7 @@ struct MotionSessionTests {
         #expect(w.session.steps == 20)
     }
 
-    @Test func `an explicit stop parks and disarms even without a recorded start`() async {
+    @Test func `should park and disarm on an explicit stop even without a recorded start`() async {
         let w = makeWiring()
 
         #expect(await w.session.stop(on: w.sim))
@@ -163,7 +163,7 @@ struct MotionSessionTests {
         verify(w.motion).clear(on: .any).called(1)
     }
 
-    @Test func `an explicit stop resumes the published walking totals after a restart`() async {
+    @Test func `should resume the published walking totals on an explicit stop after a restart`() async {
         let w = makeWiring(
             published: MotionIntent(
                 kind: .walking, confidence: .high, speed: 1.5,
@@ -178,7 +178,7 @@ struct MotionSessionTests {
         verify(w.motion).clear(on: .any).called(1)
     }
 
-    @Test func `a failed republish does not bank the same leg twice`() async {
+    @Test func `should not bank the same leg twice when a republish fails`() async {
         // The leg in flight is banked *before* the new intent is published.
         // If that publish fails, the banked seconds must not be banked again
         // — leaving `startedAt` untouched counted them on every subsequent
@@ -220,7 +220,7 @@ struct MotionSessionTests {
         #expect(captures.last?.stepsBefore == 40)
     }
 
-    @Test func `a failed disarm leaves the device parked, not still walking`() async {
+    @Test func `should leave the device parked, not still walking, when disarming fails`() async {
         // `stop` parks the device and then disarms. If the park succeeds and
         // the disarm fails, the published intent is stationary — so a retry
         // must bank *that*, not the walk it replaced. Holding on to the old
@@ -250,7 +250,7 @@ struct MotionSessionTests {
         #expect(captures.last?.stepsBefore == 20)
     }
 
-    @Test func `a failed publish reports the error and stays off`() async {
+    @Test func `should report the error and stay off when a publish fails`() async {
         let motion = MockMotion()
         given(motion).publish(.any, on: .any)
             .willThrow(SimctlCapture.Failure.failed(udid: "U", status: 2, output: ""))
@@ -264,7 +264,7 @@ struct MotionSessionTests {
         #expect(session.lastError != nil)
     }
 
-    @Test func `a first publish that writes then fails still requires parking and disarming`() async {
+    @Test func `should still park and disarm when a first publish writes then fails`() async {
         let motion = MockMotion()
         let captures = Captures()
         var reject = true
@@ -294,7 +294,7 @@ struct MotionSessionTests {
         #expect(session.lastError == nil)
     }
 
-    @Test func `a retry after a park that wrote before failing banks no steps for the standing time`() async {
+    @Test func `should bank no steps for the standing time when retrying a park that wrote before failing`() async {
         let motion = MockMotion()
         let captures = Captures()
         var reject = false
@@ -326,7 +326,7 @@ struct MotionSessionTests {
         #expect(captures.last?.stepsBefore == parked?.stepsBefore)
     }
 
-    @Test func `a failed change of kind banks the activity the guest actually read`() async {
+    @Test func `should bank the activity the guest actually read when a change of kind fails`() async {
         let motion = MockMotion()
         let captures = Captures()
         var reject = false

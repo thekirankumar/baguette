@@ -10,7 +10,7 @@ struct DisplayTouchTargetTests {
     /// With no panel bound — every single-panel device, where `input()`
     /// never pays for a guest round-trip — the phone plane addresses the
     /// built-in digitizer slot.
-    @Test func `phone uses the built-in digitizer slot when no panel is bound`() {
+    @Test func `should touch the built-in digitizer slot on a phone when no panel is bound`() {
         let target = DisplayTouchTarget.resolve(
             kind: .phone,
             connectedScreenId: nil,
@@ -34,7 +34,7 @@ struct DisplayTouchTargetTests {
     /// both created built-in, `0x32` ends up on the second: the dark
     /// panel. backboardd confirms it — a tap sent to `0x32` arrives on
     /// `ACEFADE00000009`, the sender for screen 3's display UUID.
-    @Test func `a panel's own digitizer is its screen id under the mask bit`() {
+    @Test func `should address a panel's own digitizer as its screen id under the mask bit`() {
         #expect(IndigoHIDTouchTarget.panel(screenId: 1) == 0x4000_0001)
         #expect(IndigoHIDTouchTarget.panel(screenId: 3) == 0x4000_0003)
         #expect(IndigoHIDTouchTarget.panel(screenId: 1) == 1_073_741_825)
@@ -42,7 +42,7 @@ struct DisplayTouchTargetTests {
 
     /// So on a foldable the phone plane addresses the bound panel's own
     /// registration rather than the shared slot.
-    @Test func `phone addresses the bound panel's own digitizer`() {
+    @Test func `should touch the bound panel's own digitizer on a foldable phone`() {
         #expect(
             DisplayTouchTarget.resolve(
                 kind: .phone, connectedScreenId: 1, derive: { _ in nil }
@@ -58,7 +58,7 @@ struct DisplayTouchTargetTests {
     /// The panel target is a registration, not a computation over any
     /// screen: only Integrated screens get a create-digitizer message.
     /// `0x40000002` — TVOut — is the one that took the guest down.
-    @Test func `the probe list holds the cover panel's own digitizer`() {
+    @Test func `should list the cover panel's own digitizer among the probe targets`() {
         #expect(IndigoHIDTouchTarget.knownProbeTargets.contains(IndigoHIDTouchTarget.panel(screenId: 1)))
         #expect(!IndigoHIDTouchTarget.knownProbeTargets.contains(0x4000_0002))
     }
@@ -90,7 +90,7 @@ struct DisplayTouchTargetTests {
     /// `54` (`0x36`, mouse) — every entry is a service something
     /// explicitly created, and every one is a constant, never a
     /// computation.
-    @Test func `carPlay addresses the service target, whatever screen it is on`() {
+    @Test func `should touch the CarPlay service target whatever screen CarPlay is on`() {
         for screenId in [UInt32(2), 3, 204] {
             #expect(
                 DisplayTouchTarget.resolve(
@@ -106,7 +106,7 @@ struct DisplayTouchTargetTests {
 
     /// The screen id is no longer an input to the answer, so the
     /// derivation is not consulted at all.
-    @Test func `carPlay never derives a target from the screen`() {
+    @Test func `should never derive the CarPlay target from the screen`() {
         var derived = false
         _ = DisplayTouchTarget.resolve(
             kind: .carPlay,
@@ -121,7 +121,7 @@ struct DisplayTouchTargetTests {
     /// Finding the right CarPlay target is a search, and the guest only
     /// publishes the registered set when it rejects one. An env
     /// override makes a candidate a restart rather than a rebuild.
-    @Test func `an override replaces the CarPlay target`() {
+    @Test func `should touch the overridden target on CarPlay when an override is set`() {
         #expect(
             DisplayTouchTarget.resolve(
                 kind: .carPlay, connectedScreenId: 2,
@@ -131,7 +131,7 @@ struct DisplayTouchTargetTests {
     }
 
     /// The phone's digitizer is not part of the search.
-    @Test func `an override never touches the phone plane`() {
+    @Test func `should leave the phone's digitizer alone when an override is set`() {
         #expect(
             DisplayTouchTarget.resolve(
                 kind: .phone, connectedScreenId: nil,
@@ -146,7 +146,7 @@ struct DisplayTouchTargetTests {
         )
     }
 
-    @Test func `an override parses decimal and hex`() {
+    @Test func `should read a target override written in decimal or hex`() {
         #expect(DisplayTouchTarget.parseOverride("302") == 302)
         #expect(DisplayTouchTarget.parseOverride("0x12e") == 302)
         #expect(DisplayTouchTarget.parseOverride("0X40000001") == 0x4000_0001)
@@ -156,7 +156,7 @@ struct DisplayTouchTargetTests {
     /// A typo must not become a number. Every unregistered target is one
     /// that kills the guest, so "unparseable" has to mean "use the
     /// known-good constant", never "use zero".
-    @Test func `nonsense is ignored rather than turned into a target`() {
+    @Test func `should ignore a target override that is not a number`() {
         for raw in ["", "   ", "abc", "0x", "3 0 2", "-1", "0xZZ"] {
             #expect(DisplayTouchTarget.parseOverride(raw) == nil, "\(raw)")
         }
@@ -168,7 +168,7 @@ struct DisplayTouchTargetTests {
     /// precisely the unregistered target this whole type exists to keep
     /// out, so a typo in an env var must not be the thing that takes
     /// `backboardd` down.
-    @Test func `an override outside the registered set is refused`() {
+    @Test func `should refuse a target override outside the registered set`() {
         for raw in ["0x40000002", "1073741826", "2", "999", "0x0"] {
             #expect(DisplayTouchTarget.parseOverride(raw) == nil, "\(raw)")
         }
@@ -176,7 +176,7 @@ struct DisplayTouchTargetTests {
 
     /// And a refused override leaves the plane on the constant it would
     /// have used anyway, rather than on nothing.
-    @Test func `an unregistered override leaves CarPlay on its own service`() {
+    @Test func `should keep CarPlay on its own service when the override is unregistered`() {
         #expect(
             DisplayTouchTarget.resolve(
                 kind: .carPlay, connectedScreenId: 2,
@@ -188,7 +188,7 @@ struct DisplayTouchTargetTests {
 
     /// Everything the guest named as registered, so a sweep can be
     /// driven from the list rather than from memory.
-    @Test func `the probe list holds only registered targets`() {
+    @Test func `should list only registered targets among the probe targets`() {
         #expect(IndigoHIDTouchTarget.knownProbeTargets.contains(IndigoHIDTouchTarget.phone))
         #expect(IndigoHIDTouchTarget.knownProbeTargets.contains(IndigoHIDTouchTarget.carPlay))
         #expect(!IndigoHIDTouchTarget.knownProbeTargets.contains(0x4000_0002))
@@ -197,7 +197,7 @@ struct DisplayTouchTargetTests {
     /// Screen ids start at 1; a `0` is what the enumerate parser yields
     /// for a record with none, and `0x40000000` on its own is registered
     /// by nothing. Either way there is no panel to address.
-    @Test func `phone is unaffected by the absent screen id`() {
+    @Test func `should touch the built-in digitizer slot on a phone when the screen id is absent or zero`() {
         for absent in [UInt32?.none, 0] {
             let target = DisplayTouchTarget.resolve(
                 kind: .phone,

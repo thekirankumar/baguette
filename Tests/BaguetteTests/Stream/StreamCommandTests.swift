@@ -5,7 +5,7 @@ import Testing
 
 @Suite("StreamCommand", .serialized)
 struct StreamCommandTests {
-    @Test func `capture remains active while waiting and stops on completion`() async throws {
+    @Test func `should keep capturing while the stream runs and stop once it completes`() async throws {
         let stream = CaptureProbe()
         try await StreamCommand.capture(stream, on: MockScreen()) {
             #expect(stream.running)
@@ -15,7 +15,7 @@ struct StreamCommandTests {
         #expect(stream.stops == 1)
     }
 
-    @Test func `capture releases a partially started screen and preserves the error`() async {
+    @Test func `should release the screen and surface the error when capture fails to start`() async {
         let stream = CaptureProbe(failStart: true)
         do {
             try await StreamCommand.capture(stream, on: MockScreen()) {
@@ -29,7 +29,7 @@ struct StreamCommandTests {
         #expect(stream.stops == 1)
     }
 
-    @Test func `capture releases the screen when its wait throws`() async {
+    @Test func `should release the screen when the stream is cancelled while waiting`() async {
         let stream = CaptureProbe()
         do {
             try await StreamCommand.capture(stream, on: MockScreen()) {

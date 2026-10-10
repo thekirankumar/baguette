@@ -38,14 +38,14 @@ struct BaguetteHomeTests {
         }
     }
 
-    @Test func `the override wins so tests and sandboxes never touch the real home`() {
+    @Test func `should place the baguette home at the BAGUETTE_HOME override when one is set`() {
         let restore = HomeOverride("/tmp/baguette-home-test")
         defer { _ = restore }
 
         #expect(BaguetteHome.url.path == "/tmp/baguette-home-test")
     }
 
-    @Test func `an empty override is ignored rather than resolving to nothing`() {
+    @Test func `should fall back to the default home when the BAGUETTE_HOME override is empty`() {
         // `BAGUETTE_HOME=` in a shell profile shouldn't silently point
         // the whole install at the filesystem root.
         let restore = HomeOverride("")
@@ -54,14 +54,14 @@ struct BaguetteHomeTests {
         #expect(BaguetteHome.url.path == NSHomeDirectory() + "/.baguette")
     }
 
-    @Test func `the default is a dotfile directory in the user's home`() {
+    @Test func `should place the baguette home in a dotfile directory of the user's home when no override is set`() {
         let restore = HomeOverride(nil)
         defer { _ = restore }
 
         #expect(BaguetteHome.url.path == NSHomeDirectory() + "/.baguette")
     }
 
-    @Test func `installed plugins live under the home, wherever it points`() {
+    @Test func `should keep installed plugins under the baguette home wherever it points`() {
         // The scanner root and the install target are the same path by
         // construction, not by two places agreeing on a string.
         let restore = HomeOverride("/tmp/baguette-home-test")

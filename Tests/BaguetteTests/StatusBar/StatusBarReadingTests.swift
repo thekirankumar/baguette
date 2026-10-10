@@ -10,7 +10,7 @@ import Foundation
 @Suite("StatusBarOverride.fromListOutput")
 struct StatusBarReadingTests {
 
-    @Test func `no overrides parses to an empty override`() {
+    @Test func `should read an empty override when simctl lists no overrides`() {
         let output = """
         Current Status Bar Overrides:
         =============================
@@ -18,7 +18,7 @@ struct StatusBarReadingTests {
         #expect(StatusBarOverride.fromListOutput(output).isEmpty)
     }
 
-    @Test func `a wifi reading maps the numeric codes back to wire values`() {
+    @Test func `should read a wifi listing back as wire values`() {
         let output = """
         Current Status Bar Overrides:
         =============================
@@ -35,7 +35,7 @@ struct StatusBarReadingTests {
         #expect(o.batteryLevel == nil)
     }
 
-    @Test func `a cellular reading maps dataNetwork and cellular fields`() {
+    @Test func `should read a cellular listing back as data network, cellular, operator and battery values`() {
         let output = """
         Current Status Bar Overrides:
         =============================
@@ -53,7 +53,7 @@ struct StatusBarReadingTests {
         #expect(o.batteryLevel == 68)
     }
 
-    @Test func `data network codes cover the full simctl table`() {
+    @Test func `should read every data network code in the simctl table`() {
         func dn(_ code: Int) -> DataNetwork? {
             StatusBarOverride.fromListOutput("DataNetworkType: \(code)").dataNetwork
         }
@@ -70,7 +70,7 @@ struct StatusBarReadingTests {
         #expect(dn(14) == .fiveGUC)
     }
 
-    @Test func `battery state codes map discharging charging charged`() {
+    @Test func `should read battery state codes as discharging, charging and charged`() {
         func bs(_ code: Int) -> BatteryState? {
             StatusBarOverride.fromListOutput("Battery State: \(code), Battery Level: 50, Not Charging: 0").batteryState
         }
@@ -79,20 +79,20 @@ struct StatusBarReadingTests {
         #expect(bs(2) == .charged)
     }
 
-    @Test func `cellular mode code zero is notSupported`() {
+    @Test func `should read cellular mode code zero as notSupported`() {
         let o = StatusBarOverride.fromListOutput("Cell Mode: 0, Cell Bars: 1")
         #expect(o.cellularMode == .notSupported)
         #expect(o.cellularBars == 1)
     }
 
-    @Test func `a wifi mode of zero is treated as unset`() {
+    @Test func `should leave the wifi mode unset when simctl lists it as zero`() {
         // simctl prints "WiFi Mode: 0, WiFi Bars: 0" when Wi-Fi isn't
         // the active path; that's not a real Wi-Fi mode.
         let o = StatusBarOverride.fromListOutput("WiFi Mode: 0, WiFi Bars: 0")
         #expect(o.wifiMode == nil)
     }
 
-    @Test func `jsonString emits only set fields with camelCase keys`() throws {
+    @Test func `should describe only the set fields as JSON with camelCase keys`() throws {
         let o = StatusBarOverride(dataNetwork: .wifi, wifiBars: 2, batteryLevel: 80)
         let data = Data(o.jsonString.utf8)
         let dict = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -103,11 +103,11 @@ struct StatusBarReadingTests {
         #expect(dict["cellularBars"] == nil)
     }
 
-    @Test func `jsonString of an empty override is empty braces`() {
+    @Test func `should describe an empty override as empty JSON braces`() {
         #expect(StatusBarOverride().jsonString == "{}")
     }
 
-    @Test func `a list reading round-trips through jsonString`() throws {
+    @Test func `should describe a listed reading as the matching JSON`() throws {
         let output = """
         DataNetworkType: 11
         Cell Mode: 3, Cell Bars: 4

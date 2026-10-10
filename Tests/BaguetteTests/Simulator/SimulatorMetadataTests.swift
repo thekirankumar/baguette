@@ -6,7 +6,7 @@ import Testing
 
 @Suite("SimulatorMetadata")
 struct SimulatorMetadataTests {
-    @Test func `list preserves stable model and runtime metadata after user rename`() throws {
+    @Test func `should list the stable model and runtime metadata when the user has renamed the simulator`() throws {
         let simulator = CoreSimulator(
             udid: "U1", name: "Renamed QA tablet", state: .booted,
             runtime: "iOS 26.5", deviceTypeName: "iPhone 17 Pro", host: MockDeviceHost(),
@@ -26,7 +26,7 @@ struct SimulatorMetadataTests {
         #expect(device["deviceTypeIdentifier"] as? String == "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro")
     }
 
-    @Test func `missing metadata stays unknown without deriving it from user labels`() {
+    @Test func `should leave missing metadata unknown rather than guess it from user labels`() {
         let metadata = SimulatorMetadata()
         #expect(metadata.dictionary.values.allSatisfy { $0 is NSNull })
     }

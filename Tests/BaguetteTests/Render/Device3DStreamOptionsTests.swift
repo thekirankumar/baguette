@@ -3,7 +3,7 @@ import Testing
 
 @Suite("Device3DStreamOptions")
 struct Device3DStreamOptionsTests {
-    @Test func `empty query uses live stream defaults`() throws {
+    @Test func `should use live stream defaults when the query is empty`() throws {
         let options = try Device3DStreamOptions.parse([:])
 
         #expect(options.rotation == DeviceRotation(x: -8, y: 18, z: 0))
@@ -14,7 +14,13 @@ struct Device3DStreamOptionsTests {
         #expect(options.screenGlass == false)
     }
 
-    @Test func `parses camera output and repeatable public variants`() throws {
+    @Test func `should stream the live 3D view as smoothly as the flat screen stream`() throws {
+        let options = try Device3DStreamOptions.parse([:])
+
+        #expect(options.frameRate == StreamConfig.default.fps)
+    }
+
+    @Test func `should read camera, output and repeatable public variants from the query`() throws {
         let options = try Device3DStreamOptions.parse([
             "rotation": ["-12,24,3"],
             "variant": ["finish:deep-blue", "keyboard:ansi"],
@@ -36,13 +42,13 @@ struct Device3DStreamOptionsTests {
         #expect(options.screenGlass == true)
     }
 
-    @Test func `rejects a malformed screen glass flag`() {
+    @Test func `should reject a malformed screen glass flag`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try Device3DStreamOptions.parse(["screenGlass": ["shiny"]])
         }
     }
 
-    @Test func `aligns live output dimensions for hardware video codecs`() throws {
+    @Test func `should align live output dimensions for hardware video codecs`() throws {
         let options = try Device3DStreamOptions.parse([
             "width": ["669"],
             "height": ["1047"],
@@ -51,7 +57,7 @@ struct Device3DStreamOptionsTests {
         #expect(options.outputSize == RenderDimensions(width: 670, height: 1048))
     }
 
-    @Test func `rejects duplicate variant set selection`() {
+    @Test func `should reject choosing the same variant set twice`() {
         #expect(throws: DeviceModelError.duplicateVariantSelection("finish")) {
             _ = try Device3DStreamOptions.parse([
                 "variant": ["finish:deep-blue", "finish:silver"],
@@ -59,7 +65,7 @@ struct Device3DStreamOptionsTests {
         }
     }
 
-    @Test func `rejects malformed connection options`() {
+    @Test func `should reject malformed rotation, width or fit options`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try Device3DStreamOptions.parse(["rotation": ["sideways"]])
         }
@@ -71,13 +77,13 @@ struct Device3DStreamOptionsTests {
         }
     }
 
-    @Test func `parses a size preset for the live stream`() throws {
+    @Test func `should size the live stream from a size preset`() throws {
         let options = try Device3DStreamOptions.parse(["size": ["appstore-6.9"]])
 
         #expect(options.outputSize == RenderDimensions(width: 1290, height: 2796))
     }
 
-    @Test func `resolves a live stream ratio against the requested frame`() throws {
+    @Test func `should resolve a live stream ratio against the requested frame`() throws {
         let options = try Device3DStreamOptions.parse([
             "width": ["1280"],
             "height": ["720"],
@@ -87,7 +93,7 @@ struct Device3DStreamOptionsTests {
         #expect(options.outputSize == RenderDimensions(width: 1280, height: 1280))
     }
 
-    @Test func `rejects an unknown live stream size preset`() {
+    @Test func `should reject an unknown live stream size preset`() {
         #expect(throws: DeviceModelError.invalidRenderOptions) {
             _ = try Device3DStreamOptions.parse(["size": ["gigantic"]])
         }
@@ -95,12 +101,12 @@ struct Device3DStreamOptionsTests {
 }
 
 extension Device3DStreamOptionsTests {
-    @Test func `a stream may name an explicit model for unmatched hardware`() throws {
+    @Test func `should let a stream name an explicit model for unmatched hardware`() throws {
         let options = try Device3DStreamOptions.parse(["model": ["iphone-17-pro"]])
         #expect(options.model == DeviceModelID("iphone-17-pro"))
     }
 
-    @Test func `the model defaults to nil so matching stays automatic`() throws {
+    @Test func `should leave the model unset so matching stays automatic when none is named`() throws {
         #expect(try Device3DStreamOptions.parse([:]).model == nil)
     }
 }

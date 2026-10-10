@@ -21,7 +21,7 @@ struct PluginDispatchTests {
 
     // MARK: - how the child is spawned
 
-    @Test func `spawns the command's argv through env so PATH is honoured`() async throws {
+    @Test func `should run the plugin command through env so PATH is honoured`() async throws {
         // `run` is an argv, not an absolute path — a plugin says
         // ["node", "bin/audit.js"] and shouldn't have to know where
         // the user's node lives. `/usr/bin/env` does the lookup.
@@ -31,14 +31,14 @@ struct PluginDispatchTests {
         _ = outcome
     }
 
-    @Test func `pins the working directory to the plugin's own root`() async throws {
+    @Test func `should run the plugin command from the plugin's own directory`() async throws {
         // Relative paths in `run` resolve against the plugin's files,
         // not against wherever `baguette serve` happened to launch.
         let (_, captures) = await Self.run()
         #expect(captures.workingDirectory?.lastPathComponent == "a11y")
     }
 
-    @Test func `injects the server url, device and token into the environment`() async throws {
+    @Test func `should hand the plugin command the server url, device and token in its environment`() async throws {
         // A plugin talks to the already-warm server rather than
         // re-spawning the ~1.2s baguette binary, so it needs the URL;
         // the token is what the plugin-API routes check.
@@ -48,14 +48,14 @@ struct PluginDispatchTests {
         #expect(captures.environment?["BAGUETTE_TOKEN"] == "tok-abc")
     }
 
-    @Test func `omits the device from the environment when no simulator is focused`() async throws {
+    @Test func `should leave the device out of the plugin's environment when no simulator is focused`() async throws {
         // Farm-level and device-independent commands run without one.
         // Absent is honest; empty-string would read as a real udid.
         let (_, captures) = await Self.run(udid: nil)
         #expect(captures.environment?["BAGUETTE_UDID"] == nil)
     }
 
-    @Test func `writes the invocation context to the child's stdin`() async throws {
+    @Test func `should hand the plugin command its invocation context on stdin`() async throws {
         let (_, captures) = await Self.run()
         let context = try JSONSerialization.jsonObject(
             with: try #require(captures.stdin)
@@ -67,7 +67,7 @@ struct PluginDispatchTests {
 
     // MARK: - what comes back
 
-    @Test func `a clean exit returns the rows the plugin printed`() async throws {
+    @Test func `should show the rows the plugin printed when it exits cleanly`() async throws {
         let (outcome, _) = await Self.run(
             stdout: #"{"ok":true,"rows":[{"title":"Button has no label","severity":"error"}]}"#
         )
@@ -78,7 +78,7 @@ struct PluginDispatchTests {
         #expect(result.rows.first?.severity == .error)
     }
 
-    @Test func `a plugin reporting its own failure is still a well-formed answer`() async throws {
+    @Test func `should accept a plugin's report of its own failure as a well-formed answer`() async throws {
         // The process did its job and answered honestly. That is not
         // baguette failing to run it, and the user should see the
         // plugin's own words.
@@ -90,7 +90,7 @@ struct PluginDispatchTests {
         #expect(result.message == "Metro is not running")
     }
 
-    @Test func `stdout arriving in several chunks is reassembled before parsing`() async throws {
+    @Test func `should reassemble the plugin's output when it arrives in several chunks`() async throws {
         // Pipes split wherever they like; a JSON object cut in half is
         // not a malformed answer.
         let (outcome, _) = await Self.run(stdoutChunks: [#"{"ok":true,"ro"#, #"ws":[{"title":"x"}]}"#])
@@ -102,27 +102,27 @@ struct PluginDispatchTests {
 
     // MARK: - failure paths
 
-    @Test func `an unknown qualified command is reported without spawning anything`() async throws {
+    @Test func `should report an unknown command without running anything`() async throws {
         let (outcome, captures) = await Self.run(command: "a11y:nope")
         #expect(outcome == .unknownCommand(id: "a11y:nope"))
         #expect(captures.executable == nil)
     }
 
-    @Test func `a non-zero exit surfaces the status and whatever the child said`() async throws {
+    @Test func `should surface the exit status and the plugin's output when it exits non-zero`() async throws {
         let (outcome, _) = await Self.run(
             stdout: "Error: Cannot find module 'bin/audit.js'", exitCode: 1
         )
         #expect(outcome == .exited(status: 1, output: "Error: Cannot find module 'bin/audit.js'"))
     }
 
-    @Test func `output that isn't JSON is refused rather than shown as an empty result`() async throws {
+    @Test func `should reject plugin output that is not JSON rather than show an empty result`() async throws {
         // An audit panel rendering nothing reads as "no problems
         // found", which is the worst available lie.
         let (outcome, _) = await Self.run(stdout: "Debugger attached.")
         #expect(outcome == .malformedAnswer(PluginResultError.malformedJSON.description))
     }
 
-    @Test func `a spawn that throws is reported, not crashed`() async throws {
+    @Test func `should report a plugin command that fails to start rather than crash`() async throws {
         let (outcome, _) = await Self.run(spawnThrows: true)
         guard case .spawnFailed = outcome else {
             Issue.record("expected .spawnFailed, got \(outcome)"); return
@@ -198,7 +198,7 @@ struct PluginDispatchTests {
         }
     }
 
-    @Test func `a command that ignores the polite stop is killed at the deadline`() async throws {
+    @Test func `should kill a timed-out plugin command and revoke its grant when it ignores the polite stop`() async throws {
         // `withThrowingTaskGroup` waits for every child task, and the
         // spawn task only finishes when `onExit` fires. Without a
         // signal the child can't refuse, one plugin that traps SIGTERM
@@ -219,7 +219,7 @@ struct PluginDispatchTests {
         #expect(grants.capabilities(for: token) == nil)
     }
 
-    @Test func `a command that respects the polite stop is never killed`() async throws {
+    @Test func `should stop a timed-out plugin command politely and revoke its grant when it obeys`() async throws {
         // SIGTERM first, and the grace period is the child's to use for
         // its own cleanup. Escalating immediately would make the polite
         // signal decorative.

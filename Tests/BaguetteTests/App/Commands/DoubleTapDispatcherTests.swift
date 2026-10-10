@@ -13,7 +13,7 @@ import Mockable
 @Suite("DoubleTapDispatcher")
 struct DoubleTapDispatcherTests {
 
-    @Test func `emits down → up → down → up against the input surface`() {
+    @Test func `should land a double tap as down, up, down, up at one point`() {
         let input = MockInput()
         given(input).touch1(phase: .any, at: .any, size: .any, edge: .any).willReturn(true)
 
@@ -39,7 +39,7 @@ struct DoubleTapDispatcherTests {
         ).called(2)
     }
 
-    @Test func `sleeps duration, interval, duration between the four events`() {
+    @Test func `should hold for duration, wait interval, then hold for duration between the four touches`() {
         let input = MockInput()
         given(input).touch1(phase: .any, at: .any, size: .any, edge: .any).willReturn(true)
         var sleeps: [TimeInterval] = []
@@ -55,7 +55,7 @@ struct DoubleTapDispatcherTests {
         #expect(sleeps == [0.08, 0.05, 0.08])
     }
 
-    @Test func `short-circuits if the first down is rejected`() {
+    @Test func `should stop the double tap when the first touch down is refused`() {
         let input = MockInput()
         given(input).touch1(phase: .value(.down), at: .any, size: .any, edge: .any).willReturn(false)
         given(input).touch1(phase: .value(.up), at: .any, size: .any, edge: .any).willReturn(true)
@@ -73,7 +73,7 @@ struct DoubleTapDispatcherTests {
         verify(input).touch1(phase: .value(.up), at: .any, size: .any, edge: .any).called(0)
     }
 
-    @Test func `returns the success flag of the final up event`() {
+    @Test func `should report the double tap landed when the final lift succeeds`() {
         let input = MockInput()
         given(input).touch1(phase: .value(.down), at: .any, size: .any, edge: .any).willReturn(true)
         given(input).touch1(phase: .value(.up), at: .any, size: .any, edge: .any).willReturn(true)

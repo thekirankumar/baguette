@@ -5,7 +5,7 @@ import Testing
 
 @Suite("VideoFrameScaler")
 struct VideoFrameScalerTests {
-    @Test func `publishes the copied frame before asynchronous codec consumption`() throws {
+    @Test func `should publish the copied frame before the encoder reads it`() throws {
         let source = try #require(Self.surface())
         let frame = try #require(VideoFrameScaler().scale(source, by: 1))
         let output = try #require(CVPixelBufferGetIOSurface(frame)?.takeUnretainedValue())
@@ -17,7 +17,7 @@ struct VideoFrameScalerTests {
         #expect(seed > 1)
     }
 
-    @Test func `keeps scaled frames aligned for 4 2 0 codecs`() throws {
+    @Test func `should keep scaled frames at even dimensions for 4 2 0 video`() throws {
         let source = try #require(Self.surface(width: 670, height: 1048))
         let frame = try #require(VideoFrameScaler().scale(source, by: 2))
 

@@ -17,7 +17,7 @@ import Testing
 @Suite("ScreenSnapshot")
 struct ScreenSnapshotTests {
 
-    @Test func `capture geometry records the actual even scaled frame and encoded image`() async throws {
+    @Test func `should describe the capture geometry as the even scaled frame actually encoded`() async throws {
         let surface = try #require(makeSurface(width: 1206, height: 2622))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -37,7 +37,7 @@ struct ScreenSnapshotTests {
     }
 
     @Test(arguments: [CaptureFit.contain, .cover, .stretch])
-    func `capture geometry describes the exact letterbox crop or stretch encoded`(fit: CaptureFit) async throws {
+    func `should describe exactly the letterbox, crop or stretch encoded into the capture`(fit: CaptureFit) async throws {
         let surface = try #require(makeSurface(width: 120, height: 60))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -68,7 +68,7 @@ struct ScreenSnapshotTests {
             ])
     }
 
-    @Test func `failed capture encoding still releases the screen`() async throws {
+    @Test func `should still release the screen when encoding the capture fails`() async throws {
         let surface = try #require(makeSurface(width: 120, height: 60))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -84,7 +84,7 @@ struct ScreenSnapshotTests {
         verify(screen).stop().called(1)
     }
 
-    @Test func `a captured frame comes back as JPEG at the screen's own size`() async throws {
+    @Test func `should capture a frame as JPEG at the screen's own size`() async throws {
         let surface = try #require(makeSurface(width: 120, height: 60))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -96,7 +96,7 @@ struct ScreenSnapshotTests {
         #expect(try decoded(bytes) == CGSize(width: 120, height: 60))
     }
 
-    @Test func `a requested size resizes the captured frame`() async throws {
+    @Test func `should resize the captured frame when a size is requested`() async throws {
         let surface = try #require(makeSurface(width: 120, height: 60))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -110,7 +110,7 @@ struct ScreenSnapshotTests {
         #expect(try decoded(bytes) == CGSize(width: 40, height: 80))
     }
 
-    @Test func `a PNG capture carries the PNG signature`() async throws {
+    @Test func `should capture a real PNG when PNG is asked for`() async throws {
         let surface = try #require(makeSurface(width: 40, height: 20))
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willProduce { onFrame in onFrame(surface) }
@@ -121,7 +121,7 @@ struct ScreenSnapshotTests {
         #expect(bytes.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
     }
 
-    @Test func `a screen that never delivers a frame times out`() async throws {
+    @Test func `should time out and release the screen when it never delivers a frame`() async throws {
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willReturn(())
         given(screen).stop().willReturn(())
@@ -132,7 +132,7 @@ struct ScreenSnapshotTests {
         verify(screen).stop().called(1)
     }
 
-    @Test func `a screen that refuses to open surfaces its own error`() async throws {
+    @Test func `should report the screen's own error and release it when it refuses to open`() async throws {
         let screen = MockScreen()
         given(screen).start(onFrame: .any).willThrow(SnapshotTestError.notBooted)
         given(screen).stop().willReturn(())

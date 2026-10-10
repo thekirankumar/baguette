@@ -13,18 +13,18 @@ struct LocationRouteTests {
     private func sf() -> Coordinate { Coordinate(latitude: 37.629538, longitude: -122.395733)! }
     private func nyc() -> Coordinate { Coordinate(latitude: 40.628083, longitude: -73.768254)! }
 
-    @Test func `requires at least two waypoints`() {
+    @Test func `should refuse a route when it has fewer than two waypoints`() {
         #expect(LocationRoute(waypoints: []) == nil)
         #expect(LocationRoute(waypoints: [sf()]) == nil)
         #expect(LocationRoute(waypoints: [sf(), nyc()]) != nil)
     }
 
-    @Test func `a bare route emits only its waypoints`() {
+    @Test func `should pass only the waypoints to simctl when the route sets no speed, distance or interval`() {
         let route = LocationRoute(waypoints: [sf(), nyc()])
         #expect(route?.startArguments == ["37.629538,-122.395733", "40.628083,-73.768254"])
     }
 
-    @Test func `speed distance and interval emit equals-form flags before the waypoints`() {
+    @Test func `should pass speed, distance and interval as equals-form flags ahead of the waypoints`() {
         let route = LocationRoute(
             waypoints: [sf(), nyc()],
             speed: 260,
@@ -40,7 +40,7 @@ struct LocationRouteTests {
         ])
     }
 
-    @Test func `rejects a non-positive speed`() {
+    @Test func `should refuse a route when its speed is not positive`() {
         #expect(LocationRoute(waypoints: [sf(), nyc()], speed: 0) == nil)
         #expect(LocationRoute(waypoints: [sf(), nyc()], speed: -5) == nil)
     }

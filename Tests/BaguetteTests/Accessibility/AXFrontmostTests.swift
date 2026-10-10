@@ -5,7 +5,7 @@ import Testing
 
 @Suite("AX frontmost resolution")
 struct AXFrontmostTests {
-    @Test func `only a positive guest process identifier is accepted`() throws {
+    @Test func `should accept only a positive process id for the frontmost app`() throws {
         #expect(try AXFrontmost.pid(from: Data("{\"pid\":23888}".utf8)) == 23888)
         for json in ["{\"pid\":0}", "{\"pid\":-1}", "{\"pid\":2147483648}", "{}", "error"] {
             #expect(throws: (any Error).self) {
@@ -14,7 +14,7 @@ struct AXFrontmostTests {
         }
     }
 
-    @Test func `the terminal response survives preceding guest output without reusing an old pid`() throws {
+    @Test func `should read the frontmost app from the last line when the guest prints output before it`() throws {
         #expect(try AXFrontmost.pid(from: Data("banner\n{\"pid\":99}\n{\"pid\":123}\n".utf8)) == 123)
         for terminal in ["{\"pid\":0}", "{\"pid\":2147483648}", "malformed"] {
             #expect(throws: (any Error).self) {
@@ -23,7 +23,7 @@ struct AXFrontmostTests {
         }
     }
 
-    @Test func `the current target and device set select the frontmost process`() throws {
+    @Test func `should ask the chosen device in the chosen device set for its frontmost app`() throws {
         let script = try Script(
             "[ \"$2\" = --set ] && [ \"$3\" = '/custom set' ] && [ \"$4\" = spawn ] && [ \"$6\" = '/guest tool' ] && [ \"$7\" = frontmost ] || exit 9; printf '{\"pid\":%s}' \"$5\""
         )
@@ -36,7 +36,7 @@ struct AXFrontmostTests {
         }
     }
 
-    @Test func `each query reads the current frontmost process for the same device`() throws {
+    @Test func `should read the current frontmost app afresh on each query`() throws {
         let script = try Script("cat \"$0.pid\"")
         defer { script.remove() }
         for pid in [123, 456] {
@@ -45,7 +45,7 @@ struct AXFrontmostTests {
         }
     }
 
-    @Test func `each failure names what went wrong`() {
+    @Test func `should name what went wrong when the frontmost app cannot be found`() {
         #expect(
             AXFrontmost.Failure.invalidPID(0).localizedDescription
                 == "The guest frontmost query returned an invalid process identifier: 0.")
@@ -55,7 +55,7 @@ struct AXFrontmostTests {
                 == "Frontmost application query for device returned invalid data: banner")
     }
 
-    @Test func `a missing or failed guest query is an explicit failure`() throws {
+    @Test func `should fail explicitly when the guest helper is missing or its query fails`() throws {
         #expect(throws: GuestFrontmost.Failure.toolMissing) {
             try GuestFrontmost.pid(udid: "device", tool: { nil })
         }
@@ -66,13 +66,13 @@ struct AXFrontmostTests {
         }
     }
 
-    @Test func `guest diagnostics do not corrupt the frontmost process response`() throws {
+    @Test func `should find the frontmost app when the guest also prints diagnostics`() throws {
         let script = try Script("printf 'simctl diagnostic\\n' >&2; printf '{\"pid\":123}'")
         defer { script.remove() }
         #expect(try GuestFrontmost.pid(udid: "device", tool: { "/guest tool" }, xcrun: script.url) == 123)
     }
 
-    @Test func `malformed guest output retains the guest diagnostic`() throws {
+    @Test func `should keep the guest diagnostic when the frontmost answer is malformed`() throws {
         let script = try Script("printf invalid; printf 'guest diagnostic' >&2")
         defer { script.remove() }
         do {

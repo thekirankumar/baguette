@@ -13,7 +13,7 @@ import Foundation
 @Suite("RecordingGate")
 struct RecordingGateTests {
 
-    @Test func `a gate opened by the interrupt says so`() async {
+    @Test func `should report the interrupt as the reason the recording ended`() async {
         let gate = RecordingGate()
         gate.open(.interrupt)
         await gate.wait()
@@ -21,7 +21,7 @@ struct RecordingGateTests {
         #expect(gate.openedBy == .interrupt)
     }
 
-    @Test func `a gate opened by the duration timer says so`() async {
+    @Test func `should report the duration as the reason the recording ended`() async {
         let gate = RecordingGate()
         gate.open(.duration)
         await gate.wait()
@@ -29,11 +29,11 @@ struct RecordingGateTests {
         #expect(gate.openedBy == .duration)
     }
 
-    @Test func `a gate nobody has opened has no reason yet`() {
+    @Test func `should report no reason while the recording has not ended`() {
         #expect(RecordingGate().openedBy == nil)
     }
 
-    @Test func `only the first of the two reasons through counts`() async {
+    @Test func `should keep the first reason when both the duration and an interrupt end the recording`() async {
         // Both sources really can fire: the duration deadline and a
         // Ctrl-C a millisecond later. The take ended for the first one.
         let gate = RecordingGate()
@@ -44,7 +44,7 @@ struct RecordingGateTests {
         #expect(gate.openedBy == .duration)
     }
 
-    @Test func `a waiter is released by an open that lands after it started waiting`() async {
+    @Test func `should release a waiter when the recording ends after it began waiting`() async {
         let gate = RecordingGate()
         Task.detached {
             gate.open(.interrupt)

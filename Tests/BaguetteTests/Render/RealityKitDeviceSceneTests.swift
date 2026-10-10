@@ -6,7 +6,7 @@ import Testing
 
 @Suite("RealityKitDeviceScene")
 struct RealityKitDeviceSceneTests {
-    @Test func `successive simulator surfaces produce codec-ready BGRA frames`() throws {
+    @Test func `should turn successive simulator surfaces into codec-ready BGRA frames`() throws {
         let scratch = try Self.makeScratch("frames")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let plan = try Self.plan(directory: scratch)
@@ -22,7 +22,7 @@ struct RealityKitDeviceSceneTests {
         #expect(Self.bytes(blueFrame) != Self.bytes(redFrame))
     }
 
-    @Test func `render snapshots retain their own geometry after a later camera update`() throws {
+    @Test func `should keep each rendered snapshot's own geometry after a later camera update`() throws {
         let scratch = try Self.makeScratch("snapshot")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let scene = try RealityKitDeviceScene(plan: Self.plan(directory: scratch))
@@ -40,7 +40,7 @@ struct RealityKitDeviceSceneTests {
         #expect(placement.sourcePixelSize.height == IOSurfaceGetHeight(source))
     }
 
-    @Test func `camera updates change the next frame without rebuilding the scene`() throws {
+    @Test func `should change the next frame on a camera update without rebuilding the scene`() throws {
         let scratch = try Self.makeScratch("camera")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let scene = try RealityKitDeviceScene(plan: Self.plan(directory: scratch))
@@ -60,7 +60,7 @@ struct RealityKitDeviceSceneTests {
         #expect(Self.seed(after) > 1)
     }
 
-    @Test func `live rendering reuses a bounded triple buffer`() throws {
+    @Test func `should reuse a bounded triple buffer while rendering live`() throws {
         let scratch = try Self.makeScratch("buffer-pool")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let scene = try RealityKitDeviceScene(plan: Self.plan(directory: scratch))
@@ -79,7 +79,7 @@ struct RealityKitDeviceSceneTests {
         #expect(Set(surfaceIDs).count == 3)
     }
 
-    @Test func `screen material preserves simulator midtones without additive clipping`() throws {
+    @Test func `should preserve simulator midtones on the screen without additive clipping`() throws {
         let scratch = try Self.makeScratch("color")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let scene = try RealityKitDeviceScene(plan: Self.plan(
@@ -96,7 +96,7 @@ struct RealityKitDeviceSceneTests {
         #expect(abs(Int(pixel.green) - Int(pixel.blue)) <= 2)
     }
 
-    @Test func `screen frame renders upright, not mirrored vertically`() throws {
+    @Test func `should render the screen upright, not mirrored vertically`() throws {
         let scratch = try Self.makeScratch("upright")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let scene = try RealityKitDeviceScene(plan: Self.plan(
@@ -116,7 +116,7 @@ struct RealityKitDeviceSceneTests {
         #expect(lower.blue > lower.red)
     }
 
-    @Test func `steep poses draw the screen content edge with blended coverage`() throws {
+    @Test func `should draw the screen content edge with blended coverage at steep poses`() throws {
         let scratch = try Self.makeScratch("edge-aa")
         defer { try? FileManager.default.removeItem(at: scratch) }
         // Pitch + yaw make the screen edge diagonal in image space; the
@@ -143,7 +143,7 @@ struct RealityKitDeviceSceneTests {
         #expect(rowsWithBlend * 20 >= rowsWithEdge * 13)
     }
 
-    @Test func `screenQuad tracks the rendered screen content at front and steep poses`() throws {
+    @Test func `should track the rendered screen content with the screen quad at front and steep poses`() throws {
         for rotation in [DeviceRotation.zero, DeviceRotation(x: -20, y: 40, z: 0)] {
             let scratch = try Self.makeScratch("quad")
             defer { try? FileManager.default.removeItem(at: scratch) }
@@ -170,7 +170,7 @@ struct RealityKitDeviceSceneTests {
         }
     }
 
-    @Test func `cover glass reflections composite only when the plan asks`() throws {
+    @Test func `should composite cover glass reflections only when screen glass is asked for`() throws {
         let scratch = try Self.makeScratch("glass")
         defer { try? FileManager.default.removeItem(at: scratch) }
         let plain = try RealityKitDeviceScene(plan: Self.plan(
@@ -190,7 +190,7 @@ struct RealityKitDeviceSceneTests {
         #expect(Self.bytes(plainFrame) != Self.bytes(glassyFrame))
     }
 
-    @Test func `live render preserves the authored cosmic orange color space`() throws {
+    @Test func `should preserve the authored cosmic orange color space when rendering live`() throws {
         let repository = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -215,7 +215,7 @@ struct RealityKitDeviceSceneTests {
         #expect(Self.saturatedRedPixelCount(frame) < 4_000)
     }
 
-    @Test func `deep blue variant replaces body textures instead of tinting them`() throws {
+    @Test func `should replace body textures instead of tinting them for the deep blue variant`() throws {
         let repository = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()

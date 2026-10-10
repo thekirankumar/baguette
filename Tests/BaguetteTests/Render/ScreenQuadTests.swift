@@ -4,7 +4,7 @@ import Testing
 
 @Suite("ScreenLocalCorners")
 struct ScreenLocalCornersTests {
-    @Test func `derives corners from a box whose thinnest axis is depth`() {
+    @Test func `should derive screen corners from a box whose thinnest axis is depth`() {
         let corners = ScreenLocalCorners.from(
             center: Vector3(x: 0, y: 1, z: 0.5),
             extents: Vector3(x: 2, y: 4, z: 0.1)
@@ -26,7 +26,7 @@ struct ScreenQuadProjectionTests {
         bottomLeft: Vector3(x: -1, y: -2, z: 0)
     )
 
-    @Test func `a front-on symmetric screen projects into a horizontally and vertically centered quad`() {
+    @Test func `should project a front-on symmetric screen into a horizontally and vertically centered quad`() {
         let quad = ScreenQuadProjection.project(
             corners: Self.symmetricCorners,
             rotation: .zero,
@@ -41,7 +41,7 @@ struct ScreenQuadProjectionTests {
         #expect(quad.topLeft.v < quad.bottomLeft.v)
     }
 
-    @Test func `a screen turned 90 degrees in yaw is seen edge-on with every corner centered horizontally`() {
+    @Test func `should see a screen turned 90 degrees in yaw edge-on with every corner centered horizontally`() {
         let quad = ScreenQuadProjection.project(
             corners: Self.symmetricCorners,
             rotation: DeviceRotation(x: 0, y: 90, z: 0),
@@ -55,7 +55,7 @@ struct ScreenQuadProjectionTests {
         }
     }
 
-    @Test func `a screen pitched 90 degrees is seen edge-on with every corner centered vertically`() {
+    @Test func `should see a screen pitched 90 degrees edge-on with every corner centered vertically`() {
         let quad = ScreenQuadProjection.project(
             corners: Self.symmetricCorners,
             rotation: DeviceRotation(x: 90, y: 0, z: 0),
@@ -69,7 +69,7 @@ struct ScreenQuadProjectionTests {
         }
     }
 
-    @Test func `moving the camera farther away shrinks the quad toward the center`() {
+    @Test func `should shrink the quad toward the center as the camera moves farther away`() {
         let near = ScreenQuadProjection.project(
             corners: Self.symmetricCorners,
             rotation: .zero,

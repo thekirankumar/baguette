@@ -31,7 +31,7 @@ struct SimctlShakeTests {
         return (SimctlShake(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `shake spawns xcrun simctl spawn notifyutil posting the UIKit shake notification`() async throws {
+    @Test func `should shake the device by running xcrun simctl spawn notifyutil with the UIKit shake notification`() async throws {
         let (shake, captures) = makeShake()
         try await shake.shake()
 
@@ -42,7 +42,7 @@ struct SimctlShakeTests {
         ])
     }
 
-    @Test func `a non-zero simctl exit propagates as a shake failure`() async {
+    @Test func `should fail the shake when simctl exits non-zero`() async {
         let (shake, _) = makeShake(exitCode: 3)
         var caught: ShakeError?
         do {

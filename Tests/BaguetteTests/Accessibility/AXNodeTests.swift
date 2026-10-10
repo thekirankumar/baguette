@@ -8,7 +8,7 @@ struct AXNodeTests {
 
     // MARK: - identity & defaults
 
-    @Test func `holds role, label, value, identifier, frame, traits`() {
+    @Test func `should describe an element by role, label, value, identifier, frame and traits`() {
         let node = AXNode(
             role: "AXButton",
             subrole: "AXSecureTextField",
@@ -40,7 +40,7 @@ struct AXNodeTests {
         #expect(node.children.isEmpty)
     }
 
-    @Test func `optional string fields default to nil and children to empty`() {
+    @Test func `should leave optional descriptions unset and children empty by default`() {
         let node = AXNode(
             role: "AXGroup",
             frame: Rect(origin: Point(x: 0, y: 0), size: Size(width: 0, height: 0))
@@ -59,7 +59,7 @@ struct AXNodeTests {
 
     // MARK: - JSON projection
 
-    @Test func `json round-trips required fields`() throws {
+    @Test func `should describe an element as JSON with its role, label, identifier, frame and traits`() throws {
         let node = AXNode(
             role: "AXButton",
             label: "OK",
@@ -82,7 +82,7 @@ struct AXNodeTests {
         #expect((dict["children"] as? [Any])?.isEmpty == true)
     }
 
-    @Test func `json omits absent optional strings as null`() throws {
+    @Test func `should describe absent optional fields as null in JSON`() throws {
         let node = AXNode(
             role: "AXGroup",
             frame: Rect(origin: Point(x: 0, y: 0), size: Size(width: 0, height: 0))
@@ -96,7 +96,7 @@ struct AXNodeTests {
         #expect(dict["help"] is NSNull)
     }
 
-    @Test func `json nests children recursively`() throws {
+    @Test func `should nest children in the JSON description`() throws {
         let leaf = AXNode(
             role: "AXStaticText",
             label: "Hello",
@@ -120,7 +120,7 @@ struct AXNodeTests {
         Rect(origin: Point(x: 0, y: 0), size: Size(width: 0, height: 0)),
         Rect(origin: Point(x: 20, y: 40), size: Size(width: 30, height: 60)),
     ])
-    func `hitTest reaches children outside application bounds`(bounds: Rect) {
+    func `should hit an element even when it lies outside the app bounds`(bounds: Rect) {
         let child = AXNode(
             role: "AXButton",
             frame: Rect(origin: Point(x: 100, y: 200), size: Size(width: 84, height: 48))
@@ -130,7 +130,7 @@ struct AXNodeTests {
         #expect(root.hitTest(Point(x: 184, y: 224)) == nil)
     }
 
-    @Test func `hitTest returns the deepest node containing the point`() {
+    @Test func `should hit the deepest element under the point`() {
         let leaf = AXNode(
             role: "AXButton", label: "OK",
             frame: Rect(origin: Point(x: 100, y: 200), size: Size(width: 80, height: 40))

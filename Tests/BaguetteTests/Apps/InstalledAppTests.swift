@@ -56,37 +56,37 @@ struct InstalledAppTests {
 
     // MARK: - the listapps inventory
 
-    @Test func `reads every installed app, ordered by bundle identifier`() {
+    @Test func `should list every installed app ordered by bundle identifier`() {
         #expect(Self.parse().map(\.bundleIdentifier) == ["com.example.MyApp", "com.example.Pathless"])
     }
 
-    @Test func `an app carries its on-disk bundle path`() {
+    @Test func `should know where an installed app's bundle lives on disk`() {
         #expect(Self.app("com.example.MyApp")?.bundlePath == URL(fileURLWithPath: "/tmp/Apps/MyApp.app"))
     }
 
-    @Test func `an app listapps gives no path for has none`() {
+    @Test func `should leave the bundle path unset when listapps gives none`() {
         #expect(Self.app("com.example.Pathless")?.bundlePath == nil)
     }
 
-    @Test func `listapps alone yields no schemes`() {
+    @Test func `should know no schemes from the listapps inventory alone`() {
         // Not an edge case — simctl listapps never reports
         // CFBundleURLTypes, so this is the normal result of step one.
         #expect(Self.parse().allSatisfy { $0.schemes.isEmpty })
     }
 
-    @Test func `an app is named by its display name`() {
+    @Test func `should name an app by its display name`() {
         #expect(Self.app("com.example.MyApp")?.name == "My App")
     }
 
-    @Test func `an app with no display name falls back to its bundle name`() {
+    @Test func `should name an app by its bundle name when it has no display name`() {
         #expect(Self.app("com.example.Pathless")?.name == "Pathless")
     }
 
-    @Test func `unparseable output yields no apps`() {
+    @Test func `should list no apps when listapps output is unparseable`() {
         #expect(InstalledApp.all(fromListApps: Data("not a plist".utf8)) == [])
     }
 
-    @Test func `empty output yields no apps`() {
+    @Test func `should list no apps when listapps output is empty`() {
         #expect(InstalledApp.all(fromListApps: Data()) == [])
     }
 
@@ -115,12 +115,12 @@ struct InstalledAppTests {
         </array>
         """)
 
-    @Test func `schemes are read across every URL type entry`() {
+    @Test func `should read schemes across every URL type entry in the Info.plist`() {
         #expect(InstalledApp.schemes(inInfoPlist: Self.urlTypes)
                 == ["myapp", "com.example.myapp", "exp+myapp"])
     }
 
-    @Test func `schemes are normalised to lower case for matching`() {
+    @Test func `should normalise schemes to lower case for matching`() {
         let plist = Self.infoPlist("""
             <key>CFBundleURLTypes</key>
             <array><dict><key>CFBundleURLSchemes</key>
@@ -129,7 +129,7 @@ struct InstalledAppTests {
         #expect(InstalledApp.schemes(inInfoPlist: plist) == ["myapp"])
     }
 
-    @Test func `a repeated scheme is only listed once`() {
+    @Test func `should list a repeated scheme only once`() {
         let plist = Self.infoPlist("""
             <key>CFBundleURLTypes</key>
             <array>
@@ -140,17 +140,17 @@ struct InstalledAppTests {
         #expect(InstalledApp.schemes(inInfoPlist: plist) == ["myapp"])
     }
 
-    @Test func `an app registering no URL types has no schemes`() {
+    @Test func `should find no schemes when an app registers no URL types`() {
         #expect(InstalledApp.schemes(inInfoPlist: Self.infoPlist("<key>CFBundleName</key><string>X</string>")) == [])
     }
 
-    @Test func `an unreadable Info.plist yields no schemes`() {
+    @Test func `should find no schemes when the Info.plist is unreadable`() {
         #expect(InstalledApp.schemes(inInfoPlist: Data("nonsense".utf8)) == [])
     }
 
     // MARK: - the invariant holds however the value is built
 
-    @Test func `schemes are normalised by the initialiser, not just by the parser`() {
+    @Test func `should normalise schemes however the installed app is built, not only when parsed`() {
         // The type documents lower-cased, de-duplicated schemes, and
         // `SchemeSuggestion.matching` relies on it — it lower-cases the
         // needle and then compares against the stored scheme, so an
@@ -165,12 +165,12 @@ struct InstalledAppTests {
         #expect(app.schemes == ["myapp", "com.example.myapp"])
     }
 
-    @Test func `an upper-cased scheme is still matchable once normalised`() {
+    @Test func `should still suggest an app whose scheme was given upper-cased`() {
         let apps = [InstalledApp(bundleIdentifier: "a", name: "A", schemes: ["MyApp"])]
         #expect(SchemeSuggestion.matching("myapp", in: apps).map(\.scheme) == ["myapp"])
     }
 
-    @Test func `an app takes on the schemes read from its bundle`() {
+    @Test func `should give an app the schemes read from its bundle`() {
         let app = Self.app("com.example.MyApp")?.withSchemes(["myapp"])
         #expect(app?.schemes == ["myapp"])
         #expect(app?.bundleIdentifier == "com.example.MyApp")

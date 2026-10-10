@@ -59,7 +59,7 @@ and update hit geometry only when that decoded image is actually painted.
 
 Only unsubmitted renders can be replaced. Encoded reference frames are never
 dropped: a client exceeding the 32 MiB pending-message budget receives an
-error and the connection closes. Encoding uses the live 3D stream's 20 fps
+error and the connection closes. Encoding uses the live 3D stream's 60 fps
 low-latency preset without B-frames; `set_fps`, `set_bitrate`, `set_scale`,
 `force_idr` and `snapshot` are answered with an error frame instead of being
 applied. VideoToolbox setup, submission and output

@@ -5,7 +5,7 @@ import Testing
 
 @Suite("StreamFrameSchedule")
 struct StreamFrameScheduleTests {
-    @Test func `bursts keep the latest frame and flush it after the source goes quiet`() {
+    @Test func `should keep the latest frame of a burst and deliver it once the source goes quiet`() {
         var schedule = StreamFrameSchedule<Int>(fps: 30, repeating: false)
         schedule.offer(1)
         #expect(schedule.deadline(at: 0) == 0)
@@ -19,7 +19,7 @@ struct StreamFrameScheduleTests {
         #expect(schedule.deadline(at: 1) == nil)
     }
 
-    @Test func `60 Hz arrivals produce at most the requested 30 frames per second`() {
+    @Test func `should deliver about 30 frames per second when frames arrive at 60 Hz`() {
         var schedule = StreamFrameSchedule<Int>(fps: 30, repeating: false)
         var emitted: [Int] = []
         for index in 0...60 {
@@ -33,7 +33,7 @@ struct StreamFrameScheduleTests {
         #expect(emitted.count >= 25)
     }
 
-    @Test func `runtime fps changes reschedule both pending and idle frames`() {
+    @Test func `should reschedule pending and repeated frames when fps changes mid-stream`() {
         var schedule = StreamFrameSchedule<Int>(fps: 30, repeating: true)
         schedule.offer(7)
         let first = schedule.take(at: 0)
@@ -53,7 +53,7 @@ struct StreamFrameScheduleTests {
         #expect(stopped == nil)
     }
 
-    @Test func `AVCC keeps references while MJPEG can discard complete old frames`() {
+    @Test func `should keep every AVCC reference frame while letting MJPEG discard old frames`() {
         var avcc = FrameBacklog(format: .avcc)
         let half = Data(repeating: 0x02, count: FrameBacklog.referenceByteBudget / 2)
         let first = avcc.append(half)
@@ -68,7 +68,7 @@ struct StreamFrameScheduleTests {
         #expect(jpeg.count == 1 && jpeg.droppedCount == 1)
     }
 
-    @Test func `scheduled delivery retains the final pending frame and stop cancels idle repeats`() throws {
+    @Test func `should deliver the final pending frame and stop repeating once stopped`() throws {
         let values = PacedValues()
         let queue = DispatchQueue(label: "frame-pump-test")
         let pump = StreamFramePump<Int>(queue: queue, fps: 20, repeating: true) { values.append($0) }

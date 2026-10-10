@@ -5,7 +5,7 @@ import Testing
 @Suite("DeviceModelCatalog")
 struct DeviceModelCatalogTests {
 
-    @Test func `find by id prefers the definition from the highest precedence layer`() throws {
+    @Test func `should find a model by id in the highest precedence layer that defines it`() throws {
         let bundled = Self.installed(id: "phone", displayName: "Bundled", directory: "/bundle")
         let override = Self.installed(id: "phone", displayName: "Override", directory: "/override")
         let catalog = try DeviceModelCatalog(layers: [[override], [bundled]])
@@ -16,7 +16,7 @@ struct DeviceModelCatalogTests {
         #expect(found.directoryURL.path == "/override")
     }
 
-    @Test func `match prefers a matching definition from the highest precedence layer`() throws {
+    @Test func `should match a device to the definition in the highest precedence layer`() throws {
         let bundled = Self.installed(
             id: "generic-phone", displayName: "Bundled", directory: "/bundle",
             deviceNames: ["iPhone 17 Pro"]
@@ -33,7 +33,7 @@ struct DeviceModelCatalogTests {
         #expect(found.definition.id == "custom-phone")
     }
 
-    @Test func `match returns nil when no definition supports the device`() throws {
+    @Test func `should find no model when no definition supports the device`() throws {
         let catalog = try DeviceModelCatalog(layers: [[
             Self.installed(id: "phone", displayName: "Phone", directory: "/bundle")
         ]])
@@ -41,7 +41,7 @@ struct DeviceModelCatalogTests {
         #expect(try catalog.match(deviceType: "unknown", deviceName: "Unknown") == nil)
     }
 
-    @Test func `rejects two matching definitions in the same precedence layer`() {
+    @Test func `should reject two matching definitions in the same precedence layer`() {
         let first = Self.installed(
             id: "first", displayName: "First", directory: "/models/first",
             deviceNames: ["iPhone 17 Pro"]
@@ -57,7 +57,7 @@ struct DeviceModelCatalogTests {
         }
     }
 
-    @Test func `duplicate ids in one layer are rejected when catalog is built`() {
+    @Test func `should reject duplicate model ids in one layer`() {
         let first = Self.installed(id: "phone", displayName: "First", directory: "/models/first")
         let second = Self.installed(id: "phone", displayName: "Second", directory: "/models/second")
 
@@ -119,7 +119,7 @@ extension DeviceModelCatalogTests {
         )
     }
 
-    @Test func `match by hardware prefers the highest precedence layer`() throws {
+    @Test func `should match hardware to the definition in the highest precedence layer`() throws {
         let bundled = Self.installedHardware(
             id: "stock", displayName: "Stock", directory: "/bundle", deviceModels: ["iPhone14,3"]
         )
@@ -130,14 +130,14 @@ extension DeviceModelCatalogTests {
         #expect(try catalog.match(hardware: "iPhone14,3")?.definition.id == "custom")
     }
 
-    @Test func `match by hardware returns nil when nothing declares it`() throws {
+    @Test func `should find no model when no definition declares the hardware`() throws {
         let catalog = try DeviceModelCatalog(layers: [[
             Self.installed(id: "phone", displayName: "Phone", directory: "/bundle")
         ]])
         #expect(try catalog.match(hardware: "iPhone14,3") == nil)
     }
 
-    @Test func `rejects two hardware matches in the same layer`() throws {
+    @Test func `should reject two hardware matches in the same layer`() throws {
         let first = Self.installedHardware(
             id: "first", displayName: "First", directory: "/a", deviceModels: ["iPhone14,3"]
         )
@@ -148,7 +148,7 @@ extension DeviceModelCatalogTests {
         #expect(throws: (any Error).self) { _ = try catalog.match(hardware: "iPhone14,3") }
     }
 
-    @Test func `all lists installed models with higher layers shadowing by id`() throws {
+    @Test func `should list installed models with higher layers shadowing lower ones by id`() throws {
         let bundled = Self.installed(id: "phone", displayName: "Bundled", directory: "/bundle")
         let extra = Self.installed(id: "tablet", displayName: "Tablet", directory: "/bundle")
         let override = Self.installed(id: "phone", displayName: "Override", directory: "/override")

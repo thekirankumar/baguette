@@ -9,7 +9,7 @@ import Testing
 // latest frame of each panel on its screen.
 @Suite("RenderedFoldable")
 struct RenderedFoldableTests {
-    @Test func `a frame from either panel renders with the latest frame of both`() throws {
+    @Test func `should render a frame from either panel with the latest frame of both`() throws {
         let unfolded = MockScreen(), cover = MockScreen()
         let hinge = MockHinge(), watch = MockHingeWatch()
         let scene = MockDeviceScene()
@@ -49,7 +49,7 @@ struct RenderedFoldableTests {
         verify(watch).cancel().called(1)
     }
 
-    @Test func `a hinge sample poses the scene and recomposes the latest frames`() throws {
+    @Test func `should pose the scene and recompose the latest frames when the hinge moves`() throws {
         let unfolded = MockScreen(), cover = MockScreen()
         let hinge = MockHinge(), watch = MockHingeWatch()
         let scene = MockDeviceScene()
@@ -75,7 +75,7 @@ struct RenderedFoldableTests {
         verify(scene).update(hingeDegrees: .value(120)).called(1)
     }
 
-    @Test func `the pose shown is the hinge's own angle`() throws {
+    @Test func `should show the pose at the hinge's own angle`() throws {
         let unfolded = MockScreen(), cover = MockScreen()
         let hinge = MockHinge(), watch = MockHingeWatch()
         let scene = MockDeviceScene()
@@ -92,7 +92,7 @@ struct RenderedFoldableTests {
         #expect(screen.pose == FoldablePose(hingeDegrees: 42))
     }
 
-    @Test func `the book is posed at the standing angle before any frame is composed`() throws {
+    @Test func `should pose the book at the standing angle before composing any frame`() throws {
         // A scene starts flat; a frame composed before the hinge has
         // spoken would show the book open when it is shut.
         let unfolded = MockScreen(), cover = MockScreen()

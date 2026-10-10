@@ -10,7 +10,7 @@ struct FileSystemBakeriesTests {
 
     // MARK: - trusted sources
 
-    @Test func `a recorded bakery survives a reload`() throws {
+    @Test func `should keep a recorded bakery across a reload`() throws {
         let home = try TempHome()
         let registry = FileSystemBakeries(home: home.url)
         try registry.record(Self.bakery(id: "github.com/acme/tools", commit: "abc123"))
@@ -21,7 +21,7 @@ struct FileSystemBakeriesTests {
         #expect(all.first?.commit == "abc123")
     }
 
-    @Test func `recording the same bakery again updates it in place`() throws {
+    @Test func `should update a re-recorded bakery in place rather than duplicate it`() throws {
         // Re-adding after an update re-pins the commit rather than
         // stacking a duplicate.
         let home = try TempHome()
@@ -34,7 +34,7 @@ struct FileSystemBakeriesTests {
         #expect(all.first?.commit == "new")
     }
 
-    @Test func `forgetting a bakery leaves the others`() throws {
+    @Test func `should leave the other bakeries when one is forgotten`() throws {
         let home = try TempHome()
         let registry = FileSystemBakeries(home: home.url)
         try registry.record(Self.bakery(id: "github.com/acme/tools", commit: "a"))
@@ -44,7 +44,7 @@ struct FileSystemBakeriesTests {
         #expect(try registry.bakeries().map(\.id) == ["github.com/other/pack"])
     }
 
-    @Test func `an absent registry reads as empty, not an error`() throws {
+    @Test func `should read an absent registry as no bakeries rather than an error`() throws {
         // A fresh install has no bakeries.json. That's the normal
         // first-run state, not a failure.
         let home = try TempHome()
@@ -53,7 +53,7 @@ struct FileSystemBakeriesTests {
 
     // MARK: - installed-plugin provenance
 
-    @Test func `an installed plugin remembers its source and commit`() throws {
+    @Test func `should remember an installed plugin's source and commit`() throws {
         let home = try TempHome()
         let registry = FileSystemBakeries(home: home.url)
         try registry.recordInstalled(
@@ -66,7 +66,7 @@ struct FileSystemBakeriesTests {
         #expect(reread.first?.commit == "abc123")
     }
 
-    @Test func `provenance and the sources list are independent files`() throws {
+    @Test func `should keep a bakery trusted when a plugin installed from it is forgotten`() throws {
         // Removing a plugin shouldn't forget the bakery it came from,
         // and vice versa — they answer different questions.
         let home = try TempHome()
@@ -83,7 +83,7 @@ struct FileSystemBakeriesTests {
 
     // MARK: - a registry that can't be read
 
-    @Test func `an unreadable registry is an error, not an empty registry`() throws {
+    @Test func `should report an unreadable registry as an error rather than an empty one`() throws {
         // The difference matters because the next `record` writes back
         // what it just read: reporting "no bakeries" for a file that is
         // merely unreadable would erase every trusted source and the
@@ -102,7 +102,7 @@ struct FileSystemBakeriesTests {
         #expect(throws: (any Error).self) { _ = try registry.bakeries() }
     }
 
-    @Test func `a missing registry still reads as empty`() throws {
+    @Test func `should read a missing registry as no bakeries and no installed plugins`() throws {
         // First run has neither file, and that is not an error.
         let home = try TempHome()
         let registry = FileSystemBakeries(home: home.url)
@@ -112,7 +112,7 @@ struct FileSystemBakeriesTests {
 
     // MARK: - concurrent writers
 
-    @Test func `concurrent records all survive`() async throws {
+    @Test func `should keep every bakery recorded concurrently`() async throws {
         // Every mutator is a read-modify-write over the whole file, and
         // Hummingbird serves requests concurrently — two overlapping
         // installs would otherwise both read the old array, and the
@@ -134,7 +134,7 @@ struct FileSystemBakeriesTests {
         #expect(try registry.bakeries().count == 16)
     }
 
-    @Test func `concurrent installed-plugin records all survive`() async throws {
+    @Test func `should keep every installed plugin recorded concurrently`() async throws {
         let home = try TempHome()
         let registry = FileSystemBakeries(home: home.url)
 

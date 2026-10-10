@@ -21,6 +21,11 @@ struct Device3DStreamOptions: Equatable, Sendable {
     /// separate `screen_quad` text messages are sent. Off by default so
     /// existing consumers keep the plain stream format.
     var frameMetadata = false
+    /// The rate the live 3D view is paced and encoded at — the flat
+    /// screen stream's, so the 3D view moves as smoothly. Since stream
+    /// pacing caps delivery at the configured fps, a lower value here
+    /// is a hard ceiling on what the page sees, not an idle hint.
+    let frameRate = StreamConfig.default.fps
 
     /// The largest frame the live path will encode, per axis. `size=` is
     /// held to it too, so a preset can't route around the bound `width=` /

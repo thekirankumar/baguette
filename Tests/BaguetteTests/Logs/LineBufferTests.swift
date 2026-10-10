@@ -13,14 +13,14 @@ struct LineBufferTests {
 
     // MARK: - basic line splitting
 
-    @Test func `single complete line yields one string`() {
+    @Test func `should split one complete line into one log line`() {
         var buf = LineBuffer()
         let lines = buf.append(Data("hello\n".utf8))
         #expect(lines == ["hello"])
         #expect(buf.leftover.isEmpty)
     }
 
-    @Test func `two complete lines in one append yield two strings`() {
+    @Test func `should split two complete lines arriving together into two log lines`() {
         var buf = LineBuffer()
         let lines = buf.append(Data("hello\nworld\n".utf8))
         #expect(lines == ["hello", "world"])
@@ -29,7 +29,7 @@ struct LineBufferTests {
 
     // MARK: - partial / multi-append behaviour
 
-    @Test func `bytes without a newline are buffered for next append`() {
+    @Test func `should hold bytes without a newline until the rest of the line arrives`() {
         var buf = LineBuffer()
         let lines1 = buf.append(Data("partial".utf8))
         #expect(lines1.isEmpty)
@@ -40,7 +40,7 @@ struct LineBufferTests {
         #expect(buf.leftover.isEmpty)
     }
 
-    @Test func `trailing partial after newline is held until the next append`() {
+    @Test func `should hold a trailing partial line until the rest arrives`() {
         var buf = LineBuffer()
         let lines1 = buf.append(Data("first\nseco".utf8))
         #expect(lines1 == ["first"])
@@ -50,7 +50,7 @@ struct LineBufferTests {
         #expect(lines2 == ["second"])
     }
 
-    @Test func `empty append returns no lines and doesn't disturb leftover`() {
+    @Test func `should yield no lines and keep the partial line when no bytes arrive`() {
         var buf = LineBuffer()
         _ = buf.append(Data("abc".utf8))
         let lines = buf.append(Data())
@@ -60,19 +60,19 @@ struct LineBufferTests {
 
     // MARK: - corner cases
 
-    @Test func `consecutive newlines yield an empty-string line`() {
+    @Test func `should yield an empty log line for consecutive newlines`() {
         var buf = LineBuffer()
         let lines = buf.append(Data("a\n\nb\n".utf8))
         #expect(lines == ["a", "", "b"])
     }
 
-    @Test func `lone newline yields one empty line`() {
+    @Test func `should yield one empty log line for a lone newline`() {
         var buf = LineBuffer()
         let lines = buf.append(Data("\n".utf8))
         #expect(lines == [""])
     }
 
-    @Test func `non-UTF8 line bytes are dropped silently`() {
+    @Test func `should silently drop a line that is not valid UTF-8`() {
         var buf = LineBuffer()
         // 0xFF is invalid UTF-8 lead byte. Sandwich it with valid
         // lines so we can confirm only the bad line is dropped.
@@ -85,7 +85,7 @@ struct LineBufferTests {
 
     // MARK: - mid-line CR / large input
 
-    @Test func `bytes with embedded CR are kept verbatim before the LF split`() {
+    @Test func `should keep carriage returns inside a line verbatim`() {
         var buf = LineBuffer()
         let lines = buf.append(Data("with\rcarriage\n".utf8))
         #expect(lines == ["with\rcarriage"])

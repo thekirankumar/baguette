@@ -7,29 +7,29 @@ struct PluginResultTests {
 
     // MARK: - the happy answer
 
-    @Test func `parsing reads the ok flag`() throws {
+    @Test func `should read whether the plugin answered ok`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureRows)
         #expect(result.ok)
     }
 
-    @Test func `parsing reads a row's title and subtitle`() throws {
+    @Test func `should read a result row's title and subtitle`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureRows)
         let row = try #require(result.rows.first)
         #expect(row.title == "Button has no label")
         #expect(row.subtitle == "AXButton")
     }
 
-    @Test func `parsing reads a row's severity`() throws {
+    @Test func `should read a result row's severity`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureRows)
         #expect(result.rows.first?.severity == .error)
     }
 
-    @Test func `a row's severity defaults to info when the plugin omits it`() throws {
+    @Test func `should default a row's severity to info when the plugin omits it`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureRows)
         #expect(result.rows.last?.severity == .info)
     }
 
-    @Test func `parsing reads a row's frame from flat device points`() throws {
+    @Test func `should read a row's frame from flat device points`() throws {
         // Rows carry the same device-point space as gesture wire
         // coordinates, so `rowAction: highlight` can hand the frame
         // straight to the AX inspector with no conversion.
@@ -40,19 +40,19 @@ struct PluginResultTests {
         ))
     }
 
-    @Test func `a row's frame is nil when the plugin omits it`() throws {
+    @Test func `should leave a row's frame unset when the plugin omits it`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureRows)
         #expect(result.rows.last?.frame == nil)
     }
 
-    @Test func `rows are empty when the plugin returns none`() throws {
+    @Test func `should show no rows when the plugin answers with none`() throws {
         let result = try PluginResult.parsing(json: Self.fixtureBareOK)
         #expect(result.rows.isEmpty)
     }
 
     // MARK: - the plugin reporting its own failure
 
-    @Test func `a plugin can answer that it failed, with a message`() throws {
+    @Test func `should let a plugin answer that it failed, with a message`() throws {
         // Distinct from baguette failing to run the plugin: the
         // process exited 0 and answered honestly. The host toasts the
         // message rather than inventing one.
@@ -63,7 +63,7 @@ struct PluginResultTests {
 
     // MARK: - answers baguette refuses to render
 
-    @Test func `parsing rejects non-JSON output`() throws {
+    @Test func `should reject plugin output when it is not JSON`() throws {
         // A plugin that logs to stdout instead of answering must fail
         // loudly — silently rendering nothing looks like "no problems
         // found", which is the worst possible lie for an audit panel.
@@ -72,19 +72,19 @@ struct PluginResultTests {
         }
     }
 
-    @Test func `parsing rejects a row with no title`() throws {
+    @Test func `should reject a result row when it has no title`() throws {
         #expect(throws: PluginResultError.rowMissingTitle(index: 1)) {
             try PluginResult.parsing(json: Self.fixtureRowNoTitle)
         }
     }
 
-    @Test func `parsing rejects a severity baguette has no style for`() throws {
+    @Test func `should reject a severity baguette has no style for`() throws {
         #expect(throws: PluginResultError.unknownSeverity(name: "catastrophe", index: 0)) {
             try PluginResult.parsing(json: Self.fixtureBadSeverity)
         }
     }
 
-    @Test func `parsing rejects a partial frame`() throws {
+    @Test func `should reject a result row when its frame is partial`() throws {
         // Half a frame can't be highlighted or tapped. Better to
         // reject than to paint a box at a coordinate we guessed.
         #expect(throws: PluginResultError.malformedFrame(index: 0)) {

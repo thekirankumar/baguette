@@ -11,34 +11,34 @@ import Foundation
 @Suite("AppBundle")
 struct AppBundleTests {
 
-    @Test func `an .ipa file is an installable app`() {
+    @Test func `should treat an .ipa file as an installable app`() {
         let url = URL(fileURLWithPath: "/tmp/MyApp.ipa")
         #expect(AppBundle.at(url) == AppBundle(path: url))
     }
 
-    @Test func `a .app bundle is an installable app`() {
+    @Test func `should treat a .app bundle as an installable app`() {
         let url = URL(fileURLWithPath: "/tmp/MyApp.app")
         #expect(AppBundle.at(url) == AppBundle(path: url))
     }
 
-    @Test func `the .ipa extension match is case-insensitive`() {
+    @Test func `should recognise an .ipa whatever the case of its extension`() {
         let url = URL(fileURLWithPath: "/tmp/MyApp.IPA")
         #expect(AppBundle.at(url) == AppBundle(path: url))
     }
 
-    @Test func `a photo is not an app`() {
+    @Test func `should not treat a photo as an app`() {
         #expect(AppBundle.at(URL(fileURLWithPath: "/tmp/photo.png")) == nil)
     }
 
-    @Test func `a generic document is not an app`() {
+    @Test func `should not treat a generic document as an app`() {
         #expect(AppBundle.at(URL(fileURLWithPath: "/tmp/notes.pdf")) == nil)
     }
 
-    @Test func `an extension-less file is not an app`() {
+    @Test func `should not treat an extension-less file as an app`() {
         #expect(AppBundle.at(URL(fileURLWithPath: "/tmp/Makefile")) == nil)
     }
 
-    @Test func `installArguments projects the simctl install argv tail`() {
+    @Test func `should install an app with simctl install on the device`() {
         let app = AppBundle(path: URL(fileURLWithPath: "/tmp/My App.ipa"))
         #expect(app.installArguments(udid: "U") == ["simctl", "install", "U", "/tmp/My App.ipa"])
     }

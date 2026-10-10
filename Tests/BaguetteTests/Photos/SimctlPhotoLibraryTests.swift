@@ -31,7 +31,7 @@ struct SimctlPhotoLibraryTests {
         return (SimctlPhotoLibrary(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `add spawns xcrun simctl addmedia with the media path`() async throws {
+    @Test func `should add media to the photo library via xcrun simctl addmedia with its path`() async throws {
         let (library, captures) = makeLibrary()
         try await library.add(MediaItem(path: URL(fileURLWithPath: "/tmp/clip.mov")))
 
@@ -39,7 +39,7 @@ struct SimctlPhotoLibraryTests {
         #expect(captures.arguments == ["simctl", "addmedia", "U", "/tmp/clip.mov"])
     }
 
-    @Test func `a non-zero simctl exit propagates as an add failure`() async {
+    @Test func `should report an add failure when simctl exits non-zero`() async {
         let (library, _) = makeLibrary(exitCode: 5)
         var caught: PhotoLibraryError?
         do {

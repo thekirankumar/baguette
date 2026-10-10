@@ -7,7 +7,7 @@ import ImageIO
 @Suite("CoreGraphicsPDFRasterizer")
 struct CoreGraphicsPDFRasterizerTests {
 
-    @Test func `rasterize returns PNG bytes sized to the PDF crop box`() throws {
+    @Test func `should render a PDF as a PNG sized to its crop box`() throws {
         let pdf = try makeSquarePDF(side: 100)
         let rast = CoreGraphicsPDFRasterizer()
 
@@ -17,14 +17,14 @@ struct CoreGraphicsPDFRasterizerTests {
         #expect(Self.hasPNGMagic(image.data))
     }
 
-    @Test func `rasterize throws on non-PDF input`() {
+    @Test func `should refuse to render input that isn't a PDF`() {
         let rast = CoreGraphicsPDFRasterizer()
         #expect(throws: PDFRasterizerError.self) {
             _ = try rast.rasterize(pdfData: Data("not-a-pdf".utf8))
         }
     }
 
-    @Test func `rasterize throws noPage when the PDF page has zero dimensions`() throws {
+    @Test func `should refuse to render a PDF whose page has zero size`() throws {
         let pdf = try makeSquarePDF(side: 0)
         let rast = CoreGraphicsPDFRasterizer()
         #expect(throws: PDFRasterizerError.noPage) {
@@ -34,7 +34,7 @@ struct CoreGraphicsPDFRasterizerTests {
 
     // compose stacks layers onto a fresh canvas — produces a PNG sized
     // to canvasSize with the layer drawn at top-left coordinates.
-    @Test func `compose draws PNG layers onto a sized canvas`() throws {
+    @Test func `should layer images onto a canvas of the requested size`() throws {
         let layerPDF = try makeSquarePDF(side: 50)
         let rast = CoreGraphicsPDFRasterizer()
         let layerImage = try rast.rasterize(pdfData: layerPDF)
@@ -47,14 +47,14 @@ struct CoreGraphicsPDFRasterizerTests {
         #expect(Self.hasPNGMagic(merged.data))
     }
 
-    @Test func `compose throws rasterFailed for a zero-sized canvas`() {
+    @Test func `should refuse to layer images onto a zero-sized canvas`() {
         let rast = CoreGraphicsPDFRasterizer()
         #expect(throws: PDFRasterizerError.rasterFailed) {
             _ = try rast.compose(canvasSize: Size(width: 0, height: 0), layers: [])
         }
     }
 
-    @Test func `compose throws decodingFailed when a layer's PNG bytes are unreadable`() {
+    @Test func `should refuse to layer images when a layer's PNG is unreadable`() {
         let rast = CoreGraphicsPDFRasterizer()
         let busted = ImageLayer(
             image: ChromeImage(data: Data("not-a-png".utf8), size: Size(width: 10, height: 10)),
@@ -78,7 +78,7 @@ struct CoreGraphicsPDFRasterizerTests {
     // inset into the inner area, where the front-end's screen overlay
     // hides it. Edges stretch between corners along their long axis at
     // native cornerH/cornerW thickness.
-    @Test func `compose9Slice produces PNG sized to innerSize plus insets`() throws {
+    @Test func `should size a nine-slice bezel to the inner area plus its insets`() throws {
         let rast = CoreGraphicsPDFRasterizer()
         let corner = try makeSquarePDF(side: 96)
         let edge = try makeSquarePDF(side: 2)
@@ -104,7 +104,7 @@ struct CoreGraphicsPDFRasterizerTests {
     // to the cap). Catches the bug where the corner was being squashed
     // into a `sizing × sizing` rect, leaving the visible bezel
     // looking far too thick relative to the inner area.
-    @Test func `compose9Slice draws corners at native PDF size, not scaled to insets`() throws {
+    @Test func `should draw nine-slice corners at their native size rather than squash them into the insets`() throws {
         let rast = CoreGraphicsPDFRasterizer()
         let corner = try makeSquarePDF(side: 100)
         let edge = try makeSquarePDF(side: 1)
@@ -133,7 +133,7 @@ struct CoreGraphicsPDFRasterizerTests {
         #expect(pixels.alpha(x: 130, y: 130) < 32, "inner area must remain transparent for screen overlay")
     }
 
-    @Test func `compose9Slice throws when any piece is not a PDF`() throws {
+    @Test func `should refuse a nine-slice bezel when any piece is not a PDF`() throws {
         let rast = CoreGraphicsPDFRasterizer()
         let valid = try makeSquarePDF(side: 10)
         let bogus = Data("not-a-pdf".utf8)

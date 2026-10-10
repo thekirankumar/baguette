@@ -8,7 +8,7 @@ struct ExpectedScreenTests {
     static let json =
         #"{"width":402,"height":874,"orientation":"portrait","target":{"screenId":1,"litPanel":null,"pixelSize":{"width":1206,"height":2622}}}"#
 
-    @Test func `parses an observed single-panel screen without inventing a panel`() throws {
+    @Test func `should read an observed single-panel screen without inventing a panel`() throws {
         let expected = try ExpectedScreen(json: Self.json)
         #expect(expected.screen.width == 402)
         #expect(expected.screen.orientation == .portrait)
@@ -17,7 +17,7 @@ struct ExpectedScreenTests {
         #expect(expected.screen.target?.pixelSize == Size(width: 1206, height: 2622))
     }
 
-    @Test func `parses a named lit panel`() throws {
+    @Test func `should read a named lit panel`() throws {
         let expected = try ExpectedScreen(
             json: Self.json.replacingOccurrences(of: "\"litPanel\":null", with: "\"litPanel\":\"secondary\""))
         #expect(expected.screen.target?.litPanel == .secondary)
@@ -31,11 +31,11 @@ struct ExpectedScreenTests {
         ExpectedScreenTests.json.replacingOccurrences(of: "portrait", with: "sideways"),
         ExpectedScreenTests.json.replacingOccurrences(of: "\"litPanel\":null", with: "\"litPanel\":\"guessed\""),
     ])
-    func `missing identity invalid dimensions and unknown panels fail at the boundary`(json: String) {
+    func `should reject an expected screen with missing identity, invalid dimensions or an unknown panel`(json: String) {
         #expect(throws: (any Error).self) { try ExpectedScreen(json: json) }
     }
 
-    @Test func `changed identity pixels panel orientation or points reject new input`() throws {
+    @Test func `should reject new input when the screen's identity, pixels, panel, orientation or points change`() throws {
         let expected = try ExpectedScreen(json: Self.json)
         try expected.requireMatches(expected.screen)
         for json in [
@@ -50,7 +50,7 @@ struct ExpectedScreenTests {
         }
     }
 
-    @Test func `an envelope must name the observed native points or no size at all`() throws {
+    @Test func `should accept an envelope only when it names the observed points or no size at all`() throws {
         let expected = try ExpectedScreen(json: Self.json)
         try expected.validateEnvelope(["type": "tap", "x": 10, "y": 20])
         try expected.validateEnvelope(["width": 402, "height": 874])
@@ -59,7 +59,7 @@ struct ExpectedScreenTests {
         }
     }
 
-    @Test func `loss of a target blocks down and move but never blocks release`() throws {
+    @Test func `should block a touch down and move but never the release when the screen is lost`() throws {
         let expected = try ExpectedScreen(json: Self.json)
         let screenGuard = InputScreenGuard(expected: expected) { throw ObservedScreenError.unavailable }
         #expect(!screenGuard.allows(.down))
@@ -68,7 +68,7 @@ struct ExpectedScreenTests {
         #expect(screenGuard.allows(.up))
     }
 
-    @Test func `release never probes again after a move observes a different target`() throws {
+    @Test func `should release without checking again after a move finds the screen changed`() throws {
         let expected = try ExpectedScreen(json: Self.json)
         var reads = 0
         let screenGuard = InputScreenGuard(expected: expected) {

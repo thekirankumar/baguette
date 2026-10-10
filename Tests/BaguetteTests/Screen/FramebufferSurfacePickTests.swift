@@ -18,7 +18,7 @@ struct FramebufferSurfacePickTests {
         size: Size(width: 800, height: 480)
     )
 
-    @Test func phonePicksClosestToBindingSize() {
+    @Test func `should capture the phone from the surface closest to its bound size`() {
         let index = FramebufferSurfacePick.index(
             binding: phoneBinding,
             candidates: [
@@ -30,7 +30,7 @@ struct FramebufferSurfacePickTests {
         #expect(index == 1)
     }
 
-    @Test func carPlayPicksLandscapeNearBindingAndSkipsPhone() {
+    @Test func `should capture CarPlay from the landscape surface near its bound size, skipping the phone`() {
         let index = FramebufferSurfacePick.index(
             binding: carPlayBinding,
             candidates: [
@@ -42,7 +42,7 @@ struct FramebufferSurfacePickTests {
         #expect(index == 1)
     }
 
-    @Test func carPlayReturnsNilWhenOnlyPhoneSurfacesArePresent() {
+    @Test func `should find no CarPlay surface when only phone surfaces are present`() {
         let index = FramebufferSurfacePick.index(
             binding: carPlayBinding,
             candidates: [
@@ -59,7 +59,7 @@ struct FramebufferSurfacePickTests {
     /// ordinary resolutions too, and a 1080p one is a perfectly good
     /// display to stream; rejecting it just reported "nothing attached"
     /// at a screen the user was looking at.
-    @Test func `a full-HD external is a candidate`() {
+    @Test func `should accept a full-HD or 4K external surface`() {
         #expect(FramebufferSurfacePick.acceptsExternal(Size(width: 1920, height: 1080)))
         #expect(FramebufferSurfacePick.acceptsExternal(Size(width: 3840, height: 2160)))
     }
@@ -69,7 +69,7 @@ struct FramebufferSurfacePickTests {
     /// largest-area heuristic has already spent itself on some other
     /// port. Mirroring SpringBoard into the external pane is worse than
     /// showing nothing, because it looks like it worked.
-    @Test func `a portrait plane is never an external candidate`() {
+    @Test func `should never accept a portrait surface as external`() {
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 1206, height: 2622)))
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 1179, height: 2556)))
     }
@@ -78,17 +78,17 @@ struct FramebufferSurfacePickTests {
     /// device's shape nor a display's, and admitting it means any square
     /// scratch buffer big enough to clear the area floor can bind as the
     /// external plane.
-    @Test func `a square surface is not landscape`() {
+    @Test func `should not accept a square surface as external`() {
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 512, height: 512)))
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 1080, height: 1080)))
     }
 
-    @Test func `a degenerate sliver is not a display`() {
+    @Test func `should not accept a degenerate sliver as external`() {
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 100, height: 100)))
         #expect(!FramebufferSurfacePick.acceptsExternal(Size(width: 0, height: 0)))
     }
 
-    @Test func `a large landscape surface is picked for a large binding`() {
+    @Test func `should capture a large external screen from the large landscape surface`() {
         let binding = DisplayBinding(
             kind: .carPlay,
             connectedScreenId: 2,
@@ -105,7 +105,7 @@ struct FramebufferSurfacePickTests {
         #expect(index == 1)
     }
 
-    @Test func unboundScreenFallsBackToLargestArea() {
+    @Test func `should capture the largest surface when no screen is bound`() {
         let index = FramebufferSurfacePick.index(
             binding: nil,
             candidates: [

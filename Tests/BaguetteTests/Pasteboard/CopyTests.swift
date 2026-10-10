@@ -22,17 +22,17 @@ struct CopyTests {
 
     // MARK: - parse
 
-    @Test func `parses copy with press defaulting to true`() {
+    @Test func `should press Cmd+C by default when a copy envelope omits press`() {
         #expect(Copy.parse(["type": "copy"]) == Copy(press: true))
     }
 
-    @Test func `parses an explicit press false`() {
+    @Test func `should read an explicit press false from a copy envelope`() {
         #expect(Copy.parse(["type": "copy", "press": false]).press == false)
     }
 
     // MARK: - execute
 
-    @Test func `execute presses Cmd+C then syncs the pasteboard to the host`() async throws {
+    @Test func `should press Cmd+C then ferry the simulator pasteboard to the host`() async throws {
         let (pasteboard, input) = surfaces()
         let ok = try await Copy(press: true, settleNanos: 0)
             .execute(pasteboard: pasteboard, input: input)
@@ -41,7 +41,7 @@ struct CopyTests {
         verify(pasteboard).syncToHost().called(1)
     }
 
-    @Test func `execute with press false only syncs, no keystroke`() async throws {
+    @Test func `should only ferry the pasteboard, with no keystroke, when press is false`() async throws {
         let (pasteboard, input) = surfaces()
         let ok = try await Copy(press: false, settleNanos: 0)
             .execute(pasteboard: pasteboard, input: input)
@@ -50,7 +50,7 @@ struct CopyTests {
         verify(pasteboard).syncToHost().called(1)
     }
 
-    @Test func `a failed Cmd+C press still ferries but reports not-ok`() async throws {
+    @Test func `should still ferry the pasteboard but report not-ok when the Cmd+C press fails`() async throws {
         let pasteboard = MockPasteboard()
         let input = MockInput()
         given(pasteboard).syncToHost().willReturn(())

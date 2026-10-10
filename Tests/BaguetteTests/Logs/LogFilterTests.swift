@@ -6,20 +6,20 @@ struct LogFilterTests {
 
     // MARK: - level
 
-    @Test func `default level is info`() {
+    @Test func `should stream at info level by default`() {
         // Default = info — show everything except debug-level
         // chatter, but include the `default`-severity messages
         // most apps care about.
         #expect(LogFilter().level == .info)
     }
 
-    @Test func `Level.fromWire parses every supported value`() {
+    @Test func `should accept default, info and debug as log levels`() {
         #expect(LogFilter.Level(wire: "default") == .default)
         #expect(LogFilter.Level(wire: "info")    == .info)
         #expect(LogFilter.Level(wire: "debug")   == .debug)
     }
 
-    @Test func `Level.fromWire rejects values the simulator log binary doesn't understand`() {
+    @Test func `should accept a log level in any case but reject levels the simulator log tool does not understand`() {
         #expect(LogFilter.Level(wire: "INFO") == .info)
         #expect(LogFilter.Level(wire: "Debug") == .debug)
         // notice / error / fault are accepted by macOS's host `log`
@@ -33,11 +33,11 @@ struct LogFilterTests {
 
     // MARK: - style
 
-    @Test func `default style is default`() {
+    @Test func `should use the default log style by default`() {
         #expect(LogFilter().style == .default)
     }
 
-    @Test func `Style.fromWire covers every supported value`() {
+    @Test func `should accept default, compact, json, syslog and ndjson as log styles`() {
         #expect(LogFilter.Style(wire: "default") == .default)
         #expect(LogFilter.Style(wire: "compact") == .compact)
         #expect(LogFilter.Style(wire: "json")    == .json)
@@ -47,30 +47,30 @@ struct LogFilterTests {
 
     // MARK: - args projection
 
-    @Test func `argv projects level + style flags`() {
+    @Test func `should run log stream with the chosen --level and --style`() {
         let f = LogFilter(level: .debug, style: .json)
         // argv[0] = "log" because CoreSimulator's `arguments`
         // option replaces argv entirely (including argv[0]).
         #expect(f.argv == ["log", "stream", "--level", "debug", "--style", "json"])
     }
 
-    @Test func `argv defaults emit info + default`() {
+    @Test func `should run log stream at info level in the default style by default`() {
         #expect(LogFilter().argv == ["log", "stream", "--level", "info", "--style", "default"])
     }
 
-    @Test func `argv appends raw predicate when present`() {
+    @Test func `should pass a raw --predicate through when one is given`() {
         let f = LogFilter(predicate: #"subsystem == "com.apple.UIKit""#)
         #expect(f.argv.contains("--predicate"))
         #expect(f.argv.last == #"subsystem == "com.apple.UIKit""#)
     }
 
-    @Test func `argv translates bundle-id into a process predicate`() {
+    @Test func `should filter by process when a bundle id is given`() {
         let f = LogFilter(bundleId: "com.example.app")
         #expect(f.argv.contains("--predicate"))
         #expect(f.argv.last == #"process == "com.example.app""#)
     }
 
-    @Test func `argv ANDs bundle-id with explicit predicate`() {
+    @Test func `should combine a bundle id and a predicate with AND`() {
         let f = LogFilter(
             predicate: #"subsystem == "com.apple.UIKit""#,
             bundleId: "com.example.app"

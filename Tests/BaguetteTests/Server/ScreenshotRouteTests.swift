@@ -18,7 +18,7 @@ struct ScreenshotRouteTests {
 
     // MARK: - ?size= / ?fit= / ?background=
 
-    @Test func `a screenshot with no knobs set is the native framebuffer on a white mat`() throws {
+    @Test func `should capture the native framebuffer, contained on a white mat, when no knobs are set`() throws {
         let options = try Server.captureOptions(size: nil, fit: nil, background: nil)
 
         #expect(options.size == CaptureSize.native)
@@ -26,7 +26,7 @@ struct ScreenshotRouteTests {
         #expect(options.background == .color("#ffffff"))
     }
 
-    @Test func `a screenshot resolves an App Store preset by the name the picker shows`() throws {
+    @Test func `should size a screenshot to an App Store preset by the name the picker shows`() throws {
         let options = try Server.captureOptions(
             size: "appstore-6.9", fit: "cover", background: "transparent"
         )
@@ -36,7 +36,7 @@ struct ScreenshotRouteTests {
         #expect(options.background == .transparent)
     }
 
-    @Test func `a screenshot rejects a size baguette doesn't know rather than falling back to native`() {
+    @Test func `should reject an unknown screenshot size rather than fall back to native`() {
         #expect(throws: Server.CaptureQueryError.unknownSize("nonsense")) {
             _ = try Server.captureOptions(size: "nonsense", fit: nil, background: nil)
         }
@@ -46,7 +46,7 @@ struct ScreenshotRouteTests {
         )
     }
 
-    @Test func `a screenshot rejects a fit baguette doesn't know`() {
+    @Test func `should reject an unknown screenshot fit and list the known ones`() {
         #expect(throws: Server.CaptureQueryError.unknownFit("squish")) {
             _ = try Server.captureOptions(size: "square", fit: "squish", background: nil)
         }
@@ -55,7 +55,7 @@ struct ScreenshotRouteTests {
         )
     }
 
-    @Test func `a screenshot accepts a hash-less hex background because a URL eats the hash`() throws {
+    @Test func `should accept a hex background with or without its hash`() throws {
         let bare = try Server.captureOptions(size: nil, fit: nil, background: "ff8800")
         let hashed = try Server.captureOptions(size: nil, fit: nil, background: "#ff8800")
 
@@ -63,7 +63,7 @@ struct ScreenshotRouteTests {
         #expect(hashed.background == .color("#ff8800"))
     }
 
-    @Test func `a screenshot rejects a background that isn't a colour`() {
+    @Test func `should reject a screenshot background that isn't a colour`() {
         #expect(throws: Server.CaptureQueryError.unknownBackground("chartreuse")) {
             _ = try Server.captureOptions(size: nil, fit: nil, background: "chartreuse")
         }
@@ -71,7 +71,7 @@ struct ScreenshotRouteTests {
 
     // MARK: - re-encoding the framebuffer
 
-    @Test func `a native jpeg screenshot hands back the captured bytes untouched`() throws {
+    @Test func `should hand back the captured bytes untouched for a native jpeg screenshot`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .jpeg)
 
         let outcome = Server.recapture(
@@ -82,7 +82,7 @@ struct ScreenshotRouteTests {
         #expect(outcome == .unchanged)
     }
 
-    @Test func `an App Store preset comes out at exactly the submission pixel size`() throws {
+    @Test func `should come out at exactly the submission pixel size for an App Store preset`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .jpeg)
         let options = try Server.captureOptions(size: "appstore-6.9", fit: nil, background: nil)
 
@@ -94,7 +94,7 @@ struct ScreenshotRouteTests {
         #expect(Self.dimensions(bytes) == RenderDimensions(width: 1290, height: 2796))
     }
 
-    @Test func `a square grows the canvas so the whole frame still fits, matted on the background`() throws {
+    @Test func `should grow a square canvas so the whole frame fits, matted on the background`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .png)
         let options = try Server.captureOptions(size: "square", fit: "contain", background: "00ff00")
 
@@ -109,7 +109,7 @@ struct ScreenshotRouteTests {
         #expect(corner[0] < 40 && corner[1] > 200 && corner[2] < 40)
     }
 
-    @Test func `cover fills the square by letting the overflow crop`() throws {
+    @Test func `should fill the square and crop the overflow when the fit is cover`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .png)
         let options = try Server.captureOptions(size: "square", fit: "cover", background: "00ff00")
 
@@ -124,7 +124,7 @@ struct ScreenshotRouteTests {
         #expect(corner[0] > 200 && corner[1] < 40 && corner[2] < 40)
     }
 
-    @Test func `a png screenshot re-encodes the captured jpeg as png`() throws {
+    @Test func `should re-encode the captured jpeg as png for a png screenshot`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .jpeg)
 
         let bytes = try #require(Self.encoded(Server.recapture(
@@ -136,12 +136,12 @@ struct ScreenshotRouteTests {
         #expect(Self.dimensions(bytes) == RenderDimensions(width: 100, height: 200))
     }
 
-    @Test func `each screenshot extension names the content type browsers decode by`() {
+    @Test func `should label each screenshot extension with the content type browsers decode by`() {
         #expect(Server.CaptureImageFormat.jpeg.contentType == "image/jpeg")
         #expect(Server.CaptureImageFormat.png.contentType == "image/png")
     }
 
-    @Test func `a png screenshot captures at full quality so its one lossy step is invisible`() {
+    @Test func `should capture a png screenshot at full quality and a jpeg at the default`() {
         // `ScreenSnapshot` only speaks JPEG, so a PNG still is a JPEG
         // round-trip whether the caller wanted one or not. Capturing
         // at 1.0 keeps that intermediate from showing up as ringing
@@ -150,7 +150,7 @@ struct ScreenshotRouteTests {
         #expect(Server.CaptureImageFormat.png.defaultQuality == 1.0)
     }
 
-    @Test func `a jpeg screenshot mats a transparent background white because jpeg has no alpha`() throws {
+    @Test func `should mat a transparent background white when the screenshot is jpeg`() throws {
         let captured = Self.solid(width: 100, height: 200, rgb: (1, 0, 0), format: .png)
         let options = try Server.captureOptions(
             size: "square", fit: "contain", background: "transparent"
@@ -166,7 +166,7 @@ struct ScreenshotRouteTests {
         #expect(corner[0] > 240 && corner[1] > 240 && corner[2] > 240)
     }
 
-    @Test func `an unreadable framebuffer fails rather than serving zero bytes`() {
+    @Test func `should fail rather than serve zero bytes when the framebuffer is unreadable`() {
         let outcome = Server.recapture(
             Data("not an image".utf8), sourceFormat: .jpeg, format: .png,
             options: .default, quality: 0.85
@@ -176,7 +176,7 @@ struct ScreenshotRouteTests {
 
     // MARK: - bezel composite
 
-    @Test func `the bezel composite drops the framebuffer into the chrome's screen cutout`() throws {
+    @Test func `should drop the framebuffer into the chrome's screen cutout with buttons`() throws {
         let assets = Self.chromeAssets()
         let placement = Server.bezelPlacement(assets: assets, withButtons: true)
 
@@ -189,7 +189,7 @@ struct ScreenshotRouteTests {
         #expect(placement.cornerRadius == 10)
     }
 
-    @Test func `the bare bezel composite drops the button overshoot from the canvas`() throws {
+    @Test func `should drop the button overshoot from the canvas for a bare bezel`() throws {
         let assets = Self.chromeAssets()
         let placement = Server.bezelPlacement(assets: assets, withButtons: false)
 
@@ -200,7 +200,7 @@ struct ScreenshotRouteTests {
         ))
     }
 
-    @Test func `a bezel screenshot comes out at the chrome's own composite size by default`() throws {
+    @Test func `should size a bezel screenshot to the chrome's own composite by default`() throws {
         let bytes = try #require(Server.bezelCapture(
             screenImage: Self.solid(width: 80, height: 180, rgb: (1, 0, 0), format: .jpeg),
             assets: Self.chromeAssets(),
@@ -214,7 +214,7 @@ struct ScreenshotRouteTests {
         #expect(centre[0] > 200 && centre[1] < 40 && centre[2] < 40)
     }
 
-    @Test func `a bezel screenshot keeps the framebuffer at the resolution it was captured at`() throws {
+    @Test func `should keep the framebuffer at its captured resolution in a bezel screenshot`() throws {
         // Chrome geometry is 1× points; the framebuffer is device
         // pixels. Sizing the composite off the chrome would throw ~3×
         // of a real phone's capture away before `?size=` ever upscales
@@ -231,7 +231,7 @@ struct ScreenshotRouteTests {
         #expect(Self.dimensions(bytes) == RenderDimensions(width: 360, height: 600))
     }
 
-    @Test func `a bezel screenshot never downsamples the chrome below its own resolution`() throws {
+    @Test func `should never shrink the bezel below its own resolution when the framebuffer is small`() throws {
         // A framebuffer smaller than the cutout (a heavy `?scale=`)
         // must not shrink the bezel with it — the chrome is already
         // at its authored size.
@@ -245,7 +245,7 @@ struct ScreenshotRouteTests {
         #expect(Self.dimensions(bytes) == RenderDimensions(width: 120, height: 200))
     }
 
-    @Test func `a bezel screenshot honours the same size vocabulary as the bare one`() throws {
+    @Test func `should size a bezel screenshot with the same size vocabulary as a bare one`() throws {
         let options = try Server.captureOptions(size: "appstore-6.9", fit: nil, background: nil)
         let bytes = try #require(Server.bezelCapture(
             screenImage: Self.solid(width: 80, height: 180, rgb: (1, 0, 0), format: .jpeg),
@@ -257,7 +257,7 @@ struct ScreenshotRouteTests {
         #expect(Self.dimensions(bytes) == RenderDimensions(width: 1290, height: 2796))
     }
 
-    @Test func `a bezel screenshot fails when the framebuffer can't be decoded`() {
+    @Test func `should fail a bezel screenshot when the framebuffer can't be decoded`() {
         #expect(Server.bezelCapture(
             screenImage: Data("not an image".utf8),
             assets: Self.chromeAssets(),

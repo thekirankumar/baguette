@@ -11,7 +11,7 @@ struct PluginRoutesTests {
 
     // MARK: - describe-ui.json
 
-    @Test func `describeUI projects the tree for a plugin that has no WebSocket`() throws {
+    @Test func `should describe the UI tree to a plugin that has no WebSocket`() throws {
         // `describe_ui` was WS-only, which put the AX tree out of reach
         // of a subprocess plugin entirely. This route is what makes the
         // reference a11y plugin possible.
@@ -25,7 +25,7 @@ struct PluginRoutesTests {
         #expect(tree["role"] as? String == "AXApplication")
     }
 
-    @Test func `describeUI hit-tests a point when one is given`() throws {
+    @Test func `should describe the element under a point when one is given`() throws {
         let ax = MockAccessibility()
         given(ax).describeAt(point: .value(Point(x: 10, y: 20)))
             .willReturn(AXNode(role: "AXButton", frame: Self.frame))
@@ -38,13 +38,13 @@ struct PluginRoutesTests {
         #expect(json.contains("AXButton"))
     }
 
-    @Test func `describeUI reports an unknown device`() throws {
+    @Test func `should report an unknown device when describing the UI of an unknown udid`() throws {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
         #expect(Server.describeUI(udid: "nope", point: nil, simulators: simulators) == .unknownDevice)
     }
 
-    @Test func `describeUI reports no data when nothing is frontmost`() throws {
+    @Test func `should report no data when describing the UI with nothing frontmost`() throws {
         // SpringBoard idle or a boot in progress. Not an error — the
         // plugin should say "nothing to audit", not "audit failed".
         let ax = MockAccessibility()
@@ -54,7 +54,7 @@ struct PluginRoutesTests {
 
     // MARK: - running a command
 
-    @Test func `runPlugin returns the plugin's rows as JSON`() async throws {
+    @Test func `should answer a plugin command with the plugin's rows as JSON`() async throws {
         let outcome = await Server.runPlugin(
             qualified: "a11y:audit",
             context: Self.context,
@@ -70,7 +70,7 @@ struct PluginRoutesTests {
         #expect(rows.first?["title"] as? String == "No label")
     }
 
-    @Test func `runPlugin reports an unknown command as not-found`() async throws {
+    @Test func `should report an unknown plugin command as not found`() async throws {
         let outcome = await Server.runPlugin(
             qualified: "a11y:nope", context: Self.context, plugins: Self.plugins(),
             subprocess: { Self.subprocess() }
@@ -78,7 +78,7 @@ struct PluginRoutesTests {
         #expect(outcome == .unknown(#"no installed plugin contributes "a11y:nope""#))
     }
 
-    @Test func `runPlugin surfaces a plugin that failed to run`() async throws {
+    @Test func `should report a plugin command that failed to run with its exit status`() async throws {
         let outcome = await Server.runPlugin(
             qualified: "a11y:audit", context: Self.context, plugins: Self.plugins(),
             subprocess: { Self.subprocess(stdout: "boom", exitCode: 3) }
@@ -91,7 +91,7 @@ struct PluginRoutesTests {
 
     // MARK: - capability grants
 
-    @Test func `a command invocation is handed a grant for its plugin's capabilities`() async throws {
+    @Test func `should grant a running plugin command exactly its manifest's capabilities`() async throws {
         // The token the plugin receives must be a live grant carrying
         // exactly what the manifest declared — that's what the plugin
         // API checks.
@@ -107,7 +107,7 @@ struct PluginRoutesTests {
         #expect(seen.capabilities == [.describeUI])
     }
 
-    @Test func `the grant is revoked once the command finishes`() async throws {
+    @Test func `should revoke the plugin's grant once the command finishes`() async throws {
         // A leaked token is useless after the run it belonged to.
         let grants = PluginGrants()
         let seen = SeenToken()

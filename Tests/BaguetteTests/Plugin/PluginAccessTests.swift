@@ -14,7 +14,7 @@ import Foundation
 @Suite("PluginAccess")
 struct PluginAccessTests {
 
-    @Test func `a plugin reaches a route its manifest declared`() {
+    @Test func `should grant a plugin a route its manifest declared`() {
         let grants = PluginGrants()
         let token = grants.issue(plugin: "expo", capabilities: [.input])
         #expect(
@@ -23,7 +23,7 @@ struct PluginAccessTests {
         )
     }
 
-    @Test func `a plugin is refused a route it did not declare, and the refusal names it`() {
+    @Test func `should refuse a plugin a route it did not declare, naming the missing capability`() {
         // The a11y plugin reads the screen; it must not be able to drive
         // the device. The message names the missing capability so the
         // author fixes the manifest instead of guessing.
@@ -36,7 +36,7 @@ struct PluginAccessTests {
         #expect(message == #"this plugin did not declare the "input" capability"#)
     }
 
-    @Test func `a plugin holding one capability cannot reach a route gated by another`() {
+    @Test func `should refuse a plugin every route gated by a capability it does not hold`() {
         let grants = PluginGrants()
         let token = grants.issue(plugin: "a11y", capabilities: [.describeUI])
         for path in ["/simulators/U/screenshot.jpg", "/simulators/U/apps",
@@ -52,7 +52,7 @@ struct PluginAccessTests {
         )
     }
 
-    @Test func `a route no capability unlocks is closed even to a plugin that declared everything`() {
+    @Test func `should refuse a route no capability unlocks even when the plugin declared everything`() {
         // Least privilege has to hold at the edges too: declaring the
         // whole set still doesn't reach a route outside the table.
         let grants = PluginGrants()
@@ -72,7 +72,7 @@ struct PluginAccessTests {
         }
     }
 
-    @Test func `a deep-link plugin reaches both its routes and nothing else`() {
+    @Test func `should grant a deep-link plugin both its routes and nothing else`() {
         // `open-url` is one capability over one surface: see what's
         // registered, open one. It must not carry the authority to
         // install an app, which is the neighbouring `apps` power.
@@ -94,7 +94,7 @@ struct PluginAccessTests {
 
     // MARK: - callers that aren't plugins
 
-    @Test func `a request with no grant is anonymous so browser trust still decides`() {
+    @Test func `should treat a request as anonymous when it carries no grant, leaving browser trust to decide`() {
         // `curl` and the browser present no token. They must be handled
         // by the origin checks, not by the capability table.
         let grants = PluginGrants()
@@ -108,7 +108,7 @@ struct PluginAccessTests {
         )
     }
 
-    @Test func `an anonymous caller is anonymous on an unmapped route too`() {
+    @Test func `should treat a caller as anonymous on an unmapped route too`() {
         // Closing unmapped routes applies to plugins. A browser opening
         // the page must not be caught by it.
         let grants = PluginGrants()
@@ -118,7 +118,7 @@ struct PluginAccessTests {
         )
     }
 
-    @Test func `a revoked grant is refused, not waved through as anonymous`() {
+    @Test func `should refuse a revoked grant rather than wave it through as anonymous`() {
         // Otherwise the way to escape the capability check would be to
         // present a stale token — or any garbage — instead of a real one.
         let grants = PluginGrants()
@@ -131,7 +131,7 @@ struct PluginAccessTests {
         }
     }
 
-    @Test func `an invented token is refused rather than treated as no token`() {
+    @Test func `should refuse an invented token rather than treat it as no token`() {
         let grants = PluginGrants()
         guard case .refused = PluginAccess.decide(
             token: "made-up", path: "/simulators/U/input", grants: grants

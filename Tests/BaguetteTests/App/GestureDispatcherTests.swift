@@ -5,7 +5,7 @@ import Mockable
 @Suite("GestureDispatcher")
 struct GestureDispatcherTests {
 
-    @Test func `dispatches a valid tap and returns ok=true`() {
+    @Test func `should ack ok when a valid tap lands`() {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
         let dispatcher = GestureDispatcher(input: input)
@@ -15,7 +15,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":true}"#)
     }
 
-    @Test func `propagates the input surface's false return`() {
+    @Test func `should ack not ok when the simulator refuses the gesture`() {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(false)
         let dispatcher = GestureDispatcher(input: input)
@@ -28,7 +28,7 @@ struct GestureDispatcherTests {
     // The exact stdin line from issue #75 — a CarPlay nav-bar button
     // sits in the top band, and the edge hint has to survive the whole
     // way from the wire to the input surface for it to be pressed.
-    @Test func `carries a tap's edge hint through to the input surface`() {
+    @Test func `should carry a tap's edge hint all the way to the simulator`() {
         let input = MockInput()
         given(input).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
         let dispatcher = GestureDispatcher(input: input)
@@ -43,7 +43,7 @@ struct GestureDispatcherTests {
         ).called(1)
     }
 
-    @Test func `rejects an envelope whose size is not the expected screen before dispatching`() throws {
+    @Test func `should reject a gesture whose size is not the expected screen before touching the simulator`() throws {
         let input = MockInput()
         let expected = try ExpectedScreen(json: ExpectedScreenTests.json)
         let screenGuard = InputScreenGuard(expected: expected) { expected.screen }
@@ -55,7 +55,7 @@ struct GestureDispatcherTests {
         verify(input).tap(at: .any, size: .any, duration: .any, edge: .any).called(0)
     }
 
-    @Test func `names the screen change when the guarded input surface refuses a gesture`() throws {
+    @Test func `should name the screen change when the guarded screen refuses a gesture`() throws {
         let input = MockInput()
         let expected = try ExpectedScreen(json: ExpectedScreenTests.json)
         let screenGuard = InputScreenGuard(expected: expected) { throw ObservedScreenError.unavailable }
@@ -68,7 +68,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":false,"error":"the display cannot provide a fresh screen target"}"#)
     }
 
-    @Test func `returns parse error on missing field`() {
+    @Test func `should report the missing field when a gesture line is incomplete`() {
         let input = MockInput()
         let dispatcher = GestureDispatcher(input: input)
 
@@ -77,7 +77,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":false,"error":"missing field: y"}"#)
     }
 
-    @Test func `returns parse error on unknown gesture type`() {
+    @Test func `should report an unknown gesture type`() {
         let input = MockInput()
         let dispatcher = GestureDispatcher(input: input)
 
@@ -86,7 +86,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":false,"error":"unknown kind: frobnicate"}"#)
     }
 
-    @Test func `returns parse error on malformed JSON`() {
+    @Test func `should report invalid JSON when a gesture line is malformed`() {
         let input = MockInput()
         let dispatcher = GestureDispatcher(input: input)
 
@@ -95,7 +95,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":false,"error":"invalid JSON"}"#)
     }
 
-    @Test func `dispatches phased touch1-down via registry suffix`() {
+    @Test func `should land a touch1-down as the down phase of a single finger`() {
         let input = MockInput()
         given(input).touch1(phase: .any, at: .any, size: .any, edge: .any).willReturn(true)
         let dispatcher = GestureDispatcher(input: input)
@@ -106,7 +106,7 @@ struct GestureDispatcherTests {
         verify(input).touch1(phase: .value(.down), at: .any, size: .any, edge: .any).called(1)
     }
 
-    @Test func `wraps non-GestureError thrown by a parser into the ack`() {
+    @Test func `should report any error a gesture fails to parse with in the ack`() {
         let input = MockInput()
         let registry = GestureRegistry()
         registry.register(ThrowingGesture.self)
@@ -117,7 +117,7 @@ struct GestureDispatcherTests {
         #expect(ack == #"{"ok":false,"error":"boom"}"#)
     }
 
-    @Test func `escapes thrown error strings in JSON acks`() {
+    @Test func `should escape error text so the ack stays valid JSON`() {
         let input = MockInput()
         let registry = GestureRegistry()
         registry.register(EscapingGesture.self)

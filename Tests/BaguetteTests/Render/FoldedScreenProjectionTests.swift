@@ -36,7 +36,7 @@ struct FoldedScreenProjectionTests {
         )
     }
 
-    @Test func `flat, the unfolded screen is two halves in the buffer's landscape-left order`() throws {
+    @Test func `should lay the unfolded screen out as two halves in the buffer's landscape-left order when flat`() throws {
         let p = pieces(180, lit: .secondary, orientation: .landscapeLeft)
         #expect(p.count == 2)
         let left = try #require(p.first), right = try #require(p.last)
@@ -50,7 +50,7 @@ struct FoldedScreenProjectionTests {
         #expect(right.u == 0...1 && right.v == 0...0.5)
     }
 
-    @Test func `bent, the left half rises toward the camera while the whole turns back`() throws {
+    @Test func `should raise the left half toward the camera while the whole turns back when bent`() throws {
         // 90°: the left half is up by 90° less the centring turn.
         let p = pieces(90, lit: .secondary, orientation: .landscapeLeft)
         let left = try #require(p.first), right = try #require(p.last)
@@ -60,7 +60,7 @@ struct FoldedScreenProjectionTests {
         #expect(right.quad.topRight.v > right.quad.topLeft.v)
     }
 
-    @Test func `shut, the cover faces the camera on the right half, in portrait order`() throws {
+    @Test func `should show the cover facing the camera on the right half in portrait order when shut`() throws {
         let p = pieces(0, lit: .primary, orientation: .portrait)
         #expect(p.count == 1)
         let c = try #require(p.first)
@@ -72,7 +72,7 @@ struct FoldedScreenProjectionTests {
         #expect(c.u == 0...1 && c.v == 0...1)
     }
 
-    @Test func `a button on the right half stays put as the book bends; one on the left half turns with it`() throws {
+    @Test func `should keep a right-half button put and turn a left-half one with the book as it bends`() throws {
         let body = Vector3(x: 4, y: 2, z: 0.1)
         let marks = FoldedScreenProjection.buttons(
             [ScreenButtonAnchor(id: "power", at: Vector3(x: 2, y: 0.5, z: 0)),
@@ -95,7 +95,7 @@ struct FoldedScreenProjectionTests {
         #expect(near(shut[0].at, u: 0.6, v: 0.475))
     }
 
-    @Test func `a button's control sits outside the body, off the edge the button is on`() throws {
+    @Test func `should place a button's control outside the body, off the edge the button is on`() throws {
         // Device Hub draws the controls beside the device, not on it:
         // a side button's control is out past that side, a top
         // button's above the top.
@@ -111,7 +111,7 @@ struct FoldedScreenProjectionTests {
         #expect(near(marks[1].control, u: 0.55, v: 0.425))    // y 1 → 1.5
     }
 
-    @Test func `with the centring shift the shut cover sits in the middle of the frame`() throws {
+    @Test func `should sit the shut cover in the middle of the frame when the centring shift is applied`() throws {
         let shift = FoldPose.centring(inner: inner, hingeDegrees: 0, fold: fold)
         let p = FoldedScreenProjection.pieces(
             inner: inner, cover: cover, litPanel: .primary, orientation: .portrait,

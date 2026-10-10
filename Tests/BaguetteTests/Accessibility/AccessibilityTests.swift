@@ -6,7 +6,7 @@ import Mockable
 @Suite("Accessibility")
 struct AccessibilityTests {
 
-    @Test func `simulator vends a fresh Accessibility from accessibility()`() {
+    @Test func `should give access to the simulator accessibility`() {
         let sim = MockSimulator()
         let stubAX = MockAccessibility()
         given(sim).accessibility().willReturn(stubAX)
@@ -17,7 +17,7 @@ struct AccessibilityTests {
         verify(sim).accessibility().called(1)
     }
 
-    @Test func `describeAll returns the host's tree`() throws {
+    @Test func `should describe the whole UI tree`() throws {
         let ax = MockAccessibility()
         let tree = AXNode(
             role: "AXApplication",
@@ -36,7 +36,7 @@ struct AccessibilityTests {
         verify(ax).describeAll().called(1)
     }
 
-    @Test func `describeAt returns the host's hit-tested node`() throws {
+    @Test func `should describe the element at a point`() throws {
         let ax = MockAccessibility()
         let node = AXNode(
             role: "AXButton", label: "OK",

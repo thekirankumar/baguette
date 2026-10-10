@@ -12,7 +12,7 @@ struct InterfaceRoutesTests {
 
     // MARK: - parsing the request
 
-    @Test func `an update body names any subset of the three settings`() {
+    @Test func `should accept an interface update that names any one of the three settings`() {
         // The three travel together but are set independently — a panel
         // flipping only dark mode shouldn't have to restate the rest.
         #expect(
@@ -29,7 +29,7 @@ struct InterfaceRoutesTests {
         )
     }
 
-    @Test func `an update body can carry all three at once`() {
+    @Test func `should accept an interface update carrying all three settings at once`() {
         let json = #"{"appearance":"dark","increaseContrast":"enabled","contentSize":"accessibility-large"}"#
         #expect(Server.parseInterfaceUpdate(json: json) == InterfaceUpdate(
             appearance: .dark,
@@ -38,11 +38,11 @@ struct InterfaceRoutesTests {
         ))
     }
 
-    @Test func `a malformed body is refused`() {
+    @Test func `should refuse a malformed interface update body`() {
         #expect(Server.parseInterfaceUpdate(json: "not json") == nil)
     }
 
-    @Test func `a value that can only be read is refused at the door`() {
+    @Test func `should refuse an interface value that can only be read, never set`() {
         // `unknown` is what a shut-down device *answers*. Echoing it
         // back as an instruction is a caller bug, and it fails here
         // rather than as a confusing simctl usage error.
@@ -51,7 +51,7 @@ struct InterfaceRoutesTests {
         #expect(Server.parseInterfaceUpdate(json: #"{"increaseContrast":"maybe"}"#) == nil)
     }
 
-    @Test func `an empty body sets nothing`() {
+    @Test func `should set nothing when the interface update body is empty`() {
         // Distinguishable from a parse failure: valid JSON, nothing to do.
         #expect(Server.parseInterfaceUpdate(json: "{}") == InterfaceUpdate())
         #expect(InterfaceUpdate().isEmpty)
@@ -60,7 +60,7 @@ struct InterfaceRoutesTests {
 
     // MARK: - reading
 
-    @Test func `reading answers all three settings in one call`() async throws {
+    @Test func `should read all three interface settings in one call`() async throws {
         let simulators = Self.simulators(
             appearance: .dark, contrast: .enabled, contentSize: .accessibilityLarge
         )
@@ -75,7 +75,7 @@ struct InterfaceRoutesTests {
         #expect(parsed["contentSize"] as? String == "accessibility-large")
     }
 
-    @Test func `a shut-down device answers unknown rather than failing the request`() async {
+    @Test func `should answer unknown rather than fail when the device is shut down`() async {
         // The panel needs to be able to say "boot the device" — which
         // it can only do if the read succeeds and reports unknown.
         let simulators = Self.simulators(
@@ -86,7 +86,7 @@ struct InterfaceRoutesTests {
         #expect(json.contains("\"appearance\":\"unknown\""))
     }
 
-    @Test func `reading an unknown device is reported as such`() async {
+    @Test func `should report an unknown device when reading its interface settings`() async {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
         #expect(await Server.readInterface(udid: "nope", simulators: simulators) == .unknownDevice)
@@ -94,7 +94,7 @@ struct InterfaceRoutesTests {
 
     // MARK: - applying
 
-    @Test func `applying dispatches only the settings the body named`() async {
+    @Test func `should change only the interface settings the body named`() async {
         let interface = MockInterface()
         given(interface).setAppearance(.any).willReturn(())
         given(interface).setIncreaseContrast(.any).willReturn(())
@@ -112,7 +112,7 @@ struct InterfaceRoutesTests {
         verify(interface).setContentSize(.any).called(0)
     }
 
-    @Test func `applying all three dispatches all three`() async {
+    @Test func `should change all three interface settings when the body names all three`() async {
         let interface = MockInterface()
         given(interface).setAppearance(.any).willReturn(())
         given(interface).setIncreaseContrast(.any).willReturn(())
@@ -131,7 +131,7 @@ struct InterfaceRoutesTests {
         verify(interface).setContentSize(.value(.decrement)).called(1)
     }
 
-    @Test func `a failing spawn surfaces as a failure, not a silent success`() async {
+    @Test func `should report a failure, not a silent success, when simctl cannot change a setting`() async {
         let interface = MockInterface()
         given(interface).setAppearance(.any).willThrow(InterfaceError.simctlFailed(status: 3))
 
@@ -148,7 +148,7 @@ struct InterfaceRoutesTests {
         #expect(applied.isEmpty)
     }
 
-    @Test func `a failure after an earlier success names what did apply`() async {
+    @Test func `should name the settings that did apply when a later one fails`() async {
         // Each setting is its own spawn, so a three-field body is three
         // chances to fail halfway. A bare failure would tell the caller
         // nothing changed, when in fact the appearance already had.
@@ -175,7 +175,7 @@ struct InterfaceRoutesTests {
         verify(interface).setContentSize(.any).called(0)
     }
 
-    @Test func `a wholly successful apply names every setting it landed`() async {
+    @Test func `should name every setting it changed when the whole update lands`() async {
         let interface = MockInterface()
         given(interface).setAppearance(.any).willReturn(())
         given(interface).setIncreaseContrast(.any).willReturn(())
@@ -194,7 +194,7 @@ struct InterfaceRoutesTests {
         #expect(applied == ["appearance", "increaseContrast", "contentSize"])
     }
 
-    @Test func `the applied answer is the shape a caller can act on`() throws {
+    @Test func `should tell the caller which settings applied and any error, in one shape`() throws {
         // Used when the post-change read fails: the settings landed,
         // but the device won't say what it now reads as. `{"ok":true}`
         // claimed success in a shape the caller couldn't use.
@@ -217,7 +217,7 @@ struct InterfaceRoutesTests {
         #expect(clean["error"] == nil)
     }
 
-    @Test func `applying to an unknown device is reported as such`() async {
+    @Test func `should report an unknown device when changing its interface settings`() async {
         let simulators = MockSimulators()
         given(simulators).find(udid: .any).willReturn(nil)
         let outcome = await Server.applyInterface(

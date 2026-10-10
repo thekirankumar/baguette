@@ -6,7 +6,7 @@ import Testing
 
 @Suite("AX native coordinates")
 struct AXNativeCoordinatesTests {
-    @Test func `four interface orientations preserve target centres in native HID points`() {
+    @Test func `should keep element centres on target in native touch points in all four orientations`() {
         let size = CGSize(width: 744, height: 1133)
         let cases: [(DeviceOrientation, CGRect, CGRect)] = [
             (.portrait, CGRect(x: 101, y: 316, width: 140, height: 70), CGRect(x: 101, y: 316, width: 140, height: 70)),
@@ -30,7 +30,7 @@ struct AXNativeCoordinatesTests {
         }
     }
 
-    @Test func `screen metadata does not infer panel dimensions from a partial application root`() throws {
+    @Test func `should report the real screen size when the app covers only part of it`() throws {
         let node = AXNode(
             role: "AXApplication",
             frame: Rect(origin: Point(x: 200, y: 100), size: Size(width: 300, height: 500)),

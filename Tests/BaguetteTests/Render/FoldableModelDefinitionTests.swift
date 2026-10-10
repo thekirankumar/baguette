@@ -9,7 +9,7 @@ import Testing
 @Suite("Foldable model definition")
 struct FoldableModelDefinitionTests {
 
-    @Test func `parses the fold: the shutting clip, its shut time, the cover material and the rest rotation`() throws {
+    @Test func `should read the fold's shutting clip, shut time, cover material and rest rotation`() throws {
         let model = try DeviceModelDefinition.parsing(json: Data(Self.duoJSON.utf8))
 
         let fold = try #require(model.scene.fold)
@@ -21,7 +21,7 @@ struct FoldableModelDefinitionTests {
         #expect(model.scene.restRotation == DeviceRotation(x: 90, y: 0, z: 0))
     }
 
-    @Test func `a screen's texture may be turned by a quarter turn when the mesh's UVs run the other way`() throws {
+    @Test func `should accept a quarter-turn screen texture rotation and reject other angles`() throws {
         let model = try DeviceModelDefinition.parsing(json: Data(Self.duoJSON.utf8))
 
         #expect(model.scene.textureRotation == 90)
@@ -33,7 +33,7 @@ struct FoldableModelDefinitionTests {
         }
     }
 
-    @Test func `the model's hardware buttons are named by the joints that carry them`() throws {
+    @Test func `should name each hardware button by its joint and reject a nameless one`() throws {
         let model = try DeviceModelDefinition.parsing(json: Data(Self.duoJSON.utf8))
 
         #expect(model.scene.buttons == [
@@ -46,14 +46,14 @@ struct FoldableModelDefinitionTests {
         }
     }
 
-    @Test func `a flat phone has no fold and no rest rotation`() throws {
+    @Test func `should give a flat device no fold and no rest rotation`() throws {
         let model = try DeviceModelDefinition.parsing(json: DeviceModelDefinitionTests.macBook)
 
         #expect(model.scene.fold == nil)
         #expect(model.scene.restRotation == nil)
     }
 
-    @Test func `an asset that lives in Xcode is named by its path under Contents`() throws {
+    @Test func `should name an asset that lives in Xcode by its path under Contents`() throws {
         let model = try DeviceModelDefinition.parsing(json: Data(Self.duoJSON.utf8))
 
         #expect(model.asset.file == nil)
@@ -61,7 +61,7 @@ struct FoldableModelDefinitionTests {
             == "SharedFrameworks/DeviceKit.framework/Versions/A/PlugIns/CoreDevicePopDeviceKitExtension.devicekitplugin/Contents/Resources/V68.usdz")
     }
 
-    @Test func `a fold must name its clip and a positive shut time`() throws {
+    @Test func `should reject a fold without a clip or a positive shut time`() throws {
         let noClip = Self.duoJSON.replacingOccurrences(of: #""clip": "l_over_r""#, with: #""clip": """#)
         #expect(throws: DeviceModelError.emptyField("scene.fold.clip")) {
             try DeviceModelDefinition.parsing(json: Data(noClip.utf8))

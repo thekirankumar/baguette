@@ -9,12 +9,12 @@ import Foundation
 @Suite("RecordingError")
 struct RecordingErrorTests {
 
-    @Test func `an unwritable container names the ones baguette can write`() {
+    @Test func `should name the writable containers when the container is unwritable`() {
         #expect(RecordingError.unsupportedContainer("webm").message
             == "Unknown recording container 'webm'. Expected one of: mp4 | mov")
     }
 
-    @Test func `a device that isn't booted is named as the reason, not blamed on a still screen`() {
+    @Test func `should name an unbooted device as the reason rather than blame a still screen`() {
         // A shut-down simulator has no framebuffer to wire, so it
         // delivers nothing — and "the screen never changed. Drive some
         // input" would send the user tapping at a device that isn't
@@ -26,12 +26,12 @@ struct RecordingErrorTests {
                 + "with `baguette boot --udid <UDID>`.")
     }
 
-    @Test func `a writer failure carries the reason it failed`() {
+    @Test func `should carry the reason when writing the recording fails`() {
         #expect(RecordingError.writerFailed("disk full").message
             == "Recording failed: disk full")
     }
 
-    @Test func `the no-frames failure explains that no frame ever arrived`() {
+    @Test func `should explain that no frame ever arrived when nothing was captured`() {
         #expect(RecordingError.noFramesCaptured.message
             == "No frames captured — the simulator screen never changed. "
                 + "Drive some input while recording.")

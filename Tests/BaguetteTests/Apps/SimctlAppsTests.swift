@@ -31,7 +31,7 @@ struct SimctlAppsTests {
         return (SimctlApps(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `install spawns xcrun simctl install with the app path`() async throws {
+    @Test func `should install an app by running xcrun simctl install with its path`() async throws {
         let (apps, captures) = makeApps()
         try await apps.install(AppBundle(path: URL(fileURLWithPath: "/tmp/MyApp.ipa")))
 
@@ -39,7 +39,7 @@ struct SimctlAppsTests {
         #expect(captures.arguments == ["simctl", "install", "U", "/tmp/MyApp.ipa"])
     }
 
-    @Test func `a non-zero simctl exit propagates as an install failure`() async {
+    @Test func `should report an install failure when simctl install exits non-zero`() async {
         let (apps, _) = makeApps(exitCode: 3)
         var caught: AppsError?
         do {
@@ -99,7 +99,7 @@ struct SimctlAppsTests {
         )
     }
 
-    @Test func `an archive is extracted with ditto and the inner app installed`() async throws {
+    @Test func `should install the app inside an archive after extracting it with ditto`() async throws {
         let (apps, captures) = makeArchiveApps()
         try await apps.install(archive: AppArchive(path: URL(fileURLWithPath: "/tmp/up/MyApp.app.zip")))
 
@@ -108,7 +108,7 @@ struct SimctlAppsTests {
         #expect(argv == ["simctl", "install", "U", dir + "/MyApp.app"])
     }
 
-    @Test func `the extraction directory is cleaned up after the install`() async throws {
+    @Test func `should clean up the extraction directory after installing an archive`() async throws {
         let (apps, captures) = makeArchiveApps()
         try await apps.install(archive: AppArchive(path: URL(fileURLWithPath: "/tmp/up/MyApp.app.zip")))
 
@@ -116,7 +116,7 @@ struct SimctlAppsTests {
         #expect(!FileManager.default.fileExists(atPath: dir))
     }
 
-    @Test func `a non-zero ditto exit propagates as an extract failure`() async {
+    @Test func `should report an extract failure when ditto exits non-zero`() async {
         let (apps, _) = makeArchiveApps(dittoExit: 2)
         var caught: AppsError?
         do {
@@ -127,7 +127,7 @@ struct SimctlAppsTests {
         #expect(caught == .extractFailed(status: 2))
     }
 
-    @Test func `an archive with no app inside is refused`() async {
+    @Test func `should refuse an archive with no app inside`() async {
         let (apps, captures) = makeArchiveApps(extractedEntries: ["readme.txt"])
         var caught: AppsError?
         do {
@@ -139,7 +139,7 @@ struct SimctlAppsTests {
         #expect(captures.installArguments == nil)
     }
 
-    @Test func `an archive declaring more than the cap is refused before extraction`() async throws {
+    @Test func `should refuse an archive before extraction when it declares more than the size cap`() async throws {
         let (apps, captures) = makeArchiveApps(maxExtractedBytes: 16)
         let zipURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("bomb-\(UUID().uuidString).app.zip")
@@ -157,7 +157,7 @@ struct SimctlAppsTests {
         #expect(captures.installArguments == nil)
     }
 
-    @Test func `an archive declaring less than the cap proceeds to extraction`() async throws {
+    @Test func `should extract and install an archive when it declares less than the size cap`() async throws {
         let (apps, captures) = makeArchiveApps(maxExtractedBytes: 1024)
         let zipURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ok-\(UUID().uuidString).app.zip")
@@ -169,7 +169,7 @@ struct SimctlAppsTests {
         #expect(captures.installArguments != nil)
     }
 
-    @Test func `an archive that inflates past the extraction cap is refused before install`() async {
+    @Test func `should refuse an archive before install when it inflates past the extraction cap`() async {
         let (apps, captures) = makeArchiveApps(payloadBytes: 64, maxExtractedBytes: 16)
         var caught: AppsError?
         do {
@@ -184,13 +184,13 @@ struct SimctlAppsTests {
         }
     }
 
-    @Test func `an archive within the extraction cap still installs`() async throws {
+    @Test func `should install an archive when it inflates within the extraction cap`() async throws {
         let (apps, captures) = makeArchiveApps(payloadBytes: 8, maxExtractedBytes: 16)
         try await apps.install(archive: AppArchive(path: URL(fileURLWithPath: "/tmp/up/MyApp.app.zip")))
         #expect(captures.installArguments != nil)
     }
 
-    @Test func `a simctl failure after extraction propagates as an install failure`() async {
+    @Test func `should report an install failure when simctl install fails after extraction`() async {
         let (apps, _) = makeArchiveApps(installExit: 5)
         var caught: AppsError?
         do {
@@ -224,7 +224,7 @@ struct SimctlAppsTests {
         return (SimctlApps(udid: "U", subprocess: sub), captures)
     }
 
-    @Test func `opening a deep link spawns xcrun simctl openurl`() async throws {
+    @Test func `should open a deep link by running xcrun simctl openurl`() async throws {
         let (apps, captures) = makeApps()
         try await apps.open(DeepLink.from("myapp://profile/42")!)
 
@@ -232,7 +232,7 @@ struct SimctlAppsTests {
         #expect(captures.arguments == ["simctl", "openurl", "U", "myapp://profile/42"])
     }
 
-    @Test func `a non-zero simctl exit propagates as an open failure`() async {
+    @Test func `should report an open failure when simctl openurl exits non-zero`() async {
         let (apps, _) = makeApps(exitCode: 4)
         var caught: AppsError?
         do {
@@ -243,7 +243,7 @@ struct SimctlAppsTests {
         #expect(caught == .openFailed(status: 4))
     }
 
-    @Test func `the installed inventory spawns xcrun simctl listapps`() async throws {
+    @Test func `should list installed apps by running xcrun simctl listapps`() async throws {
         let (apps, captures) = makeListingApps(output: "{ }")
         _ = try await apps.installed()
 
@@ -270,7 +270,7 @@ struct SimctlAppsTests {
         return (bundle, { try? FileManager.default.removeItem(at: dir) })
     }
 
-    @Test func `the installed inventory reads schemes from each app's bundle`() async throws {
+    @Test func `should read each installed app's schemes from its bundle`() async throws {
         // simctl listapps reports no CFBundleURLTypes, so the schemes
         // have to come from the Info.plist at the path it reports.
         let (bundle, cleanup) = try makeBundle(schemes: ["myapp"])
@@ -291,7 +291,7 @@ struct SimctlAppsTests {
         #expect(inventory.first?.schemes == ["myapp"])
     }
 
-    @Test func `an app whose bundle has vanished still lists, with no schemes`() async throws {
+    @Test func `should still list an app with no schemes when its bundle has vanished`() async throws {
         let (apps, _) = makeListingApps(output: """
         {
             "com.example.Gone" = {
@@ -307,7 +307,7 @@ struct SimctlAppsTests {
         #expect(inventory.first?.schemes == [])
     }
 
-    @Test func `stdout arriving in several chunks still parses`() async throws {
+    @Test func `should list installed apps when simctl output arrives in several chunks`() async throws {
         // A child's output lands in arbitrary chunks; the adapter has to
         // accumulate before parsing rather than parse each chunk.
         let sub = MockSubprocess()
@@ -324,7 +324,7 @@ struct SimctlAppsTests {
         #expect(inventory.map(\.bundleIdentifier) == ["com.example.MyApp"])
     }
 
-    @Test func `a non-zero simctl exit propagates as a listing failure`() async {
+    @Test func `should report a listing failure when simctl listapps exits non-zero`() async {
         let (apps, _) = makeListingApps(output: "", exitCode: 2)
         var caught: AppsError?
         do {
@@ -337,7 +337,7 @@ struct SimctlAppsTests {
 
     // MARK: - what a failure tells the user
 
-    @Test func `every app failure names the command that produced it`() {
+    @Test func `should name the command that failed in every app failure message`() {
         // These strings are the whole of what a user sees when simctl
         // refuses: the CLI prints them and the upload route puts them in
         // its 4xx body. Naming the verb is what turns "it failed" into
@@ -371,7 +371,7 @@ struct SimctlAppsTests {
         return SimctlApps(udid: "U", subprocess: sub)
     }
 
-    @Test func `a child that never starts surfaces instead of hanging`() async {
+    @Test func `should report the error instead of hanging when the simctl child never starts`() async {
         // Every verb here waits on a continuation the child's exit
         // callback resumes. A spawn that throws means that callback never
         // fires, so the error has to be resumed by hand — miss it and the

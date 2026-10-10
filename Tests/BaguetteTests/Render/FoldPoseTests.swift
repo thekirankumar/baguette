@@ -15,31 +15,31 @@ struct FoldPoseTests {
         openPoseDegrees: 130
     )
 
-    @Test func `flat is the clip's start with no turn`() {
+    @Test func `should start the clip with no turn when flat`() {
         let pose = FoldPose.at(degrees: 180, fold: fold)
         #expect(pose.clipTime == 0)
         #expect(pose.yawDegrees == 0)
     }
 
-    @Test func `shut is the clip's shut time, the cover facing the camera`() {
+    @Test func `should reach the clip's shut time with the cover facing the camera when shut`() {
         let pose = FoldPose.at(degrees: 0, fold: fold)
         #expect(pose.clipTime == 5.0)
         #expect(pose.yawDegrees == 0)
     }
 
-    @Test func `the open pose is centred: half the fold turned back`() {
+    @Test func `should centre the open pose with half the fold turned back`() {
         let pose = FoldPose.at(degrees: 130, fold: fold)
         #expect(abs(pose.clipTime - 50.0 / 180 * 5) < 1e-9)
         #expect(pose.yawDegrees == -25)
     }
 
-    @Test func `between open and shut the turn hands over in proportion`() {
+    @Test func `should hand the turn over in proportion between open and shut`() {
         let pose = FoldPose.at(degrees: 65, fold: fold)
         // fold 115°, half 57.5°, share 0.5
         #expect(abs(pose.yawDegrees - (-28.75)) < 1e-9)
     }
 
-    @Test func `angles outside the hinge's range are clamped`() {
+    @Test func `should clamp angles outside the hinge's range`() {
         #expect(FoldPose.at(degrees: 200, fold: fold).clipTime == 0)
         #expect(FoldPose.at(degrees: -5, fold: fold).clipTime == 5.0)
     }
@@ -51,12 +51,12 @@ struct FoldPoseTests {
 // interface cycle turns the device another quarter turn.
 @Suite("InterfaceRoll")
 struct InterfaceRollTests {
-    @Test func `the lit panel's own orientation is the model as it stands`() {
+    @Test func `should leave the model as it stands in the lit panel's own orientation`() {
         #expect(InterfaceRoll.degrees(.landscapeLeft, litPanel: .secondary) == 0)
         #expect(InterfaceRoll.degrees(.portrait, litPanel: .primary) == 0)
     }
 
-    @Test func `a portrait interface on the unfolded panel stands the book up`() {
+    @Test func `should stand the book up for a portrait interface on the unfolded panel`() {
         // Measured against Device Hub: the guest reporting "Portrait
         // Upside Down" on the unfolded panel stands the book with its
         // left half up, i.e. a quarter turn the other way round.
@@ -65,7 +65,7 @@ struct InterfaceRollTests {
         #expect(InterfaceRoll.degrees(.landscapeRight, litPanel: .secondary) == 180)
     }
 
-    @Test func `the shut cover turns the same way`() {
+    @Test func `should turn the shut cover a quarter turn for landscape interfaces`() {
         #expect(InterfaceRoll.degrees(.landscapeLeft, litPanel: .primary) == -90)
         #expect(InterfaceRoll.degrees(.landscapeRight, litPanel: .primary) == 90)
     }
@@ -88,13 +88,13 @@ struct FoldPoseCentringTests {
         bottomRight: Vector3(x: 2, y: -1, z: 0), bottomLeft: Vector3(x: -2, y: -1, z: 0)
     )
 
-    @Test func `flat and at the open pose the book is where it lies`() {
+    @Test func `should leave the book where it lies when flat and at the open pose`() {
         #expect(FoldPose.centring(inner: inner, hingeDegrees: 180, fold: fold).x == 0)
         let open = FoldPose.centring(inner: inner, hingeDegrees: 130, fold: fold)
         #expect(abs(open.x) < 1e-9)
     }
 
-    @Test func `shut, the book that folded onto its right half is brought back to the middle`() {
+    @Test func `should bring the book back to the middle when shut onto its right half`() {
         // The left half turned 180° lies over the right (x 0…2): the
         // book's extent is 0…2, its middle 1, the shift −1.
         let shut = FoldPose.centring(inner: inner, hingeDegrees: 0, fold: fold)
@@ -102,7 +102,7 @@ struct FoldPoseCentringTests {
         #expect(shut.y == 0)
     }
 
-    @Test func `half way, the shift follows the bent extent`() {
+    @Test func `should shift the book by its bent extent when half way`() {
         // 90°: left half up by 90° less the turn (share 90/130 of 45°).
         let mid = FoldPose.centring(inner: inner, hingeDegrees: 90, fold: fold)
         #expect(mid.x < 0 && mid.x > -1)

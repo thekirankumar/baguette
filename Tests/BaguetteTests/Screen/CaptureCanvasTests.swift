@@ -17,7 +17,7 @@ struct CaptureCanvasTests {
 
     // ── contain ──────────────────────────────────────────────
 
-    @Test func `contain letterboxes the frame onto the background`() throws {
+    @Test func `should letterbox the frame onto the background when fit is contain`() throws {
         // 100×50 all-red frame asked for a square: the ratio grows the
         // binding axis to 100×100, so 25px of background sits above and
         // below the centred frame.
@@ -35,7 +35,7 @@ struct CaptureCanvasTests {
         #expect(grid.pixel(x: 50, y: 50) == Pixel(r: 255, g: 0, b: 0, a: 255))
     }
 
-    @Test func `a transparent background leaves the letterbox bars clear`() throws {
+    @Test func `should leave the letterbox bars clear when the background is transparent`() throws {
         let source = solid(width: 100, height: 50, red: 255, green: 0, blue: 0)
         let out = try #require(CaptureCanvas.apply(
             size: try CaptureSize.parse("square"), fit: .contain,
@@ -48,7 +48,7 @@ struct CaptureCanvasTests {
 
     // ── cover ────────────────────────────────────────────────
 
-    @Test func `cover crops the overflow instead of letterboxing`() throws {
+    @Test func `should crop the overflow instead of letterboxing when fit is cover`() throws {
         // Left half red, right half green. 100×50 → square under cover
         // scales ×2 and centres, so the visible window is source x 25…75:
         // the canvas keeps red on the left, green on the right, and no
@@ -70,7 +70,7 @@ struct CaptureCanvasTests {
 
     // ── stretch ──────────────────────────────────────────────
 
-    @Test func `stretch fills the whole canvas, distorting the frame`() throws {
+    @Test func `should fill the whole canvas, distorting the frame, when fit is stretch`() throws {
         let source = solid(width: 100, height: 50, red: 255, green: 0, blue: 0)
         let out = try #require(CaptureCanvas.apply(
             size: try CaptureSize.parse("square"), fit: .stretch,
@@ -83,7 +83,7 @@ struct CaptureCanvasTests {
 
     // ── native ───────────────────────────────────────────────
 
-    @Test func `a native capture hands back the very same frame`() throws {
+    @Test func `should hand back the very same frame when the capture size is native`() throws {
         let source = solid(width: 100, height: 50, red: 255, green: 0, blue: 0)
         let out = CaptureCanvas.apply(
             size: .native, fit: .contain, background: "#0000ff", to: source
@@ -93,7 +93,7 @@ struct CaptureCanvasTests {
 
     // ── fixed sizes ──────────────────────────────────────────
 
-    @Test func `a fixed size comes out at exactly the requested pixels`() throws {
+    @Test func `should capture at exactly the requested pixels when a fixed size is asked for`() throws {
         let source = solid(width: 100, height: 50, red: 255, green: 0, blue: 0)
         let out = try #require(CaptureCanvas.apply(
             size: try CaptureSize.parse("40x80"), fit: .contain,
@@ -105,7 +105,7 @@ struct CaptureCanvasTests {
 
     // ── lifting a framebuffer ────────────────────────────────
 
-    @Test func `a lifted frame keeps its pixels after the framebuffer moves on`() throws {
+    @Test func `should keep a captured frame's pixels after the framebuffer moves on`() throws {
         // SimulatorKit keeps rendering into the surface it handed us —
         // `screen.stop()` only lands after the capture returns. A lifted
         // frame that still aliased that memory would encode a torn mix of
@@ -121,21 +121,21 @@ struct CaptureCanvasTests {
 
     // ── background parsing ───────────────────────────────────
 
-    @Test func `transparent is the absence of a background colour`() {
+    @Test func `should treat a transparent background as no background colour`() {
         #expect(CaptureCanvas.background("transparent") == nil)
         #expect(CaptureCanvas.background("#0000ff") == HexColor(red: 0, green: 0, blue: 1))
     }
 
     // ── encoding ─────────────────────────────────────────────
 
-    @Test func `encodes PNG bytes`() throws {
+    @Test func `should encode a capture as PNG`() throws {
         let source = solid(width: 8, height: 4, red: 255, green: 0, blue: 0)
         let data = try #require(CaptureCanvas.encode(source, format: .png, quality: 0.85))
         #expect(data.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
         #expect(try decodedSize(data) == CGSize(width: 8, height: 4))
     }
 
-    @Test func `encodes JPEG bytes`() throws {
+    @Test func `should encode a capture as JPEG`() throws {
         let source = solid(width: 8, height: 4, red: 255, green: 0, blue: 0)
         let data = try #require(CaptureCanvas.encode(source, format: .jpeg, quality: 0.85))
         #expect(data.prefix(2) == Data([0xFF, 0xD8]))
@@ -144,20 +144,20 @@ struct CaptureCanvasTests {
 
     // ── format choice ────────────────────────────────────────
 
-    @Test func `an explicit format wins over the output extension`() {
+    @Test func `should prefer an explicitly named format over the output extension`() {
         #expect(CaptureFormat.resolve(explicit: .jpeg, output: "/tmp/shot.png") == .jpeg)
     }
 
-    @Test func `a png output path picks PNG when no format is named`() {
+    @Test func `should capture PNG when the output path ends in .png and no format is named`() {
         #expect(CaptureFormat.resolve(explicit: nil, output: "/tmp/shot.PNG") == .png)
     }
 
-    @Test func `JPEG stays the default for stdout and every other extension`() {
+    @Test func `should default to JPEG for stdout and every other output extension`() {
         #expect(CaptureFormat.resolve(explicit: nil, output: nil) == .jpeg)
         #expect(CaptureFormat.resolve(explicit: nil, output: "/tmp/shot.jpg") == .jpeg)
     }
 
-    @Test func `parses the format names a user types`() {
+    @Test func `should accept png, jpg and jpeg as format names and reject others`() {
         #expect(CaptureFormat(argument: "png") == .png)
         #expect(CaptureFormat(argument: "jpg") == .jpeg)
         #expect(CaptureFormat(argument: "jpeg") == .jpeg)

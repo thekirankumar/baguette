@@ -20,7 +20,7 @@ import Foundation
 @Suite("NetworkProfile")
 struct NetworkProfileTests {
 
-    @Test func `pins every preset to Network Link Conditioner's numbers`() {
+    @Test func `should pin every preset to Network Link Conditioner's numbers`() {
         // (profile, NLC downlink kbps, NLC one-way delay ms, loss %)
         let pinned: [(NetworkProfile, Double, Double, Double)] = [
             (.wifi, 40_000, 1, 0),
@@ -39,7 +39,7 @@ struct NetworkProfileTests {
         }
     }
 
-    @Test func `drops everything on the hundred percent loss preset`() {
+    @Test func `should drop everything without going offline on the hundred percent loss preset`() {
         // NLC's "100% Loss" drops packets rather than reporting no
         // connection, so it stays a loss figure — an app that special-cases
         // "not connected to the internet" must not get that shortcut here.
@@ -48,7 +48,7 @@ struct NetworkProfileTests {
         #expect(condition.isOffline == false)
     }
 
-    @Test func `names every preset in the vocabulary the CLI takes`() {
+    @Test func `should name every preset in the vocabulary the CLI takes`() {
         #expect(NetworkProfile.threeG.rawValue == "3g")
         #expect(NetworkProfile.veryBadNetwork.rawValue == "very-bad-network")
         #expect(NetworkProfile.totalLoss.rawValue == "100-loss")
@@ -58,7 +58,7 @@ struct NetworkProfileTests {
         #expect(NetworkProfile.edge.rawValue == "edge")
     }
 
-    @Test func `rejects a profile nobody has heard of`() {
+    @Test func `should reject a profile nobody has heard of`() {
         // A silent fallback to some default would arm a condition the user
         // never asked for, and they'd spend the afternoon wondering why
         // their app was slow.
@@ -66,7 +66,7 @@ struct NetworkProfileTests {
         #expect(NetworkProfile(rawValue: "3G") == nil)
     }
 
-    @Test func `orders the presets from worst network to best`() {
+    @Test func `should order the presets from worst network to best`() {
         // The ordering is the property that actually matters when someone
         // reaches for a preset: edge must hurt more than 3g, which must
         // hurt more than lte.
@@ -79,11 +79,11 @@ struct NetworkProfileTests {
         #expect(middle.bandwidthKbps! < fastest.bandwidthKbps!)
     }
 
-    @Test func `offers every preset for the CLI and the browser to list`() {
+    @Test func `should offer every preset for the CLI and the browser to list`() {
         #expect(NetworkProfile.allCases.count == 7)
     }
 
-    @Test func `recognises a condition as one of its own presets`() {
+    @Test func `should recognise an applied condition as the preset it came from`() {
         // The card posts a preset's *name* and the device reports back
         // *numbers*, so without this the browser cannot tell that what is
         // applied is still the preset the user picked — and the pill it
@@ -94,7 +94,7 @@ struct NetworkProfileTests {
         }
     }
 
-    @Test func `does not mistake a hand-tuned condition for a preset`() {
+    @Test func `should not mistake a hand-tuned condition for a preset`() {
         #expect(NetworkProfile.matching(
             NetworkCondition(latencyMs: 317, bandwidthKbps: 411, lossPercent: 3)!) == nil)
         #expect(NetworkProfile.matching(.unconditioned) == nil)

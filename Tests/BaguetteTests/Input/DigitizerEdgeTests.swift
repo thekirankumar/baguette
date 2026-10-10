@@ -7,14 +7,14 @@ import Testing
 // point reached iOS as two different messages.
 @Suite("IOHIDDigitizerDispatch.Edge")
 struct DigitizerEdgeTests {
-    @Test func `maps every wire edge onto its bitmask`() {
+    @Test func `should mark a touch with the bit for each screen edge it starts on`() {
         #expect(IOHIDDigitizerDispatch.Edge.from(.left).bit   == 0x02)
         #expect(IOHIDDigitizerDispatch.Edge.from(.top).bit    == 0x08)
         #expect(IOHIDDigitizerDispatch.Edge.from(.right).bit  == 0x04)
         #expect(IOHIDDigitizerDispatch.Edge.from(.bottom).bit == 0x01)
     }
 
-    @Test func `treats an absent edge as an interior touch`() {
+    @Test func `should treat a touch as interior when no edge is named`() {
         #expect(IOHIDDigitizerDispatch.Edge.from(nil).bit == 0x00)
     }
 }
