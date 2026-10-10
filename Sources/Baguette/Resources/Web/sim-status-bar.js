@@ -14,6 +14,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // Signal-bars SVG, `n` of `max` filled. Shared by the segmented
   // pickers; mirrors the toolbar glyph so the card reads as a set.
   function barsSVG(n, max) {
@@ -86,7 +88,7 @@
     // overridden fields come back; anything absent keeps its default.
     async _hydrate() {
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(this.udid)}/status-bar`);
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/status-bar`));
         if (!res.ok) return;
         const data = await res.json();
         Object.keys(data).forEach((k) => {
@@ -259,7 +261,7 @@
       this._dirty = new Set();
       if (!Object.keys(body).length) return;
 
-      fetch(`/simulators/${encodeURIComponent(this.udid)}/status-bar`, {
+      fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/status-bar`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -268,7 +270,7 @@
 
     clear() {
       if (this.udid) {
-        fetch(`/simulators/${encodeURIComponent(this.udid)}/status-bar`, { method: 'DELETE' })
+        fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/status-bar`), { method: 'DELETE' })
           .catch((e) => console.warn('[status-bar] clear failed', e));
       }
       // Reset the controls to defaults so the card matches the now-live

@@ -415,13 +415,14 @@ baguette logs --udid <udid> [--level <level>] [--style <style>] [--predicate <pr
 Start the standalone simulator UI server
 
 ```
-baguette serve [--port <port>] [--host <host>] [--allowed-hosts <allowed-hosts> …] [--plugin-dir <plugin-dir> …] [--no-plugins]
+baguette serve [--port <port>] [--host <host>] [--rootpath <rootpath>] [--allowed-hosts <allowed-hosts> …] [--plugin-dir <plugin-dir> …] [--no-plugins]
 ```
 
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--port` |  | `8421` | Port to listen on |
 | `--host` |  | `127.0.0.1` | Host / interface to bind to |
+| `--rootpath` |  | `/` | Mount all HTTP and WebSocket routes beneath this URL path |
 | `--allowed-hosts` |  |  | Additional Host/Origin value to trust (repeatable; "*.example.com" matches subdomains) |
 | `--plugin-dir` |  |  | Extra directory of plugins; repeatable. Shadows installed plugins of the same name. |
 | `--no-plugins` |  |  | Ignore every installed plugin, including bundled ones. |

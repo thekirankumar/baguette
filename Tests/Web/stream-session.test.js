@@ -17,7 +17,7 @@ function loadStreamSession(seed) {
   return loadBrowserModules([MODULE_PATH], window);
 }
 
-test('buildWSUrl omits display when not requested', () => {
+test('should stream the default display when no display is requested', () => {
   const { StreamSession } = loadStreamSession();
   const url = StreamSession.buildWSUrl('UDID-1', 'mjpeg', 'v2');
   assert.equal(
@@ -26,7 +26,7 @@ test('buildWSUrl omits display when not requested', () => {
   );
 });
 
-test('buildWSUrl appends display=carplay when requested', () => {
+test('should stream CarPlay when its display is requested', () => {
   const { StreamSession } = loadStreamSession();
   const url = StreamSession.buildWSUrl('UDID-1', 'mjpeg', 'v2', 'carplay');
   assert.equal(
@@ -35,7 +35,7 @@ test('buildWSUrl appends display=carplay when requested', () => {
   );
 });
 
-test('buildWSUrl appends display=phone when requested', () => {
+test('should stream the phone when its display is requested', () => {
   const { StreamSession } = loadStreamSession();
   const url = StreamSession.buildWSUrl('UDID-1', 'avcc', 'v2', 'phone');
   assert.equal(
@@ -44,11 +44,27 @@ test('buildWSUrl appends display=phone when requested', () => {
   );
 });
 
-test('buildWSUrl encodes udid and ignores unknown display tokens', () => {
+test('should preserve the device identity when it contains URL separators', () => {
   const { StreamSession } = loadStreamSession();
   const url = StreamSession.buildWSUrl('a/b', 'mjpeg', 'v2', 'external');
   assert.equal(
     url,
     'ws://localhost:8421/simulators/a%2Fb/stream?format=mjpeg&version=v2'
   );
+});
+
+test('should preserve the proxy prefix for simulator and device streams', () => {
+  for (const base of ['simulators', 'devices']) {
+    const { StreamSession } = loadStreamSession({
+      BaguetteTarget: {
+        base,
+        path: (udid, rest) => `/proxy/team/${base}/${encodeURIComponent(udid)}${rest}`,
+        wsURL: pathname => `wss://example.com${pathname}`,
+      },
+    });
+    assert.equal(
+      StreamSession.buildWSUrl('a/b', 'mjpeg', 'v2', 'phone'),
+      `wss://example.com/proxy/team/${base}/a%2Fb/stream?format=mjpeg&version=v2&display=phone`
+    );
+  }
 });

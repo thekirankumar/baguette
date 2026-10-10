@@ -43,6 +43,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // Apple Park — a friendly default centre when the device has no pin yet.
   const DEFAULT_CENTER = [37.3349, -122.0090];
   const DEFAULT_ZOOM = 13;
@@ -520,7 +522,7 @@
     }
 
     _applyMotionToggle(on) {
-      const url = `/simulators/${encodeURIComponent(this.udid)}/motion`;
+      const url = appURL(`/simulators/${encodeURIComponent(this.udid)}/motion`);
       if (!on) {
         this._stopMotionPoll();
         // A failed DELETE must not read as stopped: the dylib is still armed,
@@ -578,7 +580,7 @@
     }
 
     _refreshMotion() {
-      fetch(`/simulators/${encodeURIComponent(this.udid)}/motion`)
+      fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/motion`))
         .then((res) => (res.ok ? res.json() : Promise.reject(res)))
         .then((state) => {
           const box = this.host.querySelector('#nativeLocationMotion');
@@ -1151,7 +1153,7 @@
     // repaints the live position every frame and must not have it
     // stomped by a "sent ✓" from an in-flight vector.
     _post(body, { quiet = false } = {}) {
-      return fetch(`/simulators/${encodeURIComponent(this.udid)}/location`, {
+      return fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/location`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -1163,7 +1165,7 @@
     }
 
     _clear() {
-      fetch(`/simulators/${encodeURIComponent(this.udid)}/location`, { method: 'DELETE' })
+      fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/location`), { method: 'DELETE' })
         .then((res) => this._readout(res.ok ? 'Cleared — live location restored.' : 'Clear failed.'))
         .catch(() => this._readout('Clear failed — network error.'));
       this._reset();

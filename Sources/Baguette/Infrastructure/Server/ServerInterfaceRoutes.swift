@@ -18,7 +18,7 @@ extension Server {
     /// capability — `PluginGrantMiddleware` has already turned away a
     /// plugin that didn't declare it by the time these run.
     func registerInterfaceRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?
     ) {
         let simulators = self.simulators

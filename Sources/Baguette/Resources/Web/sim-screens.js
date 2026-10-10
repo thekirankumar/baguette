@@ -22,6 +22,8 @@
 (function (root) {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   const STORAGE_KEY = 'baguette.companionScreens';
 
   // Host-owned glyphs, one per companion screen. Keyed by the same ids
@@ -124,7 +126,7 @@
     async probe() {
       try {
         const res = await fetch(
-          '/simulators/' + encodeURIComponent(this.udid) + '/companion-screens.json',
+          appURL('/simulators/' + encodeURIComponent(this.udid) + '/companion-screens.json'),
           { cache: 'no-store' }
         );
         if (!res.ok) return null;
@@ -369,7 +371,7 @@
         let failure = null;
         try {
           const res = await fetch(
-            '/simulators/' + encodeURIComponent(this.udid) + '/carplay-display',
+            appURL('/simulators/' + encodeURIComponent(this.udid) + '/carplay-display'),
             { method: 'POST' }
           );
           payload = await res.json();
@@ -439,7 +441,7 @@
         button.disabled = true;
         button.textContent = 'Booting…';
         try {
-          await fetch('/simulators/' + encodeURIComponent(entry.udid) + '/boot',
+          await fetch(appURL('/simulators/' + encodeURIComponent(entry.udid) + '/boot'),
             { method: 'POST' });
         } catch (_) { /* the poll below is the real answer */ }
         this.pollForBoot(entry.udid, note, button);
@@ -456,7 +458,7 @@
         this.bootPollTimer = null;
         let booted = false;
         try {
-          const res = await fetch('/simulators.json', { cache: 'no-store' });
+          const res = await fetch(appURL('/simulators.json'), { cache: 'no-store' });
           const json = await res.json();
           const all = (json.running || []).concat(json.available || []);
           const hit = all.find((d) => (d.id || d.udid) === udid);

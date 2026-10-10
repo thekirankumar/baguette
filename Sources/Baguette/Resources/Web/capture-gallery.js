@@ -109,8 +109,10 @@
     async _fetchScreenshot(settings, withBezel) {
       const query = withBezel ? {} : settings.toQuery();
       const params = new URLSearchParams({ t: String(Date.now()), ...query });
-      const url = `/simulators/${encodeURIComponent(this.udid)}`
-        + `/screenshot.jpg?${params.toString()}`;
+      const rest = `/screenshot.jpg?${params.toString()}`;
+      const url = root.BaguetteTarget?.path
+        ? root.BaguetteTarget.path(this.udid, rest)
+        : `/simulators/${encodeURIComponent(this.udid)}${rest}`;
       const res = await root.fetch(url);
       // The route answers a bad UDID or a failed grab with a JSON body,
       // which would otherwise decode-fail as "not an image" and throw the

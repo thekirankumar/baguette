@@ -19,6 +19,9 @@ struct ServeCommand: AsyncParsableCommand {
     @Option(name: .long, help: "Host / interface to bind to")
     var host: String = "127.0.0.1"
 
+    @Option(name: .long, help: "Mount all HTTP and WebSocket routes beneath this URL path")
+    var rootpath: String = "/"
+
     @Option(name: .long, help: "Custom CoreSimulator device-set path")
     var deviceSet: String?
 
@@ -34,7 +37,13 @@ struct ServeCommand: AsyncParsableCommand {
     @Flag(name: .customLong("no-plugins"), help: "Ignore every installed plugin, including bundled ones.")
     var noPlugins = false
 
+    func validate() throws {
+        do { _ = try RootPath(rootpath) }
+        catch { throw ValidationError(String(describing: error)) }
+    }
+
     func run() async throws {
+        let root = try RootPath(rootpath)
         // A device driven over `serve` is lost the moment Simulator.app
         // closes its window, which is easy to trigger by accident when
         // another toolchain opened Simulator.app for you. Warn, don't
@@ -67,6 +76,7 @@ struct ServeCommand: AsyncParsableCommand {
             host: host,
             port: port,
             allowedHosts: allowedHosts,
+            rootPath: root,
             cameraSessions: cameraSessions
         )
         for plugin in (try? plugins.all()) ?? [] {

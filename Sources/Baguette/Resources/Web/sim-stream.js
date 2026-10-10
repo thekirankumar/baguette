@@ -15,6 +15,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // --- Live stream state ---
   let session = null;       // StreamSession
   let sim = null;           // Baguette SDK Simulator (replaces DeviceFrame + SimInput + MouseGestureSource + BezelButtons)
@@ -118,7 +120,7 @@
       // route happily answers with sim.html. The parser then can't
       // find `#simPluginView` and downstream `getElementById` calls
       // (`simStreamTitle`, etc.) start returning null.
-      _templatePromise = fetch('/sim-stream.html')
+      _templatePromise = fetch(appURL('/sim-stream.html'))
         .then((r) => r.text())
         .then((html) => {
           const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -178,7 +180,6 @@
     // to the StreamSession's WebSocket. Pre-open gestures (rare —
     // the user can't interact until the page renders) get dropped.
     sim = await window.Baguette.use({
-      host: location.origin,
       udid,
       send: (payload) => { if (session) session.send(payload); },
       log,
@@ -685,7 +686,7 @@
   // returns to the list, share-link works, no inline-view flash).
   window.simAffordanceHandlers = window.simAffordanceHandlers || {};
   window.simAffordanceHandlers['stream'] = (id) => {
-    location.href = '/simulators/' + encodeURIComponent(id);
+    location.href = appURL('/simulators/' + encodeURIComponent(id));
   };
 
   // --- Hash trigger ---
@@ -702,7 +703,7 @@
     history.replaceState(null, '', location.pathname + location.search);
     let name = 'Simulator';
     try {
-      const r = await fetch('/simulators.json', { cache: 'no-store' });
+      const r = await fetch(appURL('/simulators.json'), { cache: 'no-store' });
       if (r.ok) {
         const json = await r.json();
         const all = (json.running || []).concat(json.available || []);

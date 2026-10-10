@@ -159,8 +159,12 @@
      */
     layerImageUrl(layer, baseUrl) {
       const base = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-      if (/^(?:[a-z]+:)?\/\//i.test(layer.image) || layer.image.startsWith('/')) {
+      if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(layer.image)) {
         return layer.image;
+      }
+      if (layer.image.startsWith('/')) {
+        if (/^(?:https?:)?\/\//i.test(baseUrl)) return new URL(layer.image, baseUrl).href;
+        return root.BaguetteTarget ? root.BaguetteTarget.url(layer.image.slice(1)) : layer.image;
       }
       return base + layer.image;
     }

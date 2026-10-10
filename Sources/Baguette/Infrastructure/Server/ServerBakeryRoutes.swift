@@ -34,7 +34,7 @@ extension Server {
     }
 
     func registerBakeryRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?
     ) {
         let installer = bakeryInstaller()

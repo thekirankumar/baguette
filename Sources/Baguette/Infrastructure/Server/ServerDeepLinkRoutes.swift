@@ -26,7 +26,7 @@ extension Server {
     /// the extension because it answers JSON to a `GET`, matching
     /// `describe-ui.json` / `interface.json` / `simulators.json`.
     func registerDeepLinkRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?
     ) {
         let simulators = self.simulators

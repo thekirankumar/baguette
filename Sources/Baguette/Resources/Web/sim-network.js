@@ -17,6 +17,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   const PROFILE_LABELS = {
     wifi: 'Wi-Fi', dsl: 'DSL', lte: 'LTE', '3g': '3G', edge: 'Edge',
     'very-bad-network': 'Very bad', '100-loss': '100% loss',
@@ -75,7 +77,7 @@
     // showing the truth rather than whatever was last typed into it.
     async _hydrate() {
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(this.udid)}/network`);
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/network`));
         if (!res.ok) return;
         this._absorb(await res.json());
       } catch (e) { /* keep what we have */ }
@@ -258,7 +260,7 @@
       // Nothing selected is a clear, not a POST the route would refuse.
       if (!body) return this._clear();
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(this.udid)}/network`, {
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/network`), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -286,7 +288,7 @@
     async _clear() {
       if (!this.udid) return;
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(this.udid)}/network`,
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(this.udid)}/network`),
                                 { method: 'DELETE' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch (e) {

@@ -18,7 +18,7 @@ extension Server {
     /// declare a capability for, and no capability covers it yet — so
     /// it rides the browser-trust check alone.
     func registerCompanionScreenRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?
     ) {
         let simulators = self.simulators
