@@ -3,6 +3,17 @@
 <head>
   <meta charset="utf-8">
   <title>Baguette SDK demo</title>
+<script>
+(function () {
+  const pathname = location.pathname;
+  const route = pathname.match(/^(.*)(\/(?:simulators|devices)(?:\/[^/]+)?\/*|\/farm(?:\/farm\.html)?\/*|\/(?:baguette-demo|sim)\.html)$/);
+  const base = document.createElement('base');
+  base.href = new URL(location.protocol === 'file:'
+    ? (/\/farm\/farm\.html$/.test(pathname) ? '../' : './')
+    : (route ? route[1] + '/' : './'), location.href).href;
+  document.head.appendChild(base);
+})();
+</script>
   <style>
     body  { font-family: ui-sans-serif, system-ui; padding: 20px; background: #f5f5f7; color: #1d1d1f; }
     h1    { margin: 0 0 6px; font-size: 18px; }
@@ -30,15 +41,16 @@
   <div id="host"></div>
   <div id="log"></div>
 
-  <script src="/baguette/transport.js"></script>
-  <script src="/baguette/gestures/pinch-overlay.js"></script>
-  <script src="/baguette/gestures/pointer-interpreter.js"></script>
-  <script src="/baguette/parts/bezel.js"></script>
-  <script src="/baguette/parts/screen.js"></script>
-  <script src="/baguette/parts/button.js"></script>
-  <script src="/baguette/parts/keyboard.js"></script>
-  <script src="/baguette/simulator.js"></script>
-  <script src="/baguette/baguette.js"></script>
+  <script src="target.js"></script>
+  <script src="baguette/transport.js"></script>
+  <script src="baguette/gestures/pinch-overlay.js"></script>
+  <script src="baguette/gestures/pointer-interpreter.js"></script>
+  <script src="baguette/parts/bezel.js"></script>
+  <script src="baguette/parts/screen.js"></script>
+  <script src="baguette/parts/button.js"></script>
+  <script src="baguette/parts/keyboard.js"></script>
+  <script src="baguette/simulator.js"></script>
+  <script src="baguette/baguette.js"></script>
   <script>
     const logEl = document.getElementById('log');
     const log = (m, isErr) => {
@@ -61,8 +73,7 @@
 
         // Open the stream WS just to get `send` — frames are
         // ignored in this demo; only input dispatch is exercised.
-        const wsUrl = location.origin.replace(/^http/, 'ws')
-          + `/simulators/${encodeURIComponent(udid)}/stream?format=mjpeg&version=v2`;
+        const wsUrl = BaguetteTarget.wsURL(BaguetteTarget.path(udid, '/stream?format=mjpeg&version=v2'));
         ws = new WebSocket(wsUrl);
         ws.binaryType = 'arraybuffer';
         ws.onopen   = () => log('WS open');
@@ -73,7 +84,7 @@
           if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
         };
 
-        sim = await Baguette.use({ host: location.origin, udid, send, log });
+        sim = await Baguette.use({ udid, send, log });
         sim.mount(document.getElementById('host'));
         log(`mounted ${sim.identity.name} (${sim.buttons.length} buttons)`);
       } catch (e) {

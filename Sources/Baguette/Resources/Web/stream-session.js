@@ -142,13 +142,16 @@
     // BaguetteTarget switches the base for /devices/:udid pages; the
     // fallback keeps embedders that load this file standalone working.
     const base = (window.BaguetteTarget && window.BaguetteTarget.base) || 'simulators';
-    let url = `${proto}//${loc.host}/${base}/${encodeURIComponent(udid)}/stream`
+    const target = window.BaguetteTarget;
+    let url = (target && target.path
+      ? target.path(udid, '/stream')
+      : `/${base}/${encodeURIComponent(udid)}/stream`)
          + `?format=${encodeURIComponent(format)}`
          + `&version=${encodeURIComponent(version)}`;
     if (display === 'phone' || display === 'carplay') {
       url += `&display=${encodeURIComponent(display)}`;
     }
-    return url;
+    return target && target.wsURL ? target.wsURL(url) : `${proto}//${loc.host}${url}`;
   }
 
   StreamSession.buildWSUrl = buildWSUrl;

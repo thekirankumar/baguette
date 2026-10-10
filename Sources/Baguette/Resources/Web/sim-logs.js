@@ -131,9 +131,9 @@
     params.set('level', level);
     params.set('style', style);
     if (bundleId) params.set('bundleId', bundleId);
-    return proto + '//' + location.host
-      + '/simulators/' + encodeURIComponent(udid) + '/logs?'
-      + params.toString();
+    const path = '/simulators/' + encodeURIComponent(udid) + '/logs?' + params.toString();
+    return window.BaguetteTarget?.wsURL
+      ? window.BaguetteTarget.wsURL(path.slice(1)) : proto + '//' + location.host + path;
   }
 
   // Treat the list as auto-scrolling when the user is within this

@@ -16,6 +16,45 @@ One resource tree: no `/api/` prefix, the UDID is always in the path, and the fo
 
 The server trusts only loopback `Host` / `Origin` values, so a request through a reverse proxy gets `403 forbidden origin`. Trust the proxy's hostname with `--allowed-hosts sim.example.com` (or `'*.example.com'` for subdomains; repeatable, ports ignored). An allowed host is trusted as both `Host` and `Origin`, and allowed origins get CORS headers and preflight answers. Other cross-site origins are still refused. Plugin calls carry their own per-run grant instead — see [plugins](features/plugins/README.md).
 
+## Proxy subpaths
+
+The web UI derives its base from the page URL: `/subpath/simulators`,
+`/subpath/simulators/:udid`, `/subpath/devices/:udid` and `/subpath/farm`
+keep assets, requests, navigation and WebSockets beneath `/subpath/`.
+Nested prefixes work too; no frontend configuration is needed.
+
+To test prefix handling locally without a reverse proxy:
+
+```bash
+baguette serve --rootpath /subpath
+open http://127.0.0.1:8421/subpath/simulators
+```
+
+This mounts every HTTP and WebSocket route beneath the supplied path. Both
+`/subpath` and `/subpath/` redirect to the mounted list; unprefixed routes are
+not served. A trailing slash on the option is accepted, and the default `/`
+keeps existing URLs unchanged. Prefixes must be literal URL paths, without
+query strings, captures or empty/dot segments.
+
+JSON definitions retain their server-root asset paths; the built-in UI resolves
+them beneath the detected mount. Custom API clients must apply the same base.
+
+Configure your reverse proxy to:
+
+- Strip the prefix upstream: `/subpath/devices.json` becomes `/devices.json`.
+- Forward WebSocket upgrades on prefixed stream, log and camera routes.
+- Rewrite upstream `Location` redirects to retain the prefix, including the
+  `/` redirect to `/simulators`; redirect `/subpath` to `/subpath/`.
+- Use a [trusted hostname](#trusted-hosts). Keep authentication at the proxy;
+  allowed hosts are an origin check, not user authentication.
+
+These stripping instructions assume the default `--rootpath /`. If the server
+itself uses `--rootpath /subpath`, forward that prefix unchanged instead.
+
+For an SDK embedded in a different page, explicitly supply the server base,
+including its mount: `Baguette.use({ host: 'https://sim.example.com/subpath/', udid, send })`.
+The built-in pages detect it automatically.
+
 ## Routes
 
 `:udid` is a simulator UDID. Rows without a feature link are documented here only.

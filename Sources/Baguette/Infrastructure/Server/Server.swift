@@ -51,6 +51,7 @@ struct Server: Sendable {
     let host: String
     let port: Int
     let allowedHosts: Set<String>
+    let rootPath: RootPath
     /// Capability grants, one per plugin-command invocation. A plugin
     /// subprocess authenticates with the token it was handed, which
     /// carries exactly its manifest's declared capabilities and dies
@@ -85,6 +86,7 @@ struct Server: Sendable {
         host: String = "127.0.0.1",
         port: Int = 8421,
         allowedHosts: [String] = [],
+        rootPath: RootPath = try! RootPath(),
         grants: PluginGrants = PluginGrants(),
         motionSessions: MotionSessions = MotionSessions(),
         cameraSessions: CameraSessions = CameraSessions(guestTerminated: { _ in false }),
@@ -105,12 +107,13 @@ struct Server: Sendable {
         self.host = host
         self.port = port
         self.allowedHosts = Set(allowedHosts.map { $0.lowercased() })
+        self.rootPath = rootPath
         self.grants = grants
     }
 
     func run() async throws {
         let router = makeRouter()
-        log("listening on http://\(host):\(port)/simulators")
+        log("listening on http://\(host):\(port)\(rootPath.route("/simulators"))")
 
         let app = Application(
             router: router,
@@ -133,26 +136,28 @@ struct Server: Sendable {
     /// Exposed for tests — build the router without binding a port.
     func makeRouter() -> Router<BasicWebSocketRequestContext> {
         let router = Router(context: BasicWebSocketRequestContext.self)
-        registerRoutes(on: router)
+        if !allowedHosts.isEmpty {
+            router.add(middleware: AllowedHostsCORSMiddleware(allowedHosts: allowedHosts))
+        }
+        router.add(middleware: PluginGrantMiddleware(grants: grants, rootPath: rootPath))
+        registerRoutes(on: router.group(RouterPath(rootPath.path)))
         return router
     }
 
     // MARK: - routes
 
-    private func registerRoutes(on router: Router<BasicWebSocketRequestContext>) {
+    private func registerRoutes(on router: some RouterMethods<BasicWebSocketRequestContext>) {
         let bindHost = self.host
         let bindPort = self.port
         let allowedHosts = self.allowedHosts
-        if !allowedHosts.isEmpty {
-            router.add(middleware: AllowedHostsCORSMiddleware(allowedHosts: allowedHosts))
-        }
+        let rootPath = self.rootPath
+        _ = router.add(middleware: RootPathMiddleware(rootPath: rootPath))
         // Capability enforcement sits in front of every route rather than
         // inside the handful that thought to ask. A plugin presenting a
         // grant gets exactly the routes its manifest declared and nothing
         // else — including routes nobody has mapped to a capability yet,
         // which are closed by construction. Requests with no grant are
         // untouched here and still answer to the origin checks below.
-        router.add(middleware: PluginGrantMiddleware(grants: self.grants))
         let rejectUntrustedBrowser: @Sendable (Request) -> Response? = { request in
             Self.rejectUntrustedBrowserRequest(
                 request, bindHost: bindHost, bindPort: bindPort, allowedHosts: allowedHosts
@@ -167,7 +172,7 @@ struct Server: Sendable {
             }
 
         // List page (HTML + sibling assets).
-        router.get("/") { _, _ in Self.redirect(to: "/simulators") }
+        router.get("/") { _, _ in Self.redirect(to: rootPath.route("/simulators")) }
         router.get("/simulators") { _, _ in Self.staticAsset("sim.html") }
         router.get("/simulators.json") { [simulators] r, _ in
             if let rejected = rejectUntrustedBrowser(r) { return rejected }
@@ -3188,7 +3193,7 @@ struct Server: Sendable {
     /// in its own helper because Hummingbird's router-builder
     /// inference grinds to a halt when too many `router.ws` /
     /// `router.get` closures share a single function body.
-    private func registerLogsRoute(on router: Router<BasicWebSocketRequestContext>) {
+    private func registerLogsRoute(on router: some RouterMethods<BasicWebSocketRequestContext>) {
         let simulators = self.simulators
         let bindHost = self.host
         let bindPort = self.port
@@ -3525,6 +3530,24 @@ struct Server: Sendable {
         }
     }
 
+    /// Keeps handler paths canonical without changing the mounted router paths.
+    struct RootPathMiddleware<Context: RequestContext>: RouterMiddleware {
+        let rootPath: RootPath
+
+        func handle(
+            _ request: Request,
+            context: Context,
+            next: (Request, Context) async throws -> Response
+        ) async throws -> Response {
+            guard let path = rootPath.relative(request.uri.path) else {
+                return Response(status: .notFound)
+            }
+            var head = request.head
+            head.path = path + (request.uri.query.map { "?" + $0 } ?? "")
+            return try await next(Request(head: head, body: request.body), context)
+        }
+    }
+
     /// Refuses a plugin any route its manifest didn't declare.
     ///
     /// In front of every route on purpose. The alternative — each
@@ -3540,6 +3563,7 @@ struct Server: Sendable {
     /// browser and `curl` behave exactly as they did before.
     struct PluginGrantMiddleware<Context: RequestContext>: RouterMiddleware {
         let grants: PluginGrants
+        var rootPath: RootPath = try! RootPath()
 
         func handle(
             _ request: Request,
@@ -3548,7 +3572,7 @@ struct Server: Sendable {
         ) async throws -> Response {
             let presented = request.headers[HTTPField.Name("X-Baguette-Token")!]
             switch PluginAccess.decide(
-                token: presented, path: request.uri.path, grants: grants
+                token: presented, path: rootPath.relative(request.uri.path) ?? request.uri.path, grants: grants
             ) {
             case .anonymous, .granted:
                 return try await next(request, context)

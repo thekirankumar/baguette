@@ -385,7 +385,8 @@
       udid: this.udid,
       format: this.format,
       canvas: this.canvas,
-      url: scheme + '//' + location.host + path,
+      url: window.BaguetteTarget?.wsURL
+        ? window.BaguetteTarget.wsURL(path) : scheme + '//' + location.host + path,
       onFps: (fps) => {
         if (generation === this.generation && this.onFps && fps > 0) {
           this.onFps(fps);

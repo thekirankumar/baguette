@@ -3,6 +3,8 @@
 (function() {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // sim-native.js owns the page when the URL is `/simulators/<udid>`
   // and sets this flag synchronously at script-eval time. Bail out so
   // we don't paint the list shell underneath the focus-mode chrome.
@@ -35,7 +37,8 @@
   }
 
   function getSimAPI() {
-    return `${getServerUrl()}/api/sim`;
+    return window.BaguetteTarget?.url && !window.DataProvider?._serverUrl
+      ? appURL('/api/sim') : `${getServerUrl()}/api/sim`;
   }
 
   function ensureShell() {
@@ -296,7 +299,7 @@
           <td>${escapeHTML(device.model || '')}</td>
           <td class="asc-sim-actions">
             <span style="display:inline-flex;align-items:center;height:22px;padding:0 9px;margin-right:6px;border:1px solid #fde68a;border-radius:99px;background:#fef3c7;color:#92400e;font-size:11px;font-weight:700">View-only</span>
-            <a class="asc-sim-button" href="/devices/${encodeURIComponent(device.udid)}">Open</a>
+            <a class="asc-sim-button" href="${escapeHTML(appURL('/devices/' + encodeURIComponent(device.udid)))}">Open</a>
           </td>
         </tr>`).join('');
     return `
@@ -309,7 +312,7 @@
 
   async function fetchPhysicalDevices() {
     try {
-      const response = await fetch('/devices.json', { cache: 'no-store' });
+      const response = await fetch(appURL('/devices.json'), { cache: 'no-store' });
       if (!response.ok) return [];
       const json = await response.json();
       return json.connected || [];
@@ -348,7 +351,7 @@
             <option value="all" ${state.family === 'all' ? 'selected' : ''}>All Devices</option>
           </select>
           <select class="asc-sim-select" id="ascSimRuntime">${runtimeOptions()}</select>
-          <a class="asc-sim-button" id="ascSimFarm" href="/farm">Device Farm</a>
+          <a class="asc-sim-button" id="ascSimFarm" href="${escapeHTML(appURL('/farm'))}">Device Farm</a>
           <button class="asc-sim-button" id="ascSimRefresh">Refresh</button>
         </div>
         ${body}
@@ -369,7 +372,7 @@
     // baguette serve exposes the list at /simulators.json, pre-split
     // into running/available. We fold them back into a flat array
     // because the IIFE renders its own RUNNING / AVAILABLE sections.
-    const response = await fetch('/simulators.json', { cache: 'no-store' });
+    const response = await fetch(appURL('/simulators.json'), { cache: 'no-store' });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const json = await response.json();
     const flat = (json.running || []).concat(json.available || []);
@@ -401,7 +404,7 @@
     // body is empty. Matches the canonical /baguette serve route
     // table (no /api/ prefix, no payload).
     const response = await fetch(
-      `/simulators/${encodeURIComponent(id)}/${encodeURIComponent(action)}`,
+      appURL(`/simulators/${encodeURIComponent(id)}/${encodeURIComponent(action)}`),
       { method: 'POST' }
     );
     if (!response.ok) throw new Error(`${action} failed: ${response.status}`);

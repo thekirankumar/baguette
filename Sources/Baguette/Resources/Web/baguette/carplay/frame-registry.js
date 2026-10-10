@@ -4,6 +4,8 @@
   'use strict';
 
   const REGISTRY_URL = '/carplay-frames/registry.json';
+  const appURL = path => root.BaguetteTarget
+    ? root.BaguetteTarget.url(/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(path) ? path : path.replace(/^\/+/, '')) : path;
 
   class CarPlayFrameRegistry {
     static #cache = new Map();
@@ -41,9 +43,9 @@
         throw new Error('CarPlayFrameRegistry: _CarPlayFrameDefinition is not loaded');
       }
 
-      const defUrl = row.definition.startsWith('/')
+      const defUrl = appURL(/^(?:[a-z][a-z\d+.-]*:|\/)/i.test(row.definition)
         ? row.definition
-        : '/carplay-frames/' + row.definition;
+        : '/carplay-frames/' + row.definition);
       const res = await fetch(defUrl);
       if (!res.ok) {
         throw new Error(`CarPlayFrameRegistry: failed to fetch ${defUrl} (${res.status})`);
@@ -59,7 +61,7 @@
 
     static async #loadIndex() {
       if (this.#index) return this.#index;
-      const res = await fetch(REGISTRY_URL);
+      const res = await fetch(appURL(REGISTRY_URL));
       if (!res.ok) {
         throw new Error(`CarPlayFrameRegistry: failed to fetch registry (${res.status})`);
       }

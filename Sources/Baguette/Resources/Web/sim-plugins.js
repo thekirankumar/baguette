@@ -24,6 +24,8 @@
 (function (root) {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // Glyphs matching Domain/Plugin/PanelBody.swift's `PluginIcon`. A
   // manifest names one; it can never supply markup. Keep the two in
   // sync — an icon the host doesn't have is rejected at parse time, so
@@ -147,7 +149,7 @@
     async load({ keepRailOnFailure = false } = {}) {
       let payload;
       try {
-        const res = await fetch('/plugins.json', { cache: 'no-cache' });
+        const res = await fetch(appURL('/plugins.json'), { cache: 'no-cache' });
         if (!res.ok) throw new Error('plugins.json: ' + res.status);
         payload = await res.json();
       } catch (_) {
@@ -610,7 +612,7 @@
           init.headers = { 'content-type': 'application/json' };
           init.body = JSON.stringify({ args });
         }
-        const res = await fetch(url, init);
+        const res = await fetch(appURL(url), init);
         payload = await res.json();
       } catch (error) {
         this.renderShell(pluginName, panel, this.statusHTML('Could not reach the server: ' + error));
@@ -1076,7 +1078,7 @@
     async paintShelf(shelf) {
       let data;
       try {
-        const res = await fetch('/bakeries.json', { cache: 'no-cache' });
+        const res = await fetch(appURL('/bakeries.json'), { cache: 'no-cache' });
         data = await res.json();
         if (!res.ok) throw new Error(data.error || 'could not read your bakeries');
       } catch (error) {
@@ -1136,7 +1138,7 @@
       button.disabled = true;
       button.textContent = 'Installing…';
       try {
-        const res = await fetch('/bakeries/install', {
+        const res = await fetch(appURL('/bakeries/install'), {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ bakery, plugin }),
         });
@@ -1165,7 +1167,7 @@
       result.innerHTML = '<div class="plugin-status">Fetching… this clones the repo, so a cold one takes a minute.</div>';
       let data;
       try {
-        const res = await fetch('/bakeries/preview', {
+        const res = await fetch(appURL('/bakeries/preview'), {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ ref }),
         });

@@ -7,7 +7,7 @@
 //   Baguette.version  — semver string
 //   Baguette.use      — bootstrap a Simulator
 //
-// `host` is the baguette server origin (e.g. `location.origin`).
+// `host` is an optional server base URL, including its proxy mount.
 // `udid` is the simulator's UDID. `send` is the upstream sink — a
 // `(payload)=>void` function the page wires to its WebSocket. The
 // SDK never opens its own socket; the consumer owns transport
@@ -25,10 +25,36 @@
   root.Baguette = root.Baguette || {};
   root.Baguette.version = '0.1.0';
 
+  function serverURL(path, host) {
+    if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(path)) return path;
+    if (!host && root.BaguetteTarget) return root.BaguetteTarget.url(path);
+    const base = new URL((host || root.location.origin).replace(/\/+$/, '') + '/');
+    return new URL(path.replace(/^\/+/, ''), base).href;
+  }
+
+  // Definitions use server-root paths; resolve them once before DOM parts mount.
+  root.Baguette.normalizeDefinition = function (def, host) {
+    const imageBase = host || (root.BaguetteTarget
+      ? new URL(root.BaguetteTarget.url(''), root.location.href).href : root.location.origin);
+    const imageURL = path => serverURL(path, imageBase);
+    const images = [def.screen && def.screen.bezelImage,
+      ...(def.buttons || []).map((button) => button.images)];
+    for (const image of images) {
+      if (!image) continue;
+      for (const state of ['rest', 'bare', 'pressed']) {
+        if (image[state]) image[state] = imageURL(image[state]);
+      }
+    }
+    if (def.screen && def.screen.maskImage) {
+      def.screen.maskImage = imageURL(def.screen.maskImage);
+    }
+    return def;
+  };
+
   /**
    * Fetch the simulator's definition and return a ready Simulator.
    * @param {object} opts
-   * @param {string} opts.host  baguette server origin
+   * @param {string} [opts.host] baguette server base URL (including proxy mount)
    * @param {string} opts.udid
    * @param {(payload:object)=>void} opts.send  wire sink
    * @param {(msg:string, isErr?:boolean)=>void} [opts.log]
@@ -38,17 +64,14 @@
     if (!udid) throw new Error('Baguette.use: udid is required');
     if (typeof send !== 'function') throw new Error('Baguette.use: send must be a function');
 
-    const base = host || location.origin;
     // `definitionURL` lets a non-simulator surface (a physical device
     // borrowing a chrome) point the bootstrap somewhere else.
-    const url  = definitionURL
-        ? `${base}${definitionURL}`
-        : `${base}/simulators/${encodeURIComponent(udid)}/definition.json`;
+    const url = serverURL(definitionURL || `simulators/${encodeURIComponent(udid)}/definition.json`, host);
     const res  = await fetch(url, { cache: 'no-cache' });
     if (!res.ok) {
       throw new Error(`Baguette.use: definition fetch failed (${res.status})`);
     }
-    const def = await res.json();
+    const def = root.Baguette.normalizeDefinition(await res.json(), host);
 
     const T = root.Baguette._Transport;
     const transport = new T({ send, log });

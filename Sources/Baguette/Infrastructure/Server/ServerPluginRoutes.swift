@@ -22,13 +22,13 @@ extension Server {
     /// no `Origin` header to be trusted by, and its token carries only
     /// what its manifest declared.
     func registerPluginRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?
     ) {
         let plugins = self.plugins
         let simulators = self.simulators
         let grants = self.grants
-        let origin = "http://\(self.host):\(self.port)"
+        let origin = "http://\(self.host):\(self.port)\(self.rootPath.path)"
 
         router.get("/plugins.json") { r, _ in
             if let rejected = rejectUntrustedBrowser(r) { return rejected }

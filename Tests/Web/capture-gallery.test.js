@@ -158,6 +158,16 @@ test('asks for a plain screenshot at native size', async () => {
   assert.equal(q.fit, undefined);
 });
 
+test('should preserve the proxy prefix and device base for screenshots', async () => {
+  const { gallery, CaptureSettings, state, window } = galleryFor({ frameImg: null });
+  window.BaguetteTarget = {
+    path: (udid, rest) => `/proxy/team/devices/${encodeURIComponent(udid)}${rest}`,
+  };
+  await gallery.capture({ settings: new CaptureSettings({ withFrame: false }) });
+  assert.equal(new URL(state.urls[0], 'https://example.com').pathname,
+    '/proxy/team/devices/UD-1/screenshot.jpg');
+});
+
 test('asks for the raw screen when the bezel is composited in', async () => {
   const { gallery, CaptureSettings, state } = galleryFor();
   await gallery.capture({

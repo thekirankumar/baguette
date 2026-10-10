@@ -21,7 +21,7 @@ import NIOCore
 /// ```
 extension Server {
     func registerDeviceTwinRoutes(
-        on router: Router<BasicWebSocketRequestContext>,
+        on router: some RouterMethods<BasicWebSocketRequestContext>,
         rejectUntrustedBrowser: @escaping @Sendable (Request) -> Response?,
         trustedWebSocketUpgrade: @escaping @Sendable (Request, BasicWebSocketRequestContext)
             async throws -> RouterShouldUpgrade
@@ -31,6 +31,7 @@ extension Server {
         let models = self.models
         let chromes = self.chromes
         let poses = self.twinPoses
+        let rootPath = self.rootPath
 
         // The companion's motion socket: hello, then attitude samples
         // at sensor rate. Kept apart from the video socket on purpose —
@@ -41,7 +42,7 @@ extension Server {
         ) { inbound, outbound, context in
             // 4 segments — `udidParam`'s second-to-last rule would grab
             // "companion", so the position is explicit.
-            let parts = context.request.uri.path.split(separator: "/")
+            let parts = (rootPath.relative(context.request.uri.path) ?? "").split(separator: "/")
             let pathUdid = parts.count >= 2
                 ? String(parts[1]).removingPercentEncoding ?? "" : ""
             var session = TwinSession(expecting: pathUdid)
@@ -254,7 +255,7 @@ extension Server {
             "/devices/:udid/companion/video",
             shouldUpgrade: trustedWebSocketUpgrade
         ) { inbound, outbound, context in
-            let parts = context.request.uri.path.split(separator: "/")
+            let parts = (rootPath.relative(context.request.uri.path) ?? "").split(separator: "/")
             let pathUdid = parts.count >= 2
                 ? String(parts[1]).removingPercentEncoding ?? "" : ""
             await Self.twinVideoWS(

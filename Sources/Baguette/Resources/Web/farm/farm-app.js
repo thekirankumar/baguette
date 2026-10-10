@@ -22,6 +22,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   const VIEW_HOST_ID = 'farm-view-host';
 
   function FarmApp() {
@@ -55,7 +57,7 @@
   // ---- device discovery ---------------------------------------------
   FarmApp.prototype.refreshDevices = async function () {
     try {
-      const res = await fetch('/simulators.json');
+      const res = await fetch(appURL('/simulators.json'));
       const json = await res.json();
       const all = [...(json.running || []), ...(json.available || [])];
       this.devices = all.map(d => normalizeDevice(d));
@@ -230,9 +232,10 @@
       d.uiState !== 'off' && !this.definitions.has(d.udid));
     await Promise.allSettled(need.map(async d => {
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(d.udid)}/definition.json`);
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(d.udid)}/definition.json`));
         if (!res.ok) { this.definitions.set(d.udid, null); return; }
         const def = await res.json();
+        if (window.Baguette?.normalizeDefinition) window.Baguette.normalizeDefinition(def);
         this.definitions.set(d.udid, def);
       } catch {
         this.definitions.set(d.udid, null);
@@ -256,7 +259,7 @@
     this.focus = this.focus || new window.FarmFocus(byId('farm-focus'));
     this.focus.show(device, tile, {
       onClose: () => this.clearFocus(),
-      onOpenTab: (d) => window.open(`/simulators/${encodeURIComponent(d.udid)}`, '_blank'),
+      onOpenTab: (d) => window.open(appURL(`/simulators/${encodeURIComponent(d.udid)}`), '_blank'),
       onLifecycle: (d, action) => this.runAction(d.udid, action),
       onButton: (name) => tile?.button(name),
       // Hand the recorder a snapshot of the focused tile's existing
@@ -341,7 +344,7 @@
   FarmApp.prototype.runAction = async function (udid, action) {
     if (action === 'snapshot')  { this.tiles.get(udid)?.snapshot(); return; }
     if (action === 'reset')     { this.tiles.get(udid)?.forceIdr(); return; }
-    if (action === 'open')      { window.open(`/simulators/${encodeURIComponent(udid)}`, '_blank'); return; }
+    if (action === 'open')      { window.open(appURL(`/simulators/${encodeURIComponent(udid)}`), '_blank'); return; }
     if (action === 'force-idr') { this.tiles.get(udid)?.forceIdr(); return; }
     if (action === 'boot')      { await this.lifecycle(udid, 'boot');     return; }
     if (action === 'shutdown')  { await this.lifecycle(udid, 'shutdown'); return; }
@@ -354,7 +357,7 @@
 
   FarmApp.prototype.lifecycle = async function (udid, verb) {
     try {
-      await fetch(`/simulators/${encodeURIComponent(udid)}/${verb}`, { method: 'POST' });
+      await fetch(appURL(`/simulators/${encodeURIComponent(udid)}/${verb}`), { method: 'POST' });
       await this.refreshDevices();
       this.startVisibleTiles();
       this.renderAll();
@@ -369,7 +372,7 @@
     if (kind === 'reset')    { visible.forEach(d => this.tiles.get(d.udid)?.forceIdr()); return; }
     if (kind === 'boot' || kind === 'shutdown') {
       await Promise.allSettled(visible.map(d =>
-        fetch(`/simulators/${encodeURIComponent(d.udid)}/${kind}`, { method: 'POST' })));
+        fetch(appURL(`/simulators/${encodeURIComponent(d.udid)}/${kind}`), { method: 'POST' })));
       await this.refreshDevices();
       this.startVisibleTiles();
       this.renderAll();

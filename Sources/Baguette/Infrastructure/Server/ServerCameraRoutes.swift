@@ -10,7 +10,7 @@ extension Server {
     /// buffer. Closing stops capture and removes the dylib's launchd
     /// env on successful cleanup. Failed cleanup remains recoverable by
     /// reconnecting to the same device and explicitly stopping again.
-    func registerCameraRoute(on router: Router<BasicWebSocketRequestContext>) {
+    func registerCameraRoute(on router: some RouterMethods<BasicWebSocketRequestContext>) {
         let simulators = self.simulators
         let sessions = self.cameraSessions
         let bindHost = self.host

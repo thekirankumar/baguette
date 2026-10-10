@@ -13,12 +13,14 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   // --- Activation gate ---------------------------------------------
   // Match `/simulators/<udid>`; reject `/simulators` and
   // `/simulators/`. UDIDs never contain `/`, so the second segment
   // being non-empty is the discriminator.
   function deepLinkUdid() {
-    const parts = location.pathname.split('/').filter(Boolean);
+    const parts = (window.BaguetteTarget?.pathname || location.pathname).split('/').filter(Boolean);
     if (parts.length !== 2) return null;
     if (parts[0] !== 'simulators' && parts[0] !== 'devices') return null;
     const u = decodeURIComponent(parts[1]);
@@ -460,7 +462,6 @@
   // hinge brings it in.
   function useSimulator(definitionURL) {
     return window.Baguette.use({
-      host: location.origin,
       udid,
       definitionURL,
       send: (payload) => {
@@ -479,7 +480,7 @@
 
   async function readHinge() {
     try {
-      const res = await fetch(`/simulators/${encodeURIComponent(udid)}/hinge`);
+      const res = await fetch(appURL(`/simulators/${encodeURIComponent(udid)}/hinge`));
       return res.ok ? await res.json() : null;
     } catch (e) { return null; }
   }
@@ -492,7 +493,7 @@
 
   function resetToPortrait() {
     if (deviceMode) return; // a physical phone rotates itself
-    fetch('/simulators/' + encodeURIComponent(udid) + '/orientation?value=portrait',
+    fetch(appURL('/simulators/' + encodeURIComponent(udid) + '/orientation?value=portrait'),
         { method: 'POST' }).catch(() => { /* best-effort */ });
   }
 
@@ -1088,7 +1089,7 @@
   async function requestBoot() {
     renderPowerCard('booting');
     try {
-      const r = await fetch('/simulators/' + encodeURIComponent(udid) + '/boot',
+      const r = await fetch(appURL('/simulators/' + encodeURIComponent(udid) + '/boot'),
           { method: 'POST' });
       if (!r.ok) {
         // CoreSimulator refuses a boot when the device is already
@@ -1277,7 +1278,7 @@
   let _templatePromise = null;
   function fetchTemplate() {
     if (_templatePromise) return _templatePromise;
-    _templatePromise = fetch('/sim-native.html')
+    _templatePromise = fetch(appURL('/sim-native.html'))
         .then((r) => (r.ok ? r.text() : ''))
         .then((html) => {
           if (!html) return '';
@@ -1288,6 +1289,8 @@
           const styles = Array.from(doc.body.querySelectorAll('style'))
               .map((s) => s.outerHTML).join('\n');
           const root = doc.getElementById('simNativeView');
+          const back = root && root.querySelector('#nativeBackLink');
+          if (back) back.setAttribute('href', appURL(back.getAttribute('data-app-href') || '/simulators'));
           return styles + (root ? root.outerHTML : '');
         })
         .catch(() => '');
@@ -1297,7 +1300,7 @@
   async function fetchDeviceMeta(targetUdid) {
     if (deviceMode) {
       try {
-        const r = await fetch('/devices.json', { cache: 'no-store' });
+        const r = await fetch(appURL('/devices.json'), { cache: 'no-store' });
         if (!r.ok) throw new Error(String(r.status));
         const json = await r.json();
         const hit = (json.connected || []).find((d) => d.udid === targetUdid);
@@ -1310,7 +1313,7 @@
       return { name: 'Device', runtime: '', state: 'Booted' };
     }
     try {
-      const r = await fetch('/simulators.json', { cache: 'no-store' });
+      const r = await fetch(appURL('/simulators.json'), { cache: 'no-store' });
       if (!r.ok) throw new Error(String(r.status));
       const json = await r.json();
       const all = (json.running || []).concat(json.available || []);
@@ -1741,7 +1744,7 @@
     const evergreen = ['iPhone 17 Pro', 'iPhone 17 Pro Max', 'iPhone 17', 'iPhone Air'];
     let names = [];
     try {
-      const r = await fetch('/simulators.json', { cache: 'no-store' });
+      const r = await fetch(appURL('/simulators.json'), { cache: 'no-store' });
       const json = await r.json();
       names = (json.running || []).concat(json.available || [])
           .map((d) => d.name).filter(Boolean);
@@ -1886,7 +1889,7 @@
       // window.close (only works for script-opened tabs) then fall
       // back to navigating to the list.
       try { window.close(); } catch (_) { /* ignore */ }
-      if (!window.closed) location.href = '/simulators';
+      if (!window.closed) location.href = appURL('/simulators');
     };
     window.__nativeSetFormat = (next) => {
       // Storing an undecodable format wedges the origin (#71). The
@@ -1933,7 +1936,7 @@
     // the cue sim-stream.js reads on load to auto-open the same
     // device's stream view without an extra click.
     window.__nativeOpenSidebarView = () => {
-      location.href = '/simulators#stream=' + encodeURIComponent(udid);
+      location.href = appURL('/simulators#stream=' + encodeURIComponent(udid));
     };
 
     // Orientation cycle — one click advances 90° CW. Cycle length
@@ -1952,7 +1955,7 @@
         if (render3DPanel) render3DPanel.setInterfaceOrientation(value);
         const url = '/simulators/' + encodeURIComponent(udid)
             + '/orientation?value=' + encodeURIComponent(value);
-        fetch(url, { method: 'POST' }).catch(() => { /* best-effort */ });
+        fetch(appURL(url), { method: 'POST' }).catch(() => { /* best-effort */ });
         return;
       }
       // Mirror the rotation in the UI immediately. The CSS
@@ -1963,7 +1966,7 @@
       applyOrientation(value);
       const url = '/simulators/' + encodeURIComponent(udid)
           + '/orientation?value=' + encodeURIComponent(value);
-      fetch(url, { method: 'POST' }).catch(() => { /* best-effort */ });
+      fetch(appURL(url), { method: 'POST' }).catch(() => { /* best-effort */ });
     };
 
     // Shake — fires a UIKit motionShake on the frontmost app
@@ -1974,7 +1977,7 @@
     // this is a pure fire-and-forget POST.
     window.__nativeShake = () => {
       const url = '/simulators/' + encodeURIComponent(udid) + '/shake';
-      fetch(url, { method: 'POST' }).catch(() => { /* best-effort */ });
+      fetch(appURL(url), { method: 'POST' }).catch(() => { /* best-effort */ });
     };
   }
 
@@ -2151,7 +2154,7 @@
     if (!udid || networkArmedTimer) return;
     const poll = async () => {
       try {
-        const res = await fetch(`/simulators/${encodeURIComponent(udid)}/network`);
+        const res = await fetch(appURL(`/simulators/${encodeURIComponent(udid)}/network`));
         if (res.ok) {
           const state = await res.json();
           markNetworkArmed(state.active, state.summary);
@@ -2362,7 +2365,7 @@
   function loadScript(src) {
     return new Promise((resolve) => {
       const el = document.createElement('script');
-      el.src = src;
+      el.src = appURL(src);
       el.onload = () => resolve(true);
       el.onerror = () => { console.warn('[native] failed to load', src); resolve(false); };
       document.head.appendChild(el);

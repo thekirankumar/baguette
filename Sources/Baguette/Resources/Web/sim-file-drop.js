@@ -30,6 +30,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   function ensureStyles() {
     if (document.getElementById('simFileDropStyles')) return;
     const s = document.createElement('style');
@@ -332,8 +334,8 @@
       const busy = toast('Adding ' + displayName + '…', 'busy');
       try {
         const res = await fetch(
-          '/simulators/' + encodeURIComponent(udid) +
-            '/files?name=' + encodeURIComponent(name),
+          appURL('/simulators/' + encodeURIComponent(udid) +
+            '/files?name=' + encodeURIComponent(name)),
           { method: 'POST', body: blob }
         );
         busy.remove();

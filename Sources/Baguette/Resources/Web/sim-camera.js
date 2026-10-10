@@ -20,6 +20,8 @@
 (function () {
   'use strict';
 
+  const appURL = path => window.BaguetteTarget?.url ? window.BaguetteTarget.url(path.replace(/^\/+/, '')) : path;
+
   function escapeHTML(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -99,7 +101,9 @@
 
     _openSocket() {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const url = `${proto}//${location.host}/simulators/${encodeURIComponent(this.udid)}/camera`;
+      const pathname = `/simulators/${encodeURIComponent(this.udid)}/camera`;
+      const url = window.BaguetteTarget?.wsURL
+        ? window.BaguetteTarget.wsURL(pathname.slice(1)) : `${proto}//${location.host}${pathname}`;
       const ws = new WebSocket(url);
       this.ws = ws;
       ws.onmessage = (ev) => this._onMessage(ev);
@@ -393,7 +397,7 @@
 
       setStatus('var(--text-muted,#94a3b8)', 'uploading ' + file.name + '…');
       try {
-        const url = `/simulators/${encodeURIComponent(udid)}/camera-source?name=${encodeURIComponent(file.name)}`;
+        const url = appURL(`/simulators/${encodeURIComponent(udid)}/camera-source?name=${encodeURIComponent(file.name)}`);
         const res = await fetch(url, { method: 'POST', body: file });
         const data = await res.json().catch(() => ({}));
         if (isStale()) return;
