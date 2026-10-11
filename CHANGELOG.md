@@ -12,6 +12,11 @@ For releases prior to this changelog, see the
 
 ---
 
+## [0.0.3] - 2026-10-11
+
+
+---
+
 ## [0.0.2] - 2026-10-10
 
 ### Added
@@ -27,6 +32,7 @@ For releases prior to this changelog, see the
 
 [0.2](docs/changelog/0.2.md) · [0.1](docs/changelog/0.1.md)
 
-[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/tddworks/baguette/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/tddworks/baguette/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/tddworks/baguette/compare/v0.2.4...v0.0.1
