@@ -10,6 +10,10 @@ For releases prior to this changelog, see the
 
 ## [Unreleased]
 
+---
+
+## [0.0.2] - 2026-10-10
+
 ### Added
 - `baguette plugin start/status/wait/cancel` manages background work, including GitLab artifact preparation and simulator installation, with polled outcomes after workspace cleanup. See [background runs](docs/features/plugin-runs/README.md).
 - `baguette serve --rootpath /subpath` mounts HTTP and WebSocket routes beneath a prefix for local proxy-path testing, including redirects and plugin calls. The default `/` preserves existing URLs. See [proxy setup](docs/serve.md#proxy-subpaths).
@@ -19,10 +23,10 @@ For releases prior to this changelog, see the
 
 ## [0.0.1] - 2026-10-10
 
-
 ## Older releases
 
 [0.2](docs/changelog/0.2.md) · [0.1](docs/changelog/0.1.md)
 
-[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/tddworks/baguette/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/tddworks/baguette/compare/v0.2.4...v0.0.1
