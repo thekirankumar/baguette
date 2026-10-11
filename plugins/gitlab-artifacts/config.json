@@ -1,0 +1,8 @@
+{
+  "_configuration": "All positive numeric project IDs are explicitly allowed on gitlab.phonepe.com. Set projectIds to [] to disable downloads or to a numeric list to restrict projects. Optional appPath is relative to the artifact archive, not supplied by command arguments.",
+  "host": "gitlab.phonepe.com",
+  "projectIds": "*",
+  "maxArchiveBytes": 3221225472,
+  "maxExpandedBytes": 17179869184,
+  "maxEntries": 50000
+}

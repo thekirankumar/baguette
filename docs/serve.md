@@ -93,7 +93,10 @@ The built-in pages detect it automatically.
 | `WS` | `/simulators/:udid/logs?level=&style=&predicate=&bundleId=` | live unified log | [logs](features/logs/README.md) |
 | `WS` | `/simulators/:udid/camera` | virtual camera control | [camera](features/camera/README.md) |
 | `GET` | `/plugins.json` | installed plugin manifests | [plugins](features/plugins/README.md) |
-| `POST` | `/plugins/:id/commands/:cmd?udid=` | run one plugin contribution | [plugins](features/plugins/README.md) |
+| `POST` | `/plugins/:id/commands/:cmd?udid=` | run one synchronous plugin contribution; background commands refused | [plugins](features/plugins/README.md) |
+| `POST` | `/plugins/:id/commands/:cmd/runs?udid=` | start a background run; `202` with status `Location` | [plugin-runs](features/plugin-runs/README.md) |
+| `GET` | `/runs/:id.json` | poll background run status, including terminal failures | [plugin-runs](features/plugin-runs/README.md) |
+| `POST` | `/runs/:id/cancel` | request cancellation; `409` during app installation | [plugin-runs](features/plugin-runs/README.md) |
 | `GET` | `/bakeries.json` | trusted bakeries, pinned commits, install state | [plugins](features/plugins/README.md) |
 | `POST` | `/bakeries/preview`, `/bakeries/install` | read a bakery's menu; install from an already-trusted one | [plugins](features/plugins/README.md) |
 | `GET` `WS` | `/devices.json`, `/devices/:udid/…` | physical-device twin (preview) | [device-twin](features/device-twin/README.md) |

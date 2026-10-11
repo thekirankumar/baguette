@@ -843,6 +843,60 @@ baguette plugin update [<name>]
 |---|---|---|---|
 | `<name>` |  |  | Plugin name to update; omit to update all installed plugins. |
 
+### baguette plugin start
+
+Start a background plugin command on a running server
+
+```
+baguette plugin start <command> [--udid <udid>] [--url <url>] [--args <args>]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `<command>` | yes |  | Qualified command id, e.g. artifacts:download. |
+| `--udid` |  |  | Device the command targets. |
+| `--url` |  | `http://127.0.0.1:8421` | Running server URL, including its mount prefix. |
+| `--args` |  | `{}` | Plugin arguments as a JSON object, not executable or shell overrides. |
+
+### baguette plugin status
+
+Print a background run's current JSON
+
+```
+baguette plugin status <id> [--url <url>]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `<id>` | yes |  | Run id. |
+| `--url` |  | `http://127.0.0.1:8421` | Running server URL, including its mount prefix. |
+
+### baguette plugin cancel
+
+Request cancellation of a background run
+
+```
+baguette plugin cancel <id> [--url <url>]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `<id>` | yes |  | Run id. |
+| `--url` |  | `http://127.0.0.1:8421` | Running server URL, including its mount prefix. |
+
+### baguette plugin wait
+
+Wait for terminal run JSON; fail if the run failed or was cancelled
+
+```
+baguette plugin wait <id> [--url <url>]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `<id>` | yes |  | Run id. |
+| `--url` |  | `http://127.0.0.1:8421` | Running server URL, including its mount prefix. |
+
 ## baguette bakery
 
 Add and manage trusted sources of plugins

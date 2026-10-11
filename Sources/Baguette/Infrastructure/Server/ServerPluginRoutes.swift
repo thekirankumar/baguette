@@ -70,6 +70,8 @@ extension Server {
                 )
             case .unknown(let message):
                 return Self.pluginError(message, status: .notFound)
+            case .background:
+                return Self.pluginError("background command must use /runs", status: .badRequest)
             case .failed(let message):
                 return Self.pluginError(message, status: .internalServerError)
             }
@@ -239,6 +241,7 @@ extension Server {
     enum PluginRunOutcome: Equatable {
         case ok(String)
         case unknown(String)
+        case background
         case failed(String)
     }
 
@@ -249,6 +252,10 @@ extension Server {
         grants: PluginGrants? = nil,
         subprocess: @Sendable () -> any Subprocess = { HostSubprocess() }
     ) async -> PluginRunOutcome {
+        if let (_, command) = try? plugins.resolve(qualifiedCommand: qualified),
+           command.background != nil {
+            return .background
+        }
         let outcome = await PluginDispatch.run(
             qualifiedCommand: qualified,
             context: context,

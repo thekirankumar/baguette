@@ -11,6 +11,7 @@ For releases prior to this changelog, see the
 ## [Unreleased]
 
 ### Added
+- `baguette plugin start/status/wait/cancel` manages background work, including GitLab artifact preparation and simulator installation, with polled outcomes after workspace cleanup. See [background runs](docs/features/plugin-runs/README.md).
 - `baguette serve --rootpath /subpath` mounts HTTP and WebSocket routes beneath a prefix for local proxy-path testing, including redirects and plugin calls. The default `/` preserves existing URLs. See [proxy setup](docs/serve.md#proxy-subpaths).
 - `baguette serve` works behind a proxy subpath without frontend configuration: assets, requests, device navigation and WebSockets retain the mount prefix. See [proxy setup](docs/serve.md#proxy-subpaths).
 

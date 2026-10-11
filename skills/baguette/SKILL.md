@@ -158,6 +158,9 @@ presentation surface; gestures still target the live 2D stream.
 ## What's wired vs what isn't
 
 Wired (use freely):
+- `baguette plugin start/status/wait/cancel` manages server-owned background
+  commands such as `gitlab-artifacts:install`. See [background runs](https://github.com/tddworks/baguette/blob/main/docs/features/plugin-runs/README.md)
+  for host configuration, mounted URLs, polling, cleanup and limits.
 - Live 3D MJPEG and AVCC accept `frameMetadata=1`, which binds hit geometry
   to the exact rendered frame in every message; AVCC keeps every encoded
   reference or closes explicitly on overload. See [atomic frames](https://github.com/tddworks/baguette/blob/main/docs/features/3d-rendering/frames.md).
@@ -339,6 +342,8 @@ Wired (use freely):
   [`docs/features/network/README.md`](../../docs/features/network/README.md).
 
 NOT wired (skill should NOT propose these):
+- Background-run webhooks, push failure callbacks or automatic Simmer proxy
+  forwarding. These need outer integration; use the documented polling contract.
 - **Non-ASCII text** through `type` — IME / Pinyin / accented / emoji
   isn't on the host-HID keystroke path. Use `baguette paste --udid
   <X> --text "…"` (or the `paste` wire verb) for those strings — it

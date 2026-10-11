@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-/// `baguette plugin <list|show|validate|run>`
+/// `baguette plugin <list|show|validate|run|start|status|cancel|wait>`
 ///
 /// Named `PluginsCommand` because it operates on the installed
 /// collection; the CLI verb stays singular (`baguette plugin …`) to
@@ -12,7 +12,8 @@ struct PluginsCommand: ParsableCommand {
         commandName: "plugin",
         abstract: "Inspect and run installed plugins",
         subcommands: [List.self, Show.self, Validate.self, Run.self,
-                      Install.self, Remove.self, Update.self]
+                      Install.self, Remove.self, Update.self,
+                      Start.self, Status.self, Cancel.self, Wait.self]
     )
 
     /// Shared `--plugin-dir` for local authoring: point baguette at a
@@ -261,6 +262,11 @@ struct PluginsCommand: ParsableCommand {
                     "  \(plugin.qualified(command.id))  \(command.title)"
                     + "  [\(command.run.joined(separator: " "))]"
                 )
+                if let background = command.background {
+                    lines.append("    background: timeout \(background.timeoutSeconds)s")
+                    lines.append("    inherited environment: " + (background.environment.isEmpty
+                        ? "none" : background.environment.joined(separator: ", ")))
+                }
             }
         }
         if !plugin.manifest.panels.isEmpty {
@@ -298,4 +304,3 @@ struct PluginsCommand: ParsableCommand {
         }
     }
 }
-

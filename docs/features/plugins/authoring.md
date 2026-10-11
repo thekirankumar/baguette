@@ -95,6 +95,9 @@ both ship a `reload`.
 
 ## The command contract
 
+This is the synchronous panel contract. Long-running commands declaring
+`background` use the separate [background author contract](../plugin-runs/README.md#background-author-contract), not stdout answers.
+
 When a panel opens, baguette runs its `source` command. The command
 receives context in its **environment** (and the same as JSON on stdin):
 

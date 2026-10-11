@@ -136,6 +136,9 @@ enum PluginDispatch {
         else {
             return .unknownCommand(id: qualifiedCommand)
         }
+        guard command.background == nil else {
+            return .spawnFailed("command requires a background run; use baguette plugin start")
+        }
 
         // Least privilege, scoped to this one run: the child gets a
         // token carrying exactly what the manifest declared, revoked

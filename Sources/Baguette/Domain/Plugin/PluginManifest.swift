@@ -191,6 +191,7 @@ enum PluginManifestWarning: Equatable, Sendable, CustomStringConvertible {
 /// `baguette plugin validate` as authoring feedback.
 enum PluginManifestError: Error, Equatable, CustomStringConvertible {
     case malformedJSON
+    case invalidBackground
     case missingName
     case missingVersion
     case missingCommandID
@@ -209,6 +210,8 @@ enum PluginManifestError: Error, Equatable, CustomStringConvertible {
         switch self {
         case .malformedJSON:
             return "baguette-plugin.json is not a JSON object"
+        case .invalidBackground:
+            return "background requires a 1...86400-second timeout and environment variable names excluding PATH and BAGUETTE_*"
         case .missingName:
             return "manifest is missing a non-empty \"name\""
         case .missingVersion:

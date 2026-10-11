@@ -60,7 +60,12 @@ private extension Plugin {
             "name": id,
             "version": manifest.version,
             "commands": manifest.commands.map { command in
-                ["id": qualified(command.id), "title": command.title]
+                var c: [String: Any] = ["id": qualified(command.id), "title": command.title]
+                if let background = command.background {
+                    c["background"] = true
+                    c["timeoutSeconds"] = background.timeoutSeconds
+                }
+                return c
             },
             "panels": manifest.panels.map { panel in
                 var p: [String: Any] = [

@@ -11,6 +11,23 @@ import Mockable
 @Suite("PluginDispatch")
 struct PluginDispatchTests {
 
+    @Test func `should refuse synchronous execution when a command requires a background run`() async {
+        let plugins = MockPlugins()
+        given(plugins).all().willReturn([Plugin(root: URL(fileURLWithPath: "/tmp/plugin"),
+            manifest: PluginManifest(name: "artifacts", version: "1", apiVersion: 1,
+                commands: [PluginCommand(id: "install", title: "Install", run: ["tool"],
+                    background: PluginBackground())]))])
+        let child = MockSubprocess()
+        given(child).run(executable: .any, arguments: .any, workingDirectory: .any,
+            environment: .any, stdin: .any, onBytes: .any, onExit: .any).willProduce {
+                _, _, _, _, _, bytes, exit in bytes(Data(#"{"ok":true}"#.utf8)); exit(0)
+            }
+        let outcome = await PluginDispatch.run(qualifiedCommand: "artifacts:install",
+            context: .init(serverURL: "http://localhost:8421", udid: "U", token: ""),
+            plugins: plugins, subprocess: { child })
+        #expect(outcome.errorText?.contains("background") == true)
+    }
+
     final class Captures: @unchecked Sendable {
         var executable: URL?
         var arguments: [String]?

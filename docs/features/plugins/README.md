@@ -38,6 +38,7 @@ official, supported, and still something you choose to install. The rail's
 length stays a count of what you asked for.
 
 Writing your own? See [authoring.md](authoring.md).
+Long-running work uses [background plugin runs](../plugin-runs/README.md), not the ten-second panel contract.
 
 ## Workflows
 

@@ -57,6 +57,7 @@ struct Server: Sendable {
     /// carries exactly its manifest's declared capabilities and dies
     /// with the command. See `PluginGrants`.
     let grants: PluginGrants
+    let pluginRuns: PluginRuns
 
     /// Per-simulator motion state. A reference type held by this struct
     /// because motion is the one surface here that *is* stateful: the
@@ -88,6 +89,7 @@ struct Server: Sendable {
         allowedHosts: [String] = [],
         rootPath: RootPath = try! RootPath(),
         grants: PluginGrants = PluginGrants(),
+        pluginRuns: PluginRuns = PluginRuns(),
         motionSessions: MotionSessions = MotionSessions(),
         cameraSessions: CameraSessions = CameraSessions(guestTerminated: { _ in false }),
         devices: LiveDevices = LiveDevices(),
@@ -109,6 +111,7 @@ struct Server: Sendable {
         self.allowedHosts = Set(allowedHosts.map { $0.lowercased() })
         self.rootPath = rootPath
         self.grants = grants
+        self.pluginRuns = pluginRuns
     }
 
     func run() async throws {
@@ -130,7 +133,13 @@ struct Server: Sendable {
             ),
             configuration: .init(address: .hostname(host, port: port))
         )
-        try await app.runService()
+        do {
+            try await app.runService()
+        } catch {
+            await pluginRuns.shutdown()
+            throw error
+        }
+        await pluginRuns.shutdown()
     }
 
     /// Exposed for tests — build the router without binding a port.
@@ -183,6 +192,7 @@ struct Server: Sendable {
         router.get("/simulators/:udid") { _, _ in Self.staticAsset("sim.html") }
 
         registerPluginRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
+        registerPluginRunRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerBakeryRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerInterfaceRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerCompanionScreenRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)

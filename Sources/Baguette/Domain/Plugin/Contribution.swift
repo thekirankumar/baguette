@@ -17,11 +17,13 @@ struct PluginCommand: Equatable, Sendable {
     /// Executable + arguments. Never empty — a command that spawns
     /// nothing is a malformed manifest, not a no-op.
     let run: [String]
+    let background: PluginBackground?
 
-    init(id: String, title: String, run: [String]) {
+    init(id: String, title: String, run: [String], background: PluginBackground? = nil) {
         self.id = id
         self.title = title
         self.run = run
+        self.background = background
     }
 
     // MARK: - parsing
@@ -42,7 +44,8 @@ struct PluginCommand: Equatable, Sendable {
         return PluginCommand(
             id: id,
             title: dict["title"] as? String ?? id,
-            run: run
+            run: run,
+            background: try dict["background"].map(PluginBackground.parsing)
         )
     }
 }
