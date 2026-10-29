@@ -30,8 +30,8 @@ public struct MediaItem: Equatable, Sendable {
         return MediaItem(path: path)
     }
 
-    /// The argv tail handed to `xcrun simctl addmedia <udid> <path>`.
-    public func addMediaArguments(udid: String) -> [String] {
-        ["simctl", "addmedia", udid, path.path]
+    /// The argv tail handed to `xcrun simctl [--set <set>] addmedia <udid> <path>`.
+    public func addMediaArguments(udid: String, deviceSetPath: String? = nil) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["addmedia", udid, path.path]
     }
 }

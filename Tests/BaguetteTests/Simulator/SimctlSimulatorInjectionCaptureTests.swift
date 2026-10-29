@@ -61,18 +61,23 @@ struct SimulatorInjectionFixture {
     var injection: SimctlSimulatorInjection { SimctlSimulatorInjection(xcrun: executable) }
     let simulator = MockSimulator()
 
-    init() throws {
+    init(deviceSetPath: String? = nil) throws {
         given(simulator).udid.willReturn("U")
+        given(simulator).deviceSetPath.willReturn(deviceSetPath)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try Data(
             """
             #!/bin/sh
             cd "$(dirname "$0")" || exit 9
-            [ "$1" = simctl ] && [ "$2" = spawn ] && [ "$3" = U ] && [ "$4" = launchctl ] && [ "$6" = DYLD_INSERT_LIBRARIES ] || exit 9
-            printf '%s\n' "$@" > "$5.args"
-            case "$5" in
+            args="$(printf '%s\n' "$@")"
+            [ "$1" = simctl ] || exit 9
+            shift
+            [ "$1" = --set ] && shift 2
+            [ "$1" = spawn ] && [ "$2" = U ] && [ "$3" = launchctl ] && [ "$5" = DYLD_INSERT_LIBRARIES ] || exit 9
+            printf '%s\n' "$args" > "$4.args"
+            case "$4" in
                 getenv) cat stderr >&2; cat stdout; exit "$(cat status)" ;;
-                setenv) printf '%s' "$7" > written; exit "$(cat write-status)" ;;
+                setenv) printf '%s' "$6" > written; exit "$(cat write-status)" ;;
                 unsetenv) : > written; exit "$(cat write-status)" ;;
                 *) exit 9 ;;
             esac

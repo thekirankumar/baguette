@@ -18,8 +18,10 @@ final class SimctlWatchPairing: WatchPairing, @unchecked Sendable {
         self.listPairs = listPairs
     }
 
-    convenience init(udid: String) {
-        self.init(udid: udid, listPairs: { try SimctlPairsCapture.list() })
+    /// `deviceSetPath` is the custom device set the phone lives in; each
+    /// set keeps its own pairing table.
+    convenience init(udid: String, deviceSetPath: String? = nil) {
+        self.init(udid: udid, listPairs: { try SimctlPairsCapture.list(deviceSetPath: deviceSetPath) })
     }
 
     var watch: PairedWatch? {
@@ -42,12 +44,13 @@ enum SimctlPairsCapture {
     static let defaultTimeout: TimeInterval = 5
 
     static func list(
+        deviceSetPath: String? = nil,
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun"),
         timeout: TimeInterval = defaultTimeout
     ) throws -> String {
         let process = Process()
         process.executableURL = xcrun
-        process.arguments = ["simctl", "list", "pairs", "-j"]
+        process.arguments = ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["list", "pairs", "-j"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = Pipe()

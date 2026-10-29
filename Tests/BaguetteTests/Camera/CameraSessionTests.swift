@@ -297,6 +297,9 @@ struct CameraSessionTests {
             func armed(dylibPath: String, on simulator: any Simulator) async throws -> Bool {
                 try await wrapped.armed(dylibPath: dylibPath, on: simulator)
             }
+            func dylibs(on simulator: any Simulator) async throws -> InjectedDylibs {
+                try await wrapped.dylibs(on: simulator)
+            }
         }
         let gate = Gate()
         let w = makeWiring(decorate: { DelayedInjection($0, gate: gate) })
@@ -358,6 +361,9 @@ struct CameraSessionTests {
             }
             func armed(dylibPath: String, on simulator: any Simulator) async throws -> Bool {
                 try await wrapped.armed(dylibPath: dylibPath, on: simulator)
+            }
+            func dylibs(on simulator: any Simulator) async throws -> InjectedDylibs {
+                try await wrapped.dylibs(on: simulator)
             }
         }
         let gate = Gate()

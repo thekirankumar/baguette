@@ -4,6 +4,7 @@ import Foundation
 final class SimulatorKitDisplay: Display, @unchecked Sendable {
     let kind: DisplayKind
     private let udid: String
+    private let deviceSetPath: String?
     private let host: any DeviceHost
     private let enumerateIO: () throws -> String
     private let hinge: any Hinge
@@ -19,6 +20,7 @@ final class SimulatorKitDisplay: Display, @unchecked Sendable {
     init(
         kind: DisplayKind,
         udid: String,
+        deviceSetPath: String? = nil,
         host: any DeviceHost,
         enumerateIO: @escaping () throws -> String,
         hinge: any Hinge,
@@ -27,6 +29,7 @@ final class SimulatorKitDisplay: Display, @unchecked Sendable {
     ) {
         self.kind = kind
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.host = host
         self.enumerateIO = enumerateIO
         self.hinge = hinge
@@ -35,7 +38,7 @@ final class SimulatorKitDisplay: Display, @unchecked Sendable {
     }
 
     /// Binds the plane. On a foldable this also asks the hinge which
-    /// panel is lit (~0.3 s through devicectl); a single-panel device
+    /// panel is lit (~0.6 s through the guest); a single-panel device
     /// never pays that, since it has nothing to choose between.
     func resolve() throws -> DisplayBinding {
         let sized = try SimulatorKitFramebufferPorts.sizedPorts(udid: udid, host: host)
@@ -45,7 +48,7 @@ final class SimulatorKitDisplay: Display, @unchecked Sendable {
             screens: screens
         )
         let litPanel: IntegratedPanel = pinnedPanel
-            ?? (IntegratedPanels.several(in: sized) ? (hinge.angle()?.litPanel ?? .primary) : .primary)
+            ?? (IntegratedPanels.several(in: sized) ? hinge.litPanel : .primary)
         let binding = try ConnectedScreens.binding(kind: kind, ports: ports, litPanel: litPanel)
         lock.lock()
         cached = binding
@@ -65,7 +68,7 @@ final class SimulatorKitDisplay: Display, @unchecked Sendable {
         let ports = try SimulatorKitFramebufferPorts.sizedPorts(udid: udid, host: host)
         let screens = SimctlIOEnumerate.connectedScreens(from: try enumerateIO())
         let multiple = screens.filter { $0.screenType == .integrated }.count > 1
-        let angle = multiple ? DevicectlHinge(udid: udid).angle() : nil
+        let angle = multiple ? GuestHinge(udid: udid, deviceSetPath: deviceSetPath).angle() : nil
         let observed = try ConnectedScreens.observedPhone(ports: ports, screens: screens, angle: angle)
         let binding = observed.binding
         guard let points = binding.pointSize(scale: observed.scale) else {

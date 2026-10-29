@@ -66,6 +66,7 @@ curl -s "http://127.0.0.1:8421/simulators/<UDID>/definition.json" | jq
 ## See also
 
 - [design.md](design.md) — chrome.json's asymmetric offset rule, the `2N − R` rest position, `devicePadding`
+- [device-hub-look.md](device-hub-look.md) — how Xcode 27's Device Hub draws the same chrome, and what baguette must change to match it
 - [baguette-sdk](../baguette-sdk/README.md) — the JS parts that draw the bezel
 - [screenshot](../screenshot/README.md) — `screenshot-bezel.png`
 - [buttons](../buttons/README.md)

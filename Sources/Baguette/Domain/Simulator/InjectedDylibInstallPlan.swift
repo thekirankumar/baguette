@@ -4,9 +4,10 @@ import CryptoKit
 /// A guest-side binary baguette ships: a dylib injected into simulator
 /// apps, or an executable spawned in the guest.
 ///
-/// Three dylibs today — the virtual camera, virtual motion and network
-/// conditioning — sharing one install layout, one arming mechanism
-/// (`InjectedDylibs`) and one `DYLD_INSERT_LIBRARIES`; and one
+/// Three dylibs armed device-wide — the virtual camera, virtual motion
+/// and network conditioning — sharing one install layout, one arming
+/// mechanism (`InjectedDylibs`) and one `DYLD_INSERT_LIBRARIES`; one
+/// handed only to the app baguette launches, `DefaultsLookups`; and one
 /// executable, `HingeControl`, run with `simctl spawn`.
 struct InjectedDylib: Equatable, Sendable {
     enum Kind: Sendable { case dylib, executable }
@@ -42,6 +43,10 @@ struct InjectedDylib: Equatable, Sendable {
         name: "VirtualMotion", environmentOverride: "BAGUETTE_VIRTUALMOTION_DYLIB")
     static let network = InjectedDylib(
         name: "VirtualNetwork", environmentOverride: "BAGUETTE_VIRTUALNETWORK_DYLIB")
+    /// Lets an app say which preferences it looks up (`PreferenceLookups`).
+    /// Never armed device-wide: only the app baguette launches loads it.
+    static let defaultsLookups = InjectedDylib(
+        name: "DefaultsLookups", environmentOverride: "BAGUETTE_DEFAULTSLOOKUPS_DYLIB")
     /// Drives iPhone Duo's hinge from inside the guest (`GuestHingeMotor`).
     static let hingeControl = InjectedDylib(
         name: "HingeControl", environmentOverride: "BAGUETTE_HINGECONTROL_TOOL", kind: .executable)

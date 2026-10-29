@@ -83,7 +83,7 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
         // backboardd have pids within a second of `boot()` returning, and
         // Device Hub's daemon publishes its state a second after that —
         // a pid poll would answer long before the surface is settled.
-        try await run(["simctl", "bootstatus", simulator.udid, "-b"])
+        try await run(simctl(on: simulator, ["bootstatus", simulator.udid, "-b"]))
         // Only worth waiting for when there is a Device Hub to attach;
         // a headless host would just pay the full timeout every boot.
         guard deviceHubRunning() else { return }
@@ -124,7 +124,12 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
     /// Runs one command inside the simulator, returning its stdout.
     @discardableResult
     private func spawn(on simulator: any Simulator, _ command: [String]) async throws -> String {
-        try await run(["simctl", "spawn", simulator.udid] + command)
+        try await run(simctl(on: simulator, ["spawn", simulator.udid] + command))
+    }
+
+    /// `xcrun simctl` argv addressed to the device set `simulator` lives in.
+    private func simctl(on simulator: any Simulator, _ verb: [String]) -> [String] {
+        ["simctl"] + (simulator.deviceSetPath.map { ["--set", $0] } ?? []) + verb
     }
 
     /// Runs one `xcrun` invocation, returning its stdout.

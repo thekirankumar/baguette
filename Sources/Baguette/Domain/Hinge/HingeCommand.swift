@@ -6,10 +6,14 @@ struct HingeCommand: Equatable, Sendable {
     let degrees: Double
     let duration: TimeInterval
 
-    /// Device Hub's poses, as `devicectl` reads them back.
+    /// Device Hub's poses, as the guest reads them back.
     static let poses: [String: Double] = ["closed": 0, "open": 130, "flat": 180]
     /// Device Hub's own sweep: 0.5–0.85 s, ease-out.
     static let defaultDuration: TimeInterval = 0.8
+    /// The longest sweep accepted. Device Hub's take under a second, and a
+    /// long enough one overflows the millisecond and frame counts the
+    /// guest helper is sent.
+    static let maximumDuration: TimeInterval = 60
 
     static func parse(pose: String?, angle: String?, duration: String?) throws -> HingeCommand {
         let degrees: Double
@@ -25,7 +29,7 @@ struct HingeCommand: Equatable, Sendable {
         }
         var seconds = defaultDuration
         if let duration {
-            guard let value = Double(duration), value.isFinite, value >= 0 else {
+            guard let value = Double(duration), (0...maximumDuration).contains(value) else {
                 throw HingeCommandError.invalidDuration
             }
             seconds = value

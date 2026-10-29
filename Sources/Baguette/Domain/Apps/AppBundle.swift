@@ -28,8 +28,8 @@ public struct AppBundle: Equatable, Sendable {
         return AppBundle(path: path)
     }
 
-    /// The argv tail handed to `xcrun simctl install <udid> <path>`.
-    public func installArguments(udid: String) -> [String] {
-        ["simctl", "install", udid, path.path]
+    /// The argv tail handed to `xcrun simctl [--set <set>] install <udid> <path>`.
+    public func installArguments(udid: String, deviceSetPath: String? = nil) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["install", udid, path.path]
     }
 }

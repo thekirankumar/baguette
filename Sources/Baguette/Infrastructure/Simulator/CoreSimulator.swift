@@ -21,9 +21,9 @@ final class CoreSimulator: Simulator, @unchecked Sendable {
     let runtime: String
     let deviceTypeName: String
     let metadata: SimulatorMetadata
+    let deviceSetPath: String?
 
     private let host: any DeviceHost
-    private let deviceSetPath: String?
 
     init(
         udid: String,
@@ -109,7 +109,7 @@ final class CoreSimulator: Simulator, @unchecked Sendable {
     /// One monitor per device: sockets share a watch and binds read the
     /// last sample while it runs. See `SharedHinge`.
     func hinge() -> any Hinge {
-        SharedHinge.forDevice(udid, make: { DevicectlHinge(udid: udid) }, motor: GuestHingeMotor.forDevice(udid, deviceSetPath: deviceSetPath))
+        SharedHinge.forDevice(udid, deviceSetPath: deviceSetPath, make: { GuestHinge(udid: udid, deviceSetPath: deviceSetPath) }, motor: GuestHingeMotor.forDevice(udid, deviceSetPath: deviceSetPath))
     }
 
     func externalDisplays() -> any ExternalDisplays {
@@ -127,7 +127,7 @@ final class CoreSimulator: Simulator, @unchecked Sendable {
     }
 
     func logs() -> any LogStream {
-        SimDeviceLogStream(udid: udid, host: host)
+        SimDeviceLogStream(udid: udid, host: host, deviceSetPath: deviceSetPath)
     }
 
     func orientation() -> any Orientation {
@@ -142,19 +142,19 @@ final class CoreSimulator: Simulator, @unchecked Sendable {
     }
 
     func statusBar() -> any StatusBar {
-        SimctlStatusBar(udid: udid)
+        SimctlStatusBar(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     func interface() -> any Interface {
-        SimctlInterface(udid: udid)
+        SimctlInterface(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     func location() -> any Location {
-        SimctlLocation(udid: udid)
+        SimctlLocation(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     func shake() -> any Shake {
-        SimctlShake(udid: udid)
+        SimctlShake(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     /// Resolves the bundled `VirtualMotion.dylib` on the way through, since
@@ -183,18 +183,30 @@ final class CoreSimulator: Simulator, @unchecked Sendable {
     }
 
     func pasteboard() -> any Pasteboard {
-        SimctlPasteboard(udid: udid)
+        SimctlPasteboard(udid: udid, deviceSetPath: deviceSetPath)
     }
 
+    /// Every app baguette launches loads `DefaultsLookups.dylib` on top of
+    /// what the device has armed, so it can say which preferences it looks
+    /// up. A build without the dylib launches plainly.
     func apps() -> any Apps {
-        SimctlApps(udid: udid)
+        SimctlApps(udid: udid, deviceSetPath: deviceSetPath, libraries: { [self] in
+            guard let lookups = InjectedDylibInstaller.installIfNeeded(.defaultsLookups) else {
+                return InjectedDylibs(paths: [])
+            }
+            return try await SimctlSimulatorInjection().dylibs(on: self).adding(lookups)
+        })
+    }
+
+    func defaults() -> any Defaults {
+        SimctlDefaults(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     func photos() -> any PhotoLibrary {
-        SimctlPhotoLibrary(udid: udid)
+        SimctlPhotoLibrary(udid: udid, deviceSetPath: deviceSetPath)
     }
 
     func watchPairing() -> any WatchPairing {
-        SimctlWatchPairing(udid: udid)
+        SimctlWatchPairing(udid: udid, deviceSetPath: deviceSetPath)
     }
 }

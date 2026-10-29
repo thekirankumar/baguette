@@ -207,11 +207,11 @@ struct PanCommand: ParsableCommand {
 struct PressCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "press",
-        abstract: "Press-and-release a hardware button (\(Press.allowed))"
+        abstract: "Press-and-release a device button (\(Press.allowed))"
     )
 
     @OptionGroup var options: DeviceOption
-    @Option(help: "Hardware button: \(Press.allowed)") var button: String
+    @Option(help: "Device button: \(Press.allowed)") var button: String
     @Option(help: "Hold duration in seconds (0 = short tap)") var duration: Double = 0
 
     func run() {

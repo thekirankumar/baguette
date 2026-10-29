@@ -197,9 +197,9 @@ Repository      Service         @Observable      View
 ```
 | Component        | Purpose                 | Inputs           | Outputs         | Dependencies      |
 |------------------|-------------------------|------------------|-----------------|-------------------|
-| OrderRepository  | Fetches orders from API | OrderId          | Order           | NetworkClient     |
-| OrderManager     | Manages order lifecycle | Order, Status    | Updated Order   | OrderRepository   |
-| OrderMapper      | Converts DTO to domain  | OrderDTO         | Order           | None              |
+| Hinge            | Reads and moves the fold| —                | HingeAngle      | GuestHinge        |
+| LitPanelInput    | Gestures to the lit panel| a gesture       | Bool (sent)     | Input ×2, Hinge   |
+| Simulator        | Hands out the roles     | —                | litPanelInput() | Displays, Hinge   |
 ```
 
 ### Extended Table (for complex features)

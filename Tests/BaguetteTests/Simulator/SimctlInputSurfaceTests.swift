@@ -39,11 +39,13 @@ struct SimctlInputSurfaceTests {
         states: [String?]? = nil,
         springBoardPids: [Int32?] = [100, 100, 200],
         failing: String? = nil,
-        deviceHubRunning: Bool = false
+        deviceHubRunning: Bool = false,
+        deviceSetPath: String? = nil
     ) -> (SimctlInputSurface, MockSimulator, Captures) {
         let sub = MockSubprocess()
         let sim = MockSimulator()
         given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(deviceSetPath)
         let captures = Captures()
         captures.springBoardPids = springBoardPids
         captures.states = states ?? []
@@ -119,6 +121,18 @@ struct SimctlInputSurfaceTests {
 
         #expect(captures.spawns == [["simctl", "bootstatus", "U", "-b"]])
         #expect(captures.sleeps.isEmpty)
+    }
+
+    @Test func `should wait for the boot and read the input surface inside the simulator's custom device set when it lives in one`() async throws {
+        let (surface, sim, captures) = makeSurface(
+            state: "com.apple.coredevice.dtuhidd.active 1\n", deviceSetPath: "/custom set")
+        try await surface.ready(on: sim)
+        _ = await surface.shadowed(on: sim)
+
+        #expect(captures.spawns == [
+            ["simctl", "--set", "/custom set", "bootstatus", "U", "-b"],
+            ["simctl", "--set", "/custom set", "spawn", "U", "notifyutil", "-g", "com.apple.coredevice.dtuhidd.active"],
+        ])
     }
 
     @Test func `should give Device Hub's daemon time to attach when Device Hub is running`() async throws {

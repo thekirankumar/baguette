@@ -70,6 +70,51 @@ enum RealityKitRenderFixtures {
     }
     """
 
+    /// The same device with a USD `finish` variant set on its root that
+    /// paints the body dark (the default) or red. The body's own colour
+    /// goes: a local opinion would outrank every variant.
+    static let variantDeviceUSDA = deviceUSDA.replacingOccurrences(
+        of: "color3f inputs:diffuseColor = (0.02, 0.02, 0.02)\n", with: ""
+    ).replacingOccurrences(
+        of: "def Xform \"Device\"\n{\n",
+        with: """
+        def Xform "Device" (
+            variants = {
+                string finish = "dark"
+            }
+            prepend variantSets = "finish"
+        )
+        {
+            variantSet "finish" = {
+                "dark" {
+                    over "Materials"
+                    {
+                        over "DeviceBody"
+                        {
+                            over "Shader"
+                            {
+                                color3f inputs:diffuseColor = (0.02, 0.02, 0.02)
+                            }
+                        }
+                    }
+                }
+                "red" {
+                    over "Materials"
+                    {
+                        over "DeviceBody"
+                        {
+                            over "Shader"
+                            {
+                                color3f inputs:diffuseColor = (0.8, 0.02, 0.02)
+                            }
+                        }
+                    }
+                }
+            }
+
+        """
+    )
+
     /// A book: the right half carries the inner screen, and the left leaf
     /// — its cover on the back — turns over it about the hinge (the y axis
     /// at the front face) as `default subtree animation` runs from flat at

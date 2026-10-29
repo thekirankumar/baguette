@@ -55,8 +55,8 @@ public struct DeepLink: Equatable, Sendable {
         return DeepLink(url: url, scheme: scheme)
     }
 
-    /// The argv tail handed to `xcrun simctl openurl <udid> <url>`.
-    public func openArguments(udid: String) -> [String] {
-        ["simctl", "openurl", udid, url.absoluteString]
+    /// The argv tail handed to `xcrun simctl [--set <set>] openurl <udid> <url>`.
+    public func openArguments(udid: String, deviceSetPath: String? = nil) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["openurl", udid, url.absoluteString]
     }
 }

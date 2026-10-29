@@ -10,29 +10,36 @@ import Foundation
 /// is integration-only.
 final class SimctlLocation: Location, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
 
     func set(_ coordinate: Coordinate) async throws {
-        try await spawn(["simctl", "location", udid, "set", coordinate.argument])
+        try await spawn(arguments(["set", coordinate.argument]))
     }
 
     func start(_ route: LocationRoute) async throws {
-        try await spawn(["simctl", "location", udid, "start"] + route.startArguments)
+        try await spawn(arguments(["start"] + route.startArguments))
     }
 
     func clear() async throws {
-        try await spawn(["simctl", "location", udid, "clear"])
+        try await spawn(arguments(["clear"]))
+    }
+
+    private func arguments(_ verb: [String]) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["location", udid] + verb
     }
 
     private func spawn(_ arguments: [String]) async throws {

@@ -200,15 +200,22 @@ struct SimctlCaptureTests {
         }
     }
 
+    /// A reader that hit EOF closes itself from inside its own readability
+    /// handler, and Foundation holds that close until the handler returns.
+    /// On a loaded host the handler's thread can be held for seconds (CI runs
+    /// that failed here had tests taking 25–33 s), so what is asserted is
+    /// that the descriptor is released, not how quickly: the wait is generous,
+    /// and the last look comes after the deadline rather than before it.
     private static func expectClosed(_ handle: FileHandle) async throws {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
-        while ContinuousClock.now < deadline {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+        while true {
             do {
                 _ = try handle.read(upToCount: 0)
             } catch {
                 #expect(error is CocoaError)
                 return
             }
+            guard ContinuousClock.now < deadline else { break }
             try await Task.sleep(for: .milliseconds(10))
         }
         Issue.record("The output reader remained open after cancellation")

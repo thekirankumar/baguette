@@ -31,7 +31,7 @@ function load(file, seed = {}) {
 
 for (const file of ['sim-list.js', 'sim-native.js', 'sim-stream.js', 'sim-camera.js',
   'sim-location.js', 'sim-screens.js', 'sim-status-bar.js', 'sim-network.js',
-  'sim-file-drop.js', 'sim-plugins.js', 'farm/farm-app.js']) {
+  'sim-file-drop.js', 'sim-plugins.js', 'sim-defaults.js', 'sim-notify.js', 'farm/farm-app.js']) {
   for (const mount of ['/simulators', '/devices']) {
     test(`should keep raw app routes beneath an overlapping ${mount} mount in ${file}`, () => {
       const location = new URL(`https://example.com${mount}/simulators/ID`);
@@ -52,6 +52,29 @@ for (const file of ['sim-list.js', 'sim-native.js', 'sim-stream.js', 'sim-camera
     });
   }
 }
+
+test('should preserve the proxy prefix for defaults and notification requests', async () => {
+  for (const prefixed of [false, true]) {
+    const urls = [];
+    const context = load('sim-defaults.js', {
+      ...(prefixed ? {} : { BaguetteTarget: undefined }),
+      fetch: async url => { urls.push(url); return { ok: true, json: async () => ({ ok: true }) }; },
+    });
+    const defaults = new context.DefaultsPanel();
+    defaults.udid = 'a/b';
+    assert.equal(defaults._url('/defaults.json'),
+      (prefixed ? '/proxy/team' : '') + '/simulators/a%2Fb/defaults.json');
+    vm.runInNewContext(fs.readFileSync(path.join(WEB, 'sim-notify.js'), 'utf8'), context);
+    const notify = new context.NotifyPanel();
+    Object.assign(notify, {
+      udid: 'a/b', host: {}, state: { app: 'com.example.app', payload: '{}' }, _show() {},
+    });
+    await notify.send();
+    assert.deepEqual(urls, [
+      (prefixed ? '/proxy/team' : '') + '/simulators/a%2Fb/notify?bundleId=com.example.app',
+    ]);
+  }
+});
 
 test('should activate the native page using its app-relative pathname', () => {
   // Stop after activation, before mounting the rest of the page.

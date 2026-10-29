@@ -91,4 +91,27 @@ struct SimctlPairsTests {
             #expect(SimulatorState.named(state.description) == state)
         }
     }
+
+    @Test func `should read the pairing table of the custom device set the phone lives in`() throws {
+        let xcrun = try echoingXcrun()
+        defer { try? FileManager.default.removeItem(at: xcrun.deletingLastPathComponent()) }
+        #expect(try SimctlPairsCapture.list(deviceSetPath: "/custom set", xcrun: xcrun)
+            == "simctl\n--set\n/custom set\nlist\npairs\n-j\n")
+    }
+
+    @Test func `should read the default pairing table when the phone lives in the default set`() throws {
+        let xcrun = try echoingXcrun()
+        defer { try? FileManager.default.removeItem(at: xcrun.deletingLastPathComponent()) }
+        #expect(try SimctlPairsCapture.list(xcrun: xcrun) == "simctl\nlist\npairs\n-j\n")
+    }
+
+    /// A stand-in `xcrun` that prints its argv, one argument per line.
+    private func echoingXcrun() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("xcrun")
+        try Data("#!/bin/sh\nprintf '%s\\n' \"$@\"\n".utf8).write(to: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
+        return url
+    }
 }

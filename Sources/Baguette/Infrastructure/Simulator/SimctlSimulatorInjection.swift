@@ -32,21 +32,19 @@ final class SimctlSimulatorInjection: SimulatorInjection, Sendable {
     }
 
     func arm(dylibPath: String, on simulator: any Simulator) async throws {
-        let udid = simulator.udid
         try await Task.detached {
-            try self.locked(udid) {
-                let armed = try self.currentDylibs(udid: udid)
-                try self.write(armed.adding(dylibPath), udid: udid)
+            try self.locked(simulator.udid) {
+                let armed = try self.currentDylibs(on: simulator)
+                try self.write(armed.adding(dylibPath), on: simulator)
             }
         }.value
     }
 
     func disarm(dylibPath: String, on simulator: any Simulator) async throws {
-        let udid = simulator.udid
         try await Task.detached {
-            try self.locked(udid) {
-                let armed = try self.currentDylibs(udid: udid)
-                try self.write(armed.removing(dylibPath), udid: udid)
+            try self.locked(simulator.udid) {
+                let armed = try self.currentDylibs(on: simulator)
+                try self.write(armed.removing(dylibPath), on: simulator)
             }
         }.value
     }
@@ -94,26 +92,29 @@ final class SimctlSimulatorInjection: SimulatorInjection, Sendable {
     /// report "not armed" for a dylib that is very much loaded. Same rule
     /// `InjectedDylibs` merges by.
     func armed(dylibPath: String, on simulator: any Simulator) async throws -> Bool {
-        let udid = simulator.udid
         let name = (dylibPath as NSString).lastPathComponent
         return try await Task.detached {
-            try self.currentDylibs(udid: udid).paths
+            try self.currentDylibs(on: simulator).paths
                 .contains { ($0 as NSString).lastPathComponent == name }
         }.value
     }
 
     /// Only launchctl's empty status-1 response confirms an unset variable.
     /// Other failures leave the environment unknown and must prevent a write.
-    private func currentDylibs(udid: String) throws -> InjectedDylibs {
+    func dylibs(on simulator: any Simulator) async throws -> InjectedDylibs {
+        try await Task.detached { try self.currentDylibs(on: simulator) }.value
+    }
+
+    private func currentDylibs(on simulator: any Simulator) throws -> InjectedDylibs {
         do {
-            let output = try spawn(udid: udid, arguments: ["getenv", Self.variable])
+            let output = try spawn(on: simulator, arguments: ["getenv", Self.variable])
             return InjectedDylibs.parsing(output.stdout)
         } catch SimctlCapture.Failure.failed(_, 1, "") {
             return InjectedDylibs.parsing(nil)
         }
     }
 
-    private func write(_ dylibs: InjectedDylibs, udid: String) throws {
+    private func write(_ dylibs: InjectedDylibs, on simulator: any Simulator) throws {
         // An empty value is not the same as no value — dyld reports an
         // empty entry as a library it failed to load — so the last dylib
         // leaving takes the whole variable with it.
@@ -121,13 +122,14 @@ final class SimctlSimulatorInjection: SimulatorInjection, Sendable {
             dylibs.isEmpty
             ? ["unsetenv", Self.variable]
             : ["setenv", Self.variable, dylibs.environmentValue]
-        _ = try spawn(udid: udid, arguments: arguments)
+        _ = try spawn(on: simulator, arguments: arguments)
     }
 
-    private func spawn(udid: String, arguments: [String]) throws -> SimctlCapture.Output {
+    private func spawn(on simulator: any Simulator, arguments: [String]) throws -> SimctlCapture.Output {
         try SimctlCapture.run(
-            udid: udid,
-            arguments: ["simctl", "spawn", udid, "launchctl"] + arguments,
+            udid: simulator.udid,
+            arguments: ["simctl"] + (simulator.deviceSetPath.map { ["--set", $0] } ?? [])
+                + ["spawn", simulator.udid, "launchctl"] + arguments,
             xcrun: xcrun
         )
     }

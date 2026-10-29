@@ -34,7 +34,7 @@ other way.
 ```bash
 baguette boot  --udid <UDID>                 # boots folded: the cover is lit
 baguette hinge --udid <UDID> --pose open     # unfold (130°); SpringBoard goes landscape
-baguette chrome layout --udid <UDID>         # the lit panel's size, for --width / --height
+baguette describe-ui --udid <UDID> | jq .screen   # the lit panel's size, for --width / --height
 baguette hinge --udid <UDID>                 # read the angle and lit panel
 ```
 
@@ -54,14 +54,15 @@ power and camera-control keys, shown while the pointer is over the stage.
 
 ```bash
 baguette hinge --udid <UDID> --pose open
-baguette chrome layout --udid <UDID>                       # now reports 669 × 951
+baguette describe-ui --udid <UDID> | jq .screen             # now reports 669 × 951
 baguette tap --udid <UDID> --x 334 --y 475 --width 669 --height 951
 ```
 
 Coordinates are device points in the **lit** panel's space, as everywhere else
-([wire.md](../../wire.md)). While folded, `chrome layout` reports the cover's
-466 × 678, and that's what to pass as `--width` / `--height`. `describe-ui`
-frames come back in the same space.
+([wire.md](../../wire.md)). While folded, `describe-ui`'s `screen` reports the
+cover's 466 × 678, and that's what to pass as `--width` / `--height`; its
+frames come back in the same space. Not `chrome layout`: its `screen` is the
+bezel image's (626 × 890 for the unfolded panel).
 
 ### Read a panel's layout without folding
 
@@ -117,6 +118,10 @@ the page can light the nearest pose; the hardware keys send the ordinary
 - A **shut-down** Duo's page shows the flat chrome (for the Boot card); the 3D
   book appears once it's booted. The CLI's `chrome` verbs and `bezel.png` always
   serve the flat chromes.
+- **Keys ride the guest.** The Duo drops Indigo's keyboard message on either
+  panel, so `type`, `key` and the page's keyboard press keys through
+  `HingeControl`, modifiers held around each, as its hardware keys go. The
+  first keystroke after a while costs the helper's spawn (most of a second).
 - The Device Hub input heal ([device hub](../device-hub/README.md)) applies to
   the Duo like any iOS 27 device.
 

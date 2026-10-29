@@ -41,4 +41,10 @@ struct MediaItemTests {
         let media = MediaItem(path: URL(fileURLWithPath: "/tmp/My Clip.mov"))
         #expect(media.addMediaArguments(udid: "U") == ["simctl", "addmedia", "U", "/tmp/My Clip.mov"])
     }
+
+    @Test func `should add media inside the device's custom device set when it lives in one`() {
+        let media = MediaItem(path: URL(fileURLWithPath: "/tmp/My Clip.mov"))
+        #expect(media.addMediaArguments(udid: "U", deviceSetPath: "/custom set")
+            == ["simctl", "--set", "/custom set", "addmedia", "U", "/tmp/My Clip.mov"])
+    }
 }

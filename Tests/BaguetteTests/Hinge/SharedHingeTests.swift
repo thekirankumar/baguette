@@ -4,7 +4,7 @@ import Mockable
 @testable import Baguette
 
 /// One monitor per device. Every stream socket on a foldable wants the
-/// sweep and every bind wants the current angle; spawning a devicectl
+/// sweep and every bind wants the current angle; spawning a reader
 /// per caller put several monitors on one device at once and a fresh
 /// spawn on every resolve. `SharedHinge` runs a single inner watch,
 /// fans its samples out, and answers `angle()` from the last sample
@@ -44,7 +44,7 @@ struct SharedHingeTests {
     }
 
     @Test func `should tell a watcher joining a running monitor the standing angle at once`() {
-        // devicectl reports a change-driven stream: the standing angle
+        // The hinge reports a change-driven stream: the standing angle
         // comes once, at start. A socket that joins later — a 3D scene
         // opened while the page's own socket already watches — would
         // otherwise wait for the hinge to move before it could pose.
@@ -146,7 +146,7 @@ struct SharedHingeTests {
     /// `/hinge`, the definition, the stream bind — before any socket
     /// has restarted the watch. Each spawning its own monitor is what
     /// produced disagreeing panels (a second concurrent devicectl
-    /// monitor answers 0° for a device sitting at 130°). One read
+    /// monitor once answered 0° for a device sitting at 130°). One read
     /// serves the burst: the first spawns, the rest share its sample.
     @Test func `should remember a one-shot read for the grace period`() {
         let inner = Inner()
@@ -191,9 +191,10 @@ struct SharedHingeTests {
         w.cancel()
     }
 
-    /// devicectl cannot read a device in a custom set. Sweeping from an
-    /// assumed shut would fold an open device closed and hand the display
-    /// to the cover and back on the way to the angle asked for.
+    /// Without `HingeControl`, or with the guest silent, nothing is
+    /// heard. Sweeping from an assumed shut would fold an open device
+    /// closed and hand the display to the cover and back on the way to
+    /// the angle asked for.
     @Test func `should fold straight to the angle asked for when no angle was heard`() throws {
         let inner = Inner()
         given(inner.hinge).angle().willReturn(nil)
@@ -204,6 +205,220 @@ struct SharedHingeTests {
         try shared.fold(to: 130, over: 0.8)
 
         verify(motor).fold(from: .value(130), to: .value(130), over: .value(0.8)).called(1)
+    }
+
+    /// Where the guest's hinge is; a fold moves it.
+    final class Device: @unchecked Sendable {
+        var angle: HingeAngle?
+        init(_ angle: HingeAngle?) { self.angle = angle }
+    }
+
+    private func folding(_ device: Device, failing error: HingeError? = nil) -> MockHingeMotor {
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, to, _ in
+            device.angle = HingeAngle(degrees: to)
+            if let error { throw error }
+        }
+        return motor
+    }
+
+    /// Clients rebind their stream as soon as a fold returns. The angle
+    /// read to start the sweep is the hinge before it, not after.
+    @Test func `should report the angle the hinge folded to when nothing is watching`() throws {
+        let inner = Inner()
+        let device = Device(HingeAngle(degrees: 130))
+        given(inner.hinge).angle().willProduce { device.angle }
+        let shared = SharedHinge(inner: inner.hinge, motor: folding(device))
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(shared.angle() == HingeAngle(degrees: 0))
+        #expect(shared.angle()?.litPanel == .primary)
+    }
+
+    /// A fold that timed out may have landed before the helper stopped.
+    @Test func `should read the hinge again when a fold fails and nothing is watching`() {
+        let inner = Inner()
+        let device = Device(HingeAngle(degrees: 130))
+        given(inner.hinge).angle().willProduce { device.angle }
+        let shared = SharedHinge(inner: inner.hinge, motor: folding(device, failing: .toolTimedOut))
+
+        #expect(throws: HingeError.toolTimedOut) { try shared.fold(to: 0, over: 0.8) }
+
+        #expect(shared.angle() == HingeAngle(degrees: 0))
+    }
+
+    /// A move is what wakes a hinge that went silent after a SpringBoard
+    /// restart, so the silence is not held against the read after it.
+    @Test func `should read a silent hinge again after a fold`() throws {
+        let inner = Inner()
+        let device = Device(nil)
+        given(inner.hinge).angle().willProduce { device.angle }
+        let shared = SharedHinge(inner: inner.hinge, motor: folding(device))
+        #expect(shared.angle() == nil)
+
+        try shared.fold(to: 130, over: 0.8)
+
+        #expect(shared.angle() == HingeAngle(degrees: 130))
+    }
+
+    /// A running watch hears the sweep itself; its last sample answers.
+    @Test func `should keep answering from the watch after a fold while one runs`() throws {
+        let inner = Inner()
+        given(inner.hinge).angle().willReturn(HingeAngle(degrees: 77))
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, to, _ in
+            inner.onAngle?(HingeAngle(degrees: to))
+        }
+        let shared = SharedHinge(inner: inner.hinge, motor: motor)
+        let w = shared.watch { _ in }
+        inner.onAngle?(HingeAngle(degrees: 130))
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(shared.angle() == HingeAngle(degrees: 0))
+        verify(inner.hinge).angle().called(0)
+        w.cancel()
+    }
+
+    /// A watch whose reader stopped still holds its subscribers, but
+    /// it hears nothing; its last sample is from before the fold.
+    @Test func `should read the hinge again after a fold the watch did not hear`() throws {
+        let inner = Inner()
+        let device = Device(HingeAngle(degrees: 130))
+        given(inner.hinge).angle().willProduce { device.angle }
+        let shared = SharedHinge(inner: inner.hinge, motor: folding(device))
+        let w = shared.watch { _ in }
+        inner.onAngle?(HingeAngle(degrees: 130))
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(shared.angle() == HingeAngle(degrees: 0))
+        w.cancel()
+    }
+
+    /// A watch started just before the fold can deliver its standing
+    /// sample — the hinge before the fold — while the fold plays.
+    @Test func `should read the hinge again after a fold when the watch only heard the angle before it`() throws {
+        let inner = Inner()
+        let device = Device(HingeAngle(degrees: 130))
+        given(inner.hinge).angle().willProduce { device.angle }
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, to, _ in
+            inner.onAngle?(HingeAngle(degrees: 130))
+            device.angle = HingeAngle(degrees: to)
+        }
+        let shared = SharedHinge(inner: inner.hinge, motor: motor)
+        let w = shared.watch { _ in }
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(shared.angle() == HingeAngle(degrees: 0))
+        w.cancel()
+    }
+
+    final class Sweeps: @unchecked Sendable {
+        private let lock = NSLock()
+        private var storage: [String] = []
+        var log: [String] { lock.withLock { storage } }
+        func append(_ entry: String) { lock.withLock { storage.append(entry) } }
+        func record(_ event: HingeSweepEvent) {
+            switch event {
+            case .began(let sweep): append("began \(sweep.from)→\(sweep.to) over \(sweep.duration)")
+            case .ended(let delivery): append("ended \(delivery)")
+            }
+        }
+    }
+
+    /// A 3D book shows a sweep baguette plays as commanded rather than
+    /// as the guest reads it back, which can be seconds late.
+    @Test func `should tell sweep watchers the sweep as the motor plays it, then how it was delivered`() throws {
+        let inner = Inner()
+        let heard = Sweeps()
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, _, _ in heard.append("motor") }
+        let shared = SharedHinge(inner: inner.hinge, motor: motor)
+        let w = shared.watch { _ in }
+        inner.onAngle?(HingeAngle(degrees: 130))
+        let sweeps = shared.watchSweeps { heard.record($0) }
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(heard.log == ["began 130.0→0.0 over 0.8", "motor", "ended delivered"])
+        sweeps.cancel()
+        w.cancel()
+    }
+
+    @Test func `should tell sweep watchers a fold the guest refused or did not confirm`() {
+        let outcomes: [(HingeError, String)] = [(.toolFailed(status: 1), "rejected"), (.toolTimedOut, "unconfirmed")]
+        for (error, delivery) in outcomes {
+            let inner = Inner()
+            given(inner.hinge).angle().willReturn(HingeAngle(degrees: 130))
+            let motor = MockHingeMotor()
+            given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, _, _ in throw error }
+            let shared = SharedHinge(inner: inner.hinge, motor: motor)
+            let heard = Sweeps()
+            let sweeps = shared.watchSweeps { heard.record($0) }
+
+            #expect(throws: error) { try shared.fold(to: 0, over: 0.8) }
+
+            #expect(heard.log == ["began 130.0→0.0 over 0.8", "ended \(delivery)"])
+            sweeps.cancel()
+        }
+    }
+
+    @Test func `should tell a cancelled sweep watcher nothing more`() throws {
+        let inner = Inner()
+        given(inner.hinge).angle().willReturn(HingeAngle(degrees: 130))
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willReturn()
+        let shared = SharedHinge(inner: inner.hinge, motor: motor)
+        let gone = Sweeps(), kept = Sweeps()
+        let a = shared.watchSweeps { gone.record($0) }
+        let b = shared.watchSweeps { kept.record($0) }
+        a.cancel()
+
+        try shared.fold(to: 0, over: 0.8)
+
+        #expect(gone.log.isEmpty)
+        #expect(kept.log.count == 2)
+        b.cancel()
+    }
+
+    /// Two clients folding at once: watchers hear the second sweep begin
+    /// only once the first has ended, as the guest plays them.
+    @Test func `should play one fold at a time`() {
+        let inner = Inner()
+        given(inner.hinge).angle().willReturn(nil)
+        let heard = Sweeps()
+        let motor = MockHingeMotor()
+        given(motor).fold(from: .any, to: .any, over: .any).willProduce { _, to, _ in
+            heard.append("motor \(to)")
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        let shared = SharedHinge(inner: inner.hinge, motor: motor)
+        let sweeps = shared.watchSweeps { heard.record($0) }
+
+        DispatchQueue.concurrentPerform(iterations: 2) { i in
+            try? shared.fold(to: i == 0 ? 0 : 180, over: 0.8)
+        }
+
+        let log = heard.log
+        #expect(log.count == 6)
+        for start in stride(from: 0, to: log.count - 2, by: 3) {
+            #expect(log[start].hasPrefix("began"))
+            #expect(log[start + 1].hasPrefix("motor"))
+            #expect(log[start + 2] == "ended delivered")
+        }
+        sweeps.cancel()
+    }
+
+    @Test func `should keep one shared hinge per device set and device identifier`() {
+        let udid = UUID().uuidString
+        let a = SharedHinge.forDevice(udid, deviceSetPath: "/sets/a", make: { MockHinge() })
+        #expect(a === SharedHinge.forDevice(udid, deviceSetPath: "/sets/a", make: { MockHinge() }))
+        #expect(a !== SharedHinge.forDevice(udid, deviceSetPath: "/sets/b", make: { MockHinge() }))
+        #expect(a !== SharedHinge.forDevice(udid, make: { MockHinge() }))
     }
 
     /// The same device always gets the same shared hinge, whoever asks.

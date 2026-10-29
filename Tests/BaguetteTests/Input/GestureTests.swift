@@ -222,6 +222,23 @@ struct Touch2Tests {
 
 @Suite("Press")
 struct PressTests {
+    @Test func `should toggle the software keyboard when the input accepts the request`() throws {
+        let gesture = try Press.parse(["button": "software-keyboard"])
+        let input = MockInput()
+        given(input).button(.value(.softwareKeyboard), duration: .value(0)).willReturn(true)
+
+        #expect(gesture.execute(on: input))
+        verify(input).button(.value(.softwareKeyboard), duration: .value(0)).called(1)
+    }
+
+    @Test func `should report failure when the software keyboard request is rejected`() throws {
+        let gesture = try Press.parse(["button": "software-keyboard"])
+        let input = MockInput()
+        given(input).button(.value(.softwareKeyboard), duration: .value(0)).willReturn(false)
+
+        #expect(!gesture.execute(on: input))
+    }
+
     @Test func `should read a home button press`() throws {
         let g = try Press.parse(["button": "home"])
         #expect(g == Press(button: .home))
@@ -305,7 +322,7 @@ struct PressTests {
     @Test func `should reject a press when the button is unknown`() {
         #expect(throws: GestureError.invalidValue(
             "button",
-            expected: "home | lock | power | volume-up | volume-down | action | digital-crown | side-button | left-side-button | app-switcher | swipe-to-app-switcher | swipe-to-home | pull-down-to-lock-screen | pull-down-to-notification-center"
+            expected: "home | lock | power | volume-up | volume-down | action | software-keyboard | digital-crown | side-button | left-side-button | app-switcher | swipe-to-app-switcher | swipe-to-home | pull-down-to-lock-screen | pull-down-to-notification-center"
         )) {
             try Press.parse(["button": "siri"])
         }

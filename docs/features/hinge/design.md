@@ -7,14 +7,14 @@ description: Why iPhone Duo's hinge and hardware keys are driven by a guest-side
 ## Path
 
 - **Drive:** `baguette hinge` / `POST /simulators/<udid>/hinge` / 3D socket `set_pose` → `Hinge.fold(to:over:)` (`HingeMotor`) → `GuestHingeMotor` → `xcrun simctl spawn <udid> <HingeControl> serve` (one per device, kept) → `HIDVirtualEventService` vendor event on an `avpCustom`-shaped service.
-- **Keys:** `baguette press` / `POST …/input` / stream sockets → a foldable's `Input` is `FoldableInput` → `DeviceKeys` (also played by `GuestHingeMotor`) → `HingeControl button <page> <usage> <ms>` on a `mainScreenButtons`-shaped service.
-- **Read:** `DevicectlHinge` → `xcrun devicectl device motion hinge-angle`.
+- **Keys:** `baguette press` / `key` / `type` / `POST …/input` / stream sockets → a foldable's `Input` is `FoldableInput` → `DeviceKeys` (also played by `GuestHingeMotor`) → `HingeControl button <page> <usage> <ms> [<page> <usage>]…` on a `mainScreenButtons`-shaped service.
+- **Read:** `GuestHinge` → `xcrun simctl spawn <udid> <HingeControl> read-angle` (or `watch-angle`) → CoreMotion's `CMAngleManager` in the guest.
 
 ## How the hinge is driven
 
-Nothing on the host sets the hinge: `devicectl device motion
-hinge-angle` only reads it, `simctl` has no verb, and Device Hub's
-window is opaque to accessibility. Device Hub itself speaks CoreDevice's
+Nothing on the host sets the hinge: `simctl` has no verb, `devicectl`
+never had one (the Xcode 27.1 beta's `device motion hinge-angle` only
+read it), and Device Hub's window is opaque to accessibility. Device Hub itself speaks CoreDevice's
 `UniversalHIDService` — a Swift-only private API with no module
 interface — to a daemon in the guest, `dtuhidd`
 (`/usr/libexec/dtuhidd`, from CoreSimulator's iphoneos platform
@@ -50,17 +50,32 @@ per device with `xcrun simctl spawn <udid> <HingeControl> --deadline <t>
 serve` and keeps: it registers a service of the same shape and plays each
 line it is written on stdin (`sweep <from> <to> <ms>` at 60 Hz with Device
 Hub's ease-out, `angle <deg>`, `orientation <native-value>`, `button <page>
-<usage> <ms>`), answering each with `done <status>` once played — 0
+<usage> <ms> [<page> <usage>]…`), answering each with `done <status>` once played — 0
 success, 1 rejected HID dispatch, 2 invalid line. Every hinge, rotation and
 key call waits for that answer, so it returns once the guest has acted and a
 short-lived CLI cannot exit with its command still queued. The encoder
 reproduces Device Hub's payload byte for byte. Commands queue behind one
 another; a pose costs no spawn after the first (~0.9 s round trip for
 Device Hub's 0.8 s sweep). `SharedHinge.fold(to:over:)` starts each
-sweep from the angle last heard — or, when nothing has been heard (a
-custom device set, which `devicectl` cannot read), at the angle asked
-for, so the hinge moves straight there — and `DevicectlHinge` reads the sweep back like
-any other, so the page, `litPanel` and the chrome all follow.
+sweep from the angle last heard — or, when nothing has been heard (no
+`HingeControl`, or a silent guest), at the angle asked for, so the hinge
+moves straight there — and `GuestHinge` reads the sweep back like any
+other, so the page, `litPanel` and the chrome all follow. Unless the last
+sample is the angle asked for (a socket's watch heard the fold land), the
+fold then forgets it, delivered or not, so the next `GET /hinge` or stream
+bind reads the guest rather than the hinge as it was before the fold.
+
+Folds on one device play one at a time. Each one tells its sweep watchers
+(`Hinge.watchSweeps`) the sweep (`HingeSweep`, the same from, to and
+60 Hz ease-out samples `HingeControl` sends) as it goes to the motor, and
+`PoseDelivery` once it returns. A live 3D book plays that sweep as
+commanded (`PosedHinge`). The readings can lag: on a loaded EC2 Mac, every
+sample of a 0.8 s sweep arrived, in order, over about 5 s. When the sweep is
+delivered, the book stands at the target until a reading lands within
+0.5°. If a reading turns back or leaves the sweep's range first, the book
+follows it, because that is a fold made elsewhere. If the sweep was
+refused or timed out, the book follows the readings at once. The readings
+themselves (`angle()`, `watch`) never carry commanded angles.
 
 A background `simctl spawn` of the tool (`&` in a subshell) once
 delivered nothing — run it in the foreground / keep `serve` alive.
@@ -100,19 +115,36 @@ behind a sweep in progress on the same helper.
 Device Hub streams the angle into the guest as HID reports
 (`UniversalHID` → `dtuhidd` → `kIOHIDEventTypeHingeAngle` → CoreMotion
 → SpringBoard's pose provider), and SpringBoard decides which panel to
-light. baguette reads it with `devicectl device motion hinge-angle`
-(`DevicectlHinge`): the first sample is the current angle and lands in
-~0.3 s, and only a device with several integrated panels
-(`IntegratedPanels.several`) ever asks. Device Hub's closed pose reads
-≈3°, its open pose ≈130°; SpringBoard goes landscape on its own when
-open. `devicectl`'s hinge stream can go silent after a SpringBoard
-restart (`baguette heal`) — it then reports nothing until Device Hub
-moves the pose — so the shared hinge remembers such silence for three
-seconds rather than making every caller wait it out. By hand:
+light. baguette reads it where SpringBoard does, in the guest:
+`HingeControl read-angle` prints the current angle and exits, and
+`watch-angle` prints every sample until stopped, each as one `angle
+<degrees>` line (`GuestHinge` spawns them with `xcrun simctl spawn`, so
+a custom device set works too). Only a device with several integrated
+panels (`IntegratedPanels.several`) ever asks. Device Hub's closed pose
+reads ≈3°, its open pose ≈130°; SpringBoard goes landscape on its own
+when open. By hand:
 
 ```bash
-xcrun devicectl device motion hinge-angle --device <UDID> --timeout 5
+xcrun simctl spawn <UDID> <HingeControl> watch-angle
 ```
+
+Both verbs use CoreMotion's private `CMAngleManager`, the reader behind
+the guest's own `dtdeviceinfod` (`HingeAngleManager`), which served the
+beta's `devicectl device motion hinge-angle`. It needs no entitlement:
+`+isAvailable`, then `startAngleUpdatesToQueue:handler:` delivers
+`CMAngle`s (`angleDegrees`, `isAngleValid`). The handler's second
+argument is not an object, so a block that retains it crashes. The
+first sample is the current angle, ~16 ms after the start (~0.6 s with
+the spawn), then one arrives per change, every 60 Hz frame of a sweep.
+An invalid sample is not printed. Like `frontmost`, the read verbs run
+before HID.framework loads or any service registers. `simctl spawn`
+forwards SIGTERM to its guest child, so stopping a watch stops the
+reader. Measured on Xcode 27.1 (27A9275) / iOS 27.1.
+
+The reading goes silent after a SpringBoard restart (`baguette heal`'s
+backboardd kickstart) until the next pose change, as the beta's
+`devicectl` stream did, so the shared hinge remembers such silence for
+three seconds rather than making every caller wait it out.
 
 What the lit panel binds (framebuffer, digitizer, chrome, tap
 space, AX point size, rotation) is in
@@ -147,7 +179,16 @@ key (`power`, `lock`, `volume-up`, `volume-down`, `action`) goes to the
 guest, held `duration` seconds or Device Hub's 0.25 s. The CLI, the
 `POST …/input` route and the stream sockets all press through it
 without change; `home` and the edge gestures still take the legacy
-path. Single-panel devices are untouched — `SimulatorKitDisplay` wraps
+path.
+
+Keyboard keys go the same way. The Duo drops Indigo's keyboard
+message (HID page 7) whichever target it names — each panel's
+`0x40000001` / `0x40000003` and the `0x32` slot all ack and type
+nothing — while the same usages on this service type. So
+`FoldableInput.key` presses through `DeviceKeys` too, held 100 ms (the
+panel's tap) unless the caller names a hold. Trailing `<page> <usage>`
+pairs on the `button` line are modifiers: down in order before the key,
+up in reverse after it, and released even when a press is refused. Single-panel devices are untouched — `SimulatorKitDisplay` wraps
 the input only when the device has several panels.
 
 ## Packaging
@@ -177,6 +218,10 @@ system "xcrun", "clang", "-arch", arch, "-isysroot", sdk,
 
 ## Dead ends
 
+- `xcrun devicectl device motion hinge-angle` read the hinge on the
+  Xcode 27.1 beta only. The release (27A9275, CoreDevice 651.13.5) has
+  no `device motion` verb (`Unknown option '--device'`, exit 64), though
+  CoreDevice.framework still carries the Swift-only capability.
 - CoreDevice's `UniversalHIDService` is Swift-only with no swiftmodule
   anywhere — not callable from baguette.
 - A SpringBoard shim (swizzling `CMAngleManager` to feed fabricated

@@ -15,15 +15,18 @@ import Foundation
 /// a caller mistake and is refused before anything is spawned.
 final class SimctlInterface: Interface, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
@@ -76,7 +79,7 @@ final class SimctlInterface: Interface, @unchecked Sendable {
     }
 
     private func arguments(_ option: Option, _ value: String? = nil) -> [String] {
-        ["simctl", "ui", udid, option.rawValue] + (value.map { [$0] } ?? [])
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["ui", udid, option.rawValue] + (value.map { [$0] } ?? [])
     }
 
     // MARK: - the subprocess handshake

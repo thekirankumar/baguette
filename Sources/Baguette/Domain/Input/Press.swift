@@ -1,13 +1,13 @@
 import Foundation
 
-/// Wire DTO for a hardware-button press. The Gesture protocol's role
+/// A physical or virtual button press. The Gesture protocol's role
 /// is parsing + delegating: actual press behaviour lives on
 /// `DeviceButton.press(duration:on:)`. Longer holds drive iOS gestures
 /// like the action button's "Hold for Ring" prompt or power's
 /// Siri/SOS path.
 struct Press: Gesture, Equatable {
     static let wireType = "button"
-    static let allowed = "home | lock | power | volume-up | volume-down | action | digital-crown | side-button | left-side-button | app-switcher | swipe-to-app-switcher | swipe-to-home | pull-down-to-lock-screen | pull-down-to-notification-center"
+    static let allowed = "home | lock | power | volume-up | volume-down | action | software-keyboard | digital-crown | side-button | left-side-button | app-switcher | swipe-to-app-switcher | swipe-to-home | pull-down-to-lock-screen | pull-down-to-notification-center"
 
     let button: DeviceButton
     let duration: Double

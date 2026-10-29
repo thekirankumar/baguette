@@ -4,11 +4,15 @@ import IOSurface
 /// A foldable's two screens and hinge, composed through one persistent
 /// 3D device scene.
 ///
-/// Frames from either panel and hinge samples all funnel into one
+/// Frames from either panel and hinge poses all funnel into one
 /// serialized composition of the latest state — the latest frame of
 /// each panel on its screen, the book posed at the latest angle. As in
 /// `RenderedScreen`, at most one composition is pending, so a slow model
 /// drops stale work instead of queueing it.
+///
+/// The book is posed where `PosedHinge` has it: at the hinge's readings,
+/// except while baguette plays a sweep, whose frames it steps through at
+/// 60 Hz as commanded however late the readings come back.
 final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
     private let unfolded: any Screen
     private let cover: any Screen
@@ -25,6 +29,8 @@ final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
     }
     private var delivery: (@Sendable (IOSurface) -> Void)?
     private var watch: (any HingeWatch)?
+    private var sweeps: (any HingeWatch)?
+    private var ticker: (any DispatchSourceTimer)?
     private var frameDelivery: (@Sendable (Result<DeviceFrame, any Error>) -> Void)?
     private var isRendering = false
     private var pending = false
@@ -33,20 +39,30 @@ final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
     /// A scene starts flat. Nothing is composed until the book has been
     /// posed, or the first frame would show it open when shut.
     private var isPosed = false
-    /// The hinge's own angle, as last heard (shut until it speaks).
+    /// The angle the book is posed at (shut until the hinge speaks).
     private var hingeDegrees: Double = 0
+    private var posed = PosedHinge(reading: 0)
+    /// One pose at a time: a reading and a sweep's frame must reach the
+    /// scene in the order they were decided.
+    private let posing = NSLock()
 
     /// The pose the book is shown at.
     var pose: FoldablePose {
         lock.withLock { FoldablePose(hingeDegrees: hingeDegrees) }
     }
 
-    private let onPose: @Sendable () -> Void
+    private let onPose: @Sendable (FoldablePose) -> Void
+    /// Monotonic seconds; a sweep's frames are timed by it.
+    private let now: @Sendable () -> TimeInterval
 
-    /// `onPose` runs after each hinge sample has posed the scene.
+    /// `onPose` runs after each new pose — a hinge sample, or a frame of
+    /// a sweep baguette plays — with the pose it now stands at, so a
+    /// listener never needs to hold the book to read it (that cycle kept
+    /// a closed stream's scene alive).
     init(
         unfolded: any Screen, cover: any Screen, hinge: any Hinge, scene: any DeviceScene,
-        fps: Int? = nil, onPose: @escaping @Sendable () -> Void = {}
+        fps: Int? = nil, onPose: @escaping @Sendable (FoldablePose) -> Void = { _ in },
+        now: @escaping @Sendable () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     ) {
         self.unfolded = unfolded
         self.cover = cover
@@ -54,6 +70,7 @@ final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
         self.scene = scene
         self.fps = fps
         self.onPose = onPose
+        self.now = now
     }
 
     func startFrames(onFrame: @escaping @Sendable (Result<DeviceFrame, any Error>) -> Void) throws {
@@ -73,6 +90,7 @@ final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
         let standing = hinge.angle()?.degrees ?? 0
         lock.withLock {
             hingeDegrees = standing
+            posed = PosedHinge(reading: standing)
             isPosed = true
         }
         scene.update(hingeDegrees: standing)
@@ -88,29 +106,89 @@ final class RenderedFoldable: DeviceFrames, @unchecked Sendable {
             throw error
         }
         let watch = hinge.watch { [weak self] angle in
-            guard let self else { return }
-            self.lock.withLock {
-                self.hingeDegrees = angle.degrees
-                self.isPosed = true
-            }
-            self.scene.update(hingeDegrees: angle.degrees)
-            self.onPose()
-            self.refresh()
+            self?.repose { $0.heard(angle) }
         }
-        lock.withLock { self.watch = watch }
+        let sweeps = hinge.watchSweeps { [weak self] event in self?.follow(event) }
+        lock.withLock {
+            self.watch = watch
+            self.sweeps = sweeps
+        }
+    }
+
+    /// Called on the folding thread before and after the motor plays the
+    /// sweep, so the posing itself happens on the render queue.
+    private func follow(_ event: HingeSweepEvent) {
+        let now = self.now()
+        lock.withLock {
+            guard !isStopped else { return }
+            switch event {
+            case .began(let sweep): posed.began(sweep, at: now)
+            case .ended(let delivery): posed.ended(delivery)
+            }
+        }
+        switch event {
+        case .began: startTicking()
+        case .ended: queue.async { [weak self] in self?.repose() }
+        }
+    }
+
+    private func startTicking() {
+        lock.withLock {
+            guard !isStopped, ticker == nil else { return }
+            let timer = DispatchSource.makeTimerSource(queue: queue)
+            timer.schedule(deadline: .now(), repeating: HingeSweep.frameInterval, leeway: .milliseconds(1))
+            timer.setEventHandler { [weak self] in self?.tick() }
+            ticker = timer
+            timer.resume()
+        }
+    }
+
+    private func tick() {
+        repose()
+        lock.withLock {
+            guard isStopped || !posed.isMoving(at: now()) else { return }
+            ticker?.cancel()
+            ticker = nil
+        }
+    }
+
+    /// Pose the book where `PosedHinge` has it now, after `change`, and
+    /// recompose — unless the book is already there.
+    private func repose(_ change: (inout PosedHinge) -> Void = { _ in }) {
+        let moved: Bool = posing.withLock {
+            let next = lock.withLock { () -> Double? in
+                guard !isStopped else { return nil }
+                change(&posed)
+                let degrees = posed.degrees(at: now())
+                guard degrees != hingeDegrees else { return nil }
+                hingeDegrees = degrees
+                return degrees
+            }
+            guard let next else { return false }
+            scene.update(hingeDegrees: next)
+            onPose(FoldablePose(hingeDegrees: next))
+            return true
+        }
+        if moved { refresh() }
     }
 
     func stop() {
-        let watch = lock.withLock {
+        let (watch, sweeps, ticker) = lock.withLock {
             isStopped = true
             pending = false
             latest = FoldableScreens(unfolded: nil, cover: nil)
             delivery = nil
             frameDelivery = nil
-            defer { self.watch = nil }
-            return self.watch
+            defer {
+                self.watch = nil
+                self.sweeps = nil
+                self.ticker = nil
+            }
+            return (self.watch, self.sweeps, self.ticker)
         }
         pump?.stop(waitForDelivery: false)
+        ticker?.cancel()
+        sweeps?.cancel()
         watch?.cancel()
         unfolded.stop()
         cover.stop()

@@ -55,6 +55,7 @@ docs/
 ├── README.md                   tier 1: index, GENERATED from feature descriptions
 ├── documentation-design/       this design (README.md) + layout.md
 ├── ARCHITECTURE.md             tap-to-UITouch flow, layers, route table (unchanged; the one diagram home)
+├── CANONICAL_MODEL.md          the domain tree, its words, every law and its one owner, the contexts
 ├── commands.md                 tier 3: GENERATED from swift-argument-parser, never hand-edited
 ├── wire.md                     tier 3: `baguette input` + WebSocket JSON (moved from README)
 ├── serve.md                    tier 3: `baguette serve` routes (moved from README)

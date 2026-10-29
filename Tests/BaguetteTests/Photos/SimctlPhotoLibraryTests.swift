@@ -16,7 +16,7 @@ struct SimctlPhotoLibraryTests {
         var ran = false
     }
 
-    private func makeLibrary(exitCode: Int32 = 0) -> (SimctlPhotoLibrary, Captures) {
+    private func makeLibrary(exitCode: Int32 = 0, deviceSetPath: String? = nil) -> (SimctlPhotoLibrary, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
         given(sub).run(
@@ -28,7 +28,7 @@ struct SimctlPhotoLibraryTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlPhotoLibrary(udid: "U", subprocess: sub), captures)
+        return (SimctlPhotoLibrary(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     @Test func `should add media to the photo library via xcrun simctl addmedia with its path`() async throws {
@@ -37,6 +37,13 @@ struct SimctlPhotoLibraryTests {
 
         #expect(captures.executable == URL(fileURLWithPath: "/usr/bin/xcrun"))
         #expect(captures.arguments == ["simctl", "addmedia", "U", "/tmp/clip.mov"])
+    }
+
+    @Test func `should add media inside the device's custom device set when it lives in one`() async throws {
+        let (library, captures) = makeLibrary(deviceSetPath: "/custom set")
+        try await library.add(MediaItem(path: URL(fileURLWithPath: "/tmp/clip.mov")))
+
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "addmedia", "U", "/tmp/clip.mov"])
     }
 
     @Test func `should report an add failure when simctl exits non-zero`() async {

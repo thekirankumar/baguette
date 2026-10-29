@@ -4,7 +4,7 @@ import Foundation
 ///
 /// A foldable's stream sockets each want the sweep, and every bind of
 /// the phone plane wants the current angle. Giving each caller its own
-/// `DevicectlHinge` put several monitors on one device at once and a
+/// `GuestHinge` put several monitors on one device at once and a
 /// fresh spawn on every resolve — including inside `/hinge` polls
 /// while a socket was already streaming samples. This runs a single
 /// inner watch for as long as anyone subscribes, fans its samples out,
@@ -39,29 +39,85 @@ final class SharedHinge: Hinge, @unchecked Sendable {
     }
 
     /// A sweep starts where the hinge is — the angle last heard. With
-    /// nothing heard (devicectl cannot read a custom device set) the
+    /// nothing heard (no `HingeControl`, or a silent guest) the
     /// hinge goes straight to the angle asked for rather than sweeping
     /// from a guessed start.
+    ///
+    /// Once the fold returns, delivered or not, a reading from before it
+    /// is stale — clients rebind as soon as it does — so unless the last
+    /// sample is the angle asked for (a watch heard the fold land), the
+    /// next `angle()` asks the guest again.
+    ///
+    /// Sweep watchers hear the sweep as it goes to the motor and how it
+    /// was delivered once it returns. Folds play one at a time, so each
+    /// starts from where the last left the hinge and its watchers hear
+    /// them in the order the guest plays them.
     func fold(to degrees: Double, over duration: TimeInterval) throws {
         guard let motor else { throw HingeError.toolMissing }
+        folding.lock()
+        defer { folding.unlock() }
         let from = angle()?.degrees ?? degrees
-        try motor.fold(from: from, to: degrees, over: duration)
+        defer {
+            lock.lock()
+            let landed = last.map { abs($0.angle.degrees - degrees) <= Self.landedTolerance } ?? false
+            if !landed {
+                last = nil
+                silentSince = nil
+            }
+            lock.unlock()
+        }
+        announce(.began(HingeSweep(from: from, to: degrees, duration: duration)))
+        do {
+            try motor.fold(from: from, to: degrees, over: duration)
+        } catch {
+            announce(.ended(PoseDelivery(failure: error)))
+            throw error
+        }
+        announce(.ended(.delivered))
     }
+
+    private let folding = NSLock()
+    private var sweepSubscribers: [UUID: @Sendable (HingeSweepEvent) -> Void] = [:]
+
+    func watchSweeps(onSweep: @escaping @Sendable (HingeSweepEvent) -> Void) -> any HingeWatch {
+        let id = UUID()
+        lock.withLock { sweepSubscribers[id] = onSweep }
+        return Subscription { [weak self] in
+            guard let self else { return }
+            self.lock.withLock { self.sweepSubscribers[id] = nil }
+        }
+    }
+
+    private func announce(_ event: HingeSweepEvent) {
+        let targets = lock.withLock { Array(sweepSubscribers.values) }
+        for target in targets { target(event) }
+    }
+
+    /// How close a sample must be to a fold's angle to show it landed;
+    /// the guest reports the angle a sweep ends on, give or take its
+    /// float rounding.
+    static let landedTolerance: Double = 0.5
 
     // MARK: - registry
 
-    nonisolated(unsafe) private static var registry: [String: SharedHinge] = [:]
+    private struct DeviceKey: Hashable {
+        let deviceSetPath: String?
+        let udid: String
+    }
+    nonisolated(unsafe) private static var registry: [DeviceKey: SharedHinge] = [:]
     private static let registryLock = NSLock()
 
-    /// The shared hinge for `udid`, made on first use.
+    /// The shared hinge for `udid` in its device set, made on first use.
     static func forDevice(
-        _ udid: String, make: () -> any Hinge, motor: @autoclosure () -> (any HingeMotor)? = nil
+        _ udid: String, deviceSetPath: String? = nil,
+        make: () -> any Hinge, motor: @autoclosure () -> (any HingeMotor)? = nil
     ) -> SharedHinge {
+        let key = DeviceKey(deviceSetPath: deviceSetPath, udid: udid)
         registryLock.lock()
         defer { registryLock.unlock() }
-        if let existing = registry[udid] { return existing }
+        if let existing = registry[key] { return existing }
         let made = SharedHinge(inner: make(), motor: motor())
-        registry[udid] = made
+        registry[key] = made
         return made
     }
 
@@ -69,7 +125,7 @@ final class SharedHinge: Hinge, @unchecked Sendable {
 
     /// Serialises one-shot reads: a burst of callers with nothing
     /// cached spawns one monitor, and the rest take its sample. Two
-    /// concurrent devicectl monitors on one device do not agree — the
+    /// concurrent devicectl monitors on one device did not agree — the
     /// second reported 0° for a device at 130° — which is how a reload
     /// once bound the unfolded panel's stream under the cover's chrome.
     private let readLock = NSLock()

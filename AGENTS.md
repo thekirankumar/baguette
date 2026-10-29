@@ -92,7 +92,8 @@ One line each; the research behind every line is in the linked `design.md`. Read
 
 ## When you are…
 
-- **adding a feature** (gesture, route, CLI verb, stream format, web UI piece) → the `baguette-implement-feature` skill: phases, extensibility hot spots, JS testing conventions, doc rules
+- **moving a domain rule** → [CANONICAL_MODEL](docs/CANONICAL_MODEL.md)
+- **adding a feature** (gesture, route, verb, stream, web UI) → the `baguette-implement-feature` skill
 - **changing a route or the gesture wire** → [docs/serve.md](docs/serve.md), [docs/wire.md](docs/wire.md)
 - **touching docs** → [docs/documentation-design/](docs/documentation-design/README.md)
 - **following a tap end to end** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the 9-arg recipe itself is commented in `Sources/Baguette/Infrastructure/Input/IndigoHIDInput.swift`

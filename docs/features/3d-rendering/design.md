@@ -50,7 +50,7 @@ SimulatorKit Screen
       ▼
 RenderedScreen (Screen decorator)
   1. resolve model + verified asset once
-  2. author variant overlay and load the entity once (RealityKit)
+  2. author variant overlay; load the model once per process, clone it
   3. fit a 32° perspective camera to the complete model once
   4. build studio lighting, screen material and renderer once
   5. blit each IOSurface into one persistent LowLevelTexture
@@ -94,6 +94,15 @@ changes update the retained scene and immediately re-render the latest
 simulator surface without reconnecting; variant choices reconnect because
 native USD variant selection happens when the model is loaded.
 
+A stream's stage lives exactly as long as its socket; nothing it hands a
+callback may hold the frame source that owns the stage (a foldable's pose
+listener is given the pose rather than reading it off the book). The model
+itself outlives the socket: RealityKit keeps the assets of every
+`Entity.load` until the process exits, even for a file it has loaded before,
+so `DeviceModelPrototypes` loads each asset + USD variants + scene definition
+once and every stage clones it. Clones share meshes, so the one mesh edit —
+turning a screen's texture coordinates — is made on the prototype.
+
 ## Screen quad
 
 `screen_quad` is computed analytically by `RealityKitDeviceScene`
@@ -111,7 +120,11 @@ true screen position away from Front.
 A foldable's 3D socket binds both panels and the hinge, poses the clip at
 `(180 − angle) / 180 · shutTime` and turns the whole device back by half the
 fold above the open pose (`FoldPose`); `set_3d_camera`'s `orientation` rolls
-the model to stand that way (`InterfaceRoll`).
+the model to stand that way (`InterfaceRoll`). The angle is the hinge's
+reading. During a sweep `serve` plays, it is that sweep's 60 Hz curve until
+the readings catch up (`PosedHinge`, see
+[Hinge design](../hinge/design.md#how-the-hinge-is-driven)). Each pose
+recomposes the frame, and frame metadata carries the posed angle.
 
 ## Browser: frames, export and density
 

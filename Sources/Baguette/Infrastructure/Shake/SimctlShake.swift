@@ -11,24 +11,27 @@ import Foundation
 /// the real spawn is integration-only.
 final class SimctlShake: Shake, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let signal: MotionShake
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         signal: MotionShake = MotionShake(),
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.signal = signal
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
 
     func shake() async throws {
-        try await spawn(signal.simctlArguments(udid: udid))
+        try await spawn(signal.simctlArguments(udid: udid, deviceSetPath: deviceSetPath))
     }
 
     private func spawn(_ arguments: [String]) async throws {

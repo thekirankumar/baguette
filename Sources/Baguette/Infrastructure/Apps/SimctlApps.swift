@@ -12,14 +12,22 @@ import Foundation
 /// via `MockSubprocess` — only the real spawns are integration-only.
 final class SimctlApps: Apps, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
     private let ditto: URL
     private let maxExtractedBytes: Int64
+    private let libraries: @Sendable () async throws -> InjectedDylibs
+    private let env = URL(fileURLWithPath: "/usr/bin/env")
 
+    /// `libraries` is what a launched app loads: the ones armed on the
+    /// device plus `DefaultsLookups.dylib`, so the app baguette relaunches
+    /// can say which preferences it looks up. Empty launches plainly.
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
+        libraries: @escaping @Sendable () async throws -> InjectedDylibs = { InjectedDylibs(paths: []) },
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun"),
         ditto: URL = URL(fileURLWithPath: "/usr/bin/ditto"),
         // The upload route caps the *compressed* body at 1 GiB, but a
@@ -30,14 +38,16 @@ final class SimctlApps: Apps, @unchecked Sendable {
         maxExtractedBytes: Int64 = 4 << 30
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
         self.ditto = ditto
         self.maxExtractedBytes = maxExtractedBytes
+        self.libraries = libraries
     }
 
     func install(_ app: AppBundle) async throws {
-        let status = try await exitStatus(of: xcrun, arguments: app.installArguments(udid: udid))
+        let status = try await exitStatus(of: xcrun, arguments: app.installArguments(udid: udid, deviceSetPath: deviceSetPath))
         guard status == 0 else { throw AppsError.installFailed(status: status) }
     }
 
@@ -74,13 +84,62 @@ final class SimctlApps: Apps, @unchecked Sendable {
     }
 
     func open(_ link: DeepLink) async throws {
-        let status = try await exitStatus(of: xcrun, arguments: link.openArguments(udid: udid))
+        let status = try await exitStatus(of: xcrun, arguments: link.openArguments(udid: udid, deviceSetPath: deviceSetPath))
         guard status == 0 else { throw AppsError.openFailed(status: status) }
+    }
+
+    /// simctl reads the payload from a path, so it's staged in a temp
+    /// file for the one call. simctl writes its refusal ("Unable to lookup
+    /// app", "not booted") to the merged output — kept, so the caller sees
+    /// why rather than a bare status. One refusal is common enough to
+    /// name: `UNErrorDomain` 2003, "Source is not authorized" (measured,
+    /// iOS 27), which is the app's notification permission, not a fault.
+    func deliver(_ notification: RemoteNotification) async throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("baguette-notification-\(UUID().uuidString).json")
+        try notification.payload.write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let (status, output) = try await capture(
+            of: xcrun,
+            arguments: notification.deliverArguments(udid: udid, deviceSetPath: deviceSetPath, payloadFile: file)
+        )
+        guard status == 0 else {
+            let message = String(decoding: output, as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if message.contains("Source is not authorized") {
+                throw AppsError.notificationsNotAllowed(app: notification.app)
+            }
+            throw AppsError.deliverFailed(status: status, message: message)
+        }
+    }
+
+    func terminate(bundleID: String) async throws {
+        let status = try await exitStatus(
+            of: xcrun, arguments: ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["terminate", udid, bundleID])
+        // 3 is simctl's "found nothing to terminate" (Xcode 27): the app
+        // is already not running, which is what the caller asked for.
+        guard status == 0 || status == 3 else { throw AppsError.terminateFailed(status: status) }
+    }
+
+    /// simctl gives a launched app `SIMCTL_CHILD_DYLD_INSERT_LIBRARIES` *in
+    /// place of* the device-wide `DYLD_INSERT_LIBRARIES` (measured, Xcode
+    /// 27), so the list handed over is the whole list, armed ones included.
+    /// `env` sets it for simctl alone, not for baguette.
+    func launch(bundleID: String) async throws {
+        let launch = ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["launch", udid, bundleID]
+        let loaded = try await libraries()
+        let status = loaded.isEmpty
+            ? try await exitStatus(of: xcrun, arguments: launch)
+            : try await exitStatus(of: env, arguments: [
+                "SIMCTL_CHILD_DYLD_INSERT_LIBRARIES=\(loaded.environmentValue)", xcrun.path,
+            ] + launch)
+        guard status == 0 else { throw AppsError.launchFailed(status: status) }
     }
 
     func installed() async throws -> [InstalledApp] {
         let (status, output) = try await capture(
-            of: xcrun, arguments: ["simctl", "listapps", udid]
+            of: xcrun, arguments: ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["listapps", udid]
         )
         guard status == 0 else { throw AppsError.listFailed(status: status) }
 

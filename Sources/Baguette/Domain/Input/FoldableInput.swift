@@ -31,7 +31,7 @@ struct FoldableInput: Input {
             return touches.button(button, duration: duration)
         }
         do {
-            try keys.press(key, hold: duration > 0 ? duration : Self.hold)
+            try keys.press(key, holding: [], hold: duration > 0 ? duration : Self.hold)
             return true
         } catch {
             log("[keys] press \(button.rawValue) failed: \(error)")
@@ -55,8 +55,20 @@ struct FoldableInput: Input {
         touches.touch2(phase: phase, first: first, second: second, size: size)
     }
 
+    /// A keystroke's hold when the caller names none: the panel's tap.
+    static let keystroke: TimeInterval = 0.1
+
+    /// iPhone Duo drops the Indigo keyboard message whichever panel it
+    /// addresses; a key on the guest's buttons service types.
     func key(_ key: KeyboardKey, modifiers: Set<KeyModifier>, duration: Double) -> Bool {
-        touches.key(key, modifiers: modifiers, duration: duration)
+        let held = modifiers.sorted { $0.rawValue < $1.rawValue }.map(\.hidUsage)
+        do {
+            try keys.press(key.hidUsage, holding: held, hold: duration > 0 ? duration : Self.keystroke)
+            return true
+        } catch {
+            log("[keys] key \(key.hidUsage.usage) failed: \(error)")
+            return false
+        }
     }
 
     func scroll(deltaX: Double, deltaY: Double) -> Bool {

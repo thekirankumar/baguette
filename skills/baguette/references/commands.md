@@ -8,7 +8,7 @@ Every `baguette` command and flag, generated from the binary. For how to use a f
 
 **Exit codes:** `0` on success, `1` on any error, `3` when an iPhone Duo `orientation` or `hinge` change is unconfirmed: its guest helper timed out, so the change may have landed and will not land later. Errors print `{"ok":false,"error":"…"}`, so parse stdout, not just the exit code.
 
-**Commands:** [list](#baguette-list) · [boot](#baguette-boot) · [shutdown](#baguette-shutdown) · [lifetime](#baguette-lifetime) · [input](#baguette-input) · [stream](#baguette-stream) · [tap](#baguette-tap) · [double-tap](#baguette-double-tap) · [swipe](#baguette-swipe) · [pinch](#baguette-pinch) · [pan](#baguette-pan) · [press](#baguette-press) · [key](#baguette-key) · [type](#baguette-type) · [paste](#baguette-paste) · [clipboard](#baguette-clipboard) · [chrome](#baguette-chrome) · [screenshot](#baguette-screenshot) · [record](#baguette-record) · [render-3d](#baguette-render-3d) · [describe-ui](#baguette-describe-ui) · [logs](#baguette-logs) · [serve](#baguette-serve) · [orientation](#baguette-orientation) · [hinge](#baguette-hinge) · [shake](#baguette-shake) · [status-bar](#baguette-status-bar) · [interface](#baguette-interface) · [location](#baguette-location) · [motion](#baguette-motion) · [network](#baguette-network) · [install](#baguette-install) · [add-media](#baguette-add-media) · [openurl](#baguette-openurl) · [schemes](#baguette-schemes) · [plugin](#baguette-plugin) · [bakery](#baguette-bakery) · [diag-digitizer-trackpad](#baguette-diag-digitizer-trackpad) · [heal](#baguette-heal)
+**Commands:** [list](#baguette-list) · [boot](#baguette-boot) · [shutdown](#baguette-shutdown) · [lifetime](#baguette-lifetime) · [input](#baguette-input) · [stream](#baguette-stream) · [tap](#baguette-tap) · [double-tap](#baguette-double-tap) · [swipe](#baguette-swipe) · [pinch](#baguette-pinch) · [pan](#baguette-pan) · [press](#baguette-press) · [key](#baguette-key) · [type](#baguette-type) · [paste](#baguette-paste) · [clipboard](#baguette-clipboard) · [chrome](#baguette-chrome) · [screenshot](#baguette-screenshot) · [record](#baguette-record) · [render-3d](#baguette-render-3d) · [describe-ui](#baguette-describe-ui) · [logs](#baguette-logs) · [serve](#baguette-serve) · [orientation](#baguette-orientation) · [hinge](#baguette-hinge) · [shake](#baguette-shake) · [status-bar](#baguette-status-bar) · [interface](#baguette-interface) · [location](#baguette-location) · [motion](#baguette-motion) · [network](#baguette-network) · [install](#baguette-install) · [add-media](#baguette-add-media) · [openurl](#baguette-openurl) · [notify](#baguette-notify) · [schemes](#baguette-schemes) · [plugin](#baguette-plugin) · [bakery](#baguette-bakery) · [diag-digitizer-trackpad](#baguette-diag-digitizer-trackpad) · [heal](#baguette-heal) · [defaults](#baguette-defaults)
 
 ## baguette list
 
@@ -189,7 +189,7 @@ baguette pan --udid <udid> --x1 <x1> --y1 <y1> --x2 <x2> --y2 <y2> --dx <dx> --d
 
 ## baguette press
 
-Press-and-release a hardware button (home \| lock \| power \| volume-up \| volume-down \| action \| digital-crown \| side-button \| left-side-button \| app-switcher \| swipe-to-app-switcher \| swipe-to-home \| pull-down-to-lock-screen \| pull-down-to-notification-center)
+Press-and-release a device button (home \| lock \| power \| volume-up \| volume-down \| action \| software-keyboard \| digital-crown \| side-button \| left-side-button \| app-switcher \| swipe-to-app-switcher \| swipe-to-home \| pull-down-to-lock-screen \| pull-down-to-notification-center)
 
 ```
 baguette press --udid <udid> --button <button> [--duration <duration>]
@@ -198,7 +198,7 @@ baguette press --udid <udid> --button <button> [--duration <duration>]
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--udid` | yes |  | Simulator UDID |
-| `--button` | yes |  | Hardware button: home \| lock \| power \| volume-up \| volume-down \| action \| digital-crown \| side-button \| left-side-button \| app-switcher \| swipe-to-app-switcher \| swipe-to-home \| pull-down-to-lock-screen \| pull-down-to-notification-center |
+| `--button` | yes |  | Device button: home \| lock \| power \| volume-up \| volume-down \| action \| software-keyboard \| digital-crown \| side-button \| left-side-button \| app-switcher \| swipe-to-app-switcher \| swipe-to-home \| pull-down-to-lock-screen \| pull-down-to-notification-center |
 | `--duration` |  | `0.0` | Hold duration in seconds (0 = short tap) |
 
 ## baguette key
@@ -453,7 +453,7 @@ baguette hinge --udid <udid> [--pose <pose>] [--angle <angle>] [--duration <dura
 | `--udid` | yes |  | Simulator UDID |
 | `--pose` |  |  | A pose: closed (0°), open (130°) or flat (180°) |
 | `--angle` |  |  | An angle in degrees, 0–180 |
-| `--duration` |  |  | Seconds the sweep takes (default: Device Hub's 0.8) |
+| `--duration` |  |  | Seconds the sweep takes, 0–60 (default: Device Hub's 0.8) |
 
 ## baguette shake
 
@@ -737,6 +737,22 @@ baguette openurl --udid <udid> <url>
 | `--udid` | yes |  | Simulator UDID |
 | `<url>` | yes |  | The URL to open, e.g. myapp://profile/42 |
 
+## baguette notify
+
+Deliver a remote notification to an app on the booted simulator
+
+```
+baguette notify --udid <udid> [--bundle-id <bundle-id>] [--file <file>] [--stdin] [--json]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` |  |  | The app to notify (optional when the payload has "Simulator Target Bundle") |
+| `--file` |  |  | Path to the JSON payload |
+| `--stdin` |  |  | Read the JSON payload from standard input |
+| `--json` |  |  | Emit the result as JSON on stdout |
+
 ## baguette schemes
 
 List URL schemes the booted simulator's apps answer to
@@ -997,3 +1013,91 @@ baguette heal --udid <udid>
 | Flag | Required | Default | Description |
 |---|---|---|---|
 | `--udid` | yes |  | Simulator UDID |
+
+## baguette defaults
+
+Read or edit an app's UserDefaults, typed, including App Group suites
+
+### baguette defaults read
+
+Print the app's persisted defaults and the settings it looks up but nothing stores, or one key
+
+```
+baguette defaults read --udid <udid> --bundle-id <bundle-id> [--suite <suite>] [--key <key>] [--json]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` | yes |  | The app's bundle identifier |
+| `--suite` |  |  | An App Group suite (the group identifier) instead of the app's standard defaults |
+| `--key` |  |  | Read only this key (reports whether it is set) |
+| `--json` |  |  | Print typed JSON instead of text |
+
+### baguette defaults write
+
+Store a typed value under a key
+
+```
+baguette defaults write --udid <udid> --bundle-id <bundle-id> --key <key> --type <type> --value <value> [--suite <suite>] [--relaunch] [--relaunch-if-needed]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` | yes |  | The app's bundle identifier |
+| `--suite` |  |  | An App Group suite (the group identifier) instead of the app's standard defaults |
+| `--key` | yes |  | The key to store under |
+| `--type` | yes |  | The value's type: bool \| int \| float \| string \| date \| data \| plist. plist takes an XML fragment, for arrays and dictionaries One of: bool, int, float, string, date, data, plist. |
+| `--value` | yes |  | The value, e.g. false, 3, 1.5, 2026-01-02T03:04:05Z, base64 data, or <array>…</array> |
+| `--relaunch` |  |  | Quit the app before the change and launch it after, so it starts from the new value |
+| `--relaunch-if-needed` |  |  | Relaunch only if the running app wouldn't see the change: it read the key once rather than watching it |
+
+### baguette defaults delete
+
+Remove a key, leaving every other preference alone
+
+```
+baguette defaults delete --udid <udid> --bundle-id <bundle-id> --key <key> [--suite <suite>] [--relaunch] [--relaunch-if-needed]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` | yes |  | The app's bundle identifier |
+| `--suite` |  |  | An App Group suite (the group identifier) instead of the app's standard defaults |
+| `--key` | yes |  | The key to remove |
+| `--relaunch` |  |  | Quit the app before the change and launch it after, so it starts from the new value |
+| `--relaunch-if-needed` |  |  | Relaunch only if the running app wouldn't see the change: it read the key once rather than watching it |
+
+### baguette defaults export
+
+Print the suite's preferences as typed JSON, for `defaults import`
+
+```
+baguette defaults export --udid <udid> --bundle-id <bundle-id> [--suite <suite>] [--key <key> …]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` | yes |  | The app's bundle identifier |
+| `--suite` |  |  | An App Group suite (the group identifier) instead of the app's standard defaults |
+| `--key` |  |  | Export only this key (repeatable) |
+
+### baguette defaults import
+
+Write every value from a `defaults export` file, leaving other keys alone
+
+```
+baguette defaults import --udid <udid> --bundle-id <bundle-id> --file <file> [--suite <suite>] [--relaunch] [--relaunch-if-needed]
+```
+
+| Flag | Required | Default | Description |
+|---|---|---|---|
+| `--udid` | yes |  | Simulator UDID |
+| `--bundle-id` | yes |  | The app's bundle identifier |
+| `--suite` |  |  | An App Group suite (the group identifier) instead of the app's standard defaults |
+| `--file` | yes |  | A `defaults export` file, or a JSON map of typed values; - reads stdin |
+| `--relaunch` |  |  | Quit the app before the change and launch it after, so it starts from the new value |
+| `--relaunch-if-needed` |  |  | Relaunch only if the running app wouldn't see the change: it read the key once rather than watching it |

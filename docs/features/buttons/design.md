@@ -16,6 +16,7 @@ description: How baguette's hardware-button presses reach SimulatorKit — the l
 |----------------|---------------|
 | `home`         | `IndigoHIDMessageForButton` |
 | `lock`         | `IndigoHIDMessageForButton` |
+| `software-keyboard` | `IndigoHIDMessageForButton` |
 | `power`        | `IndigoHIDMessageForHIDArbitrary` |
 | `volume-up`    | `IndigoHIDMessageForHIDArbitrary` |
 | `volume-down`  | `IndigoHIDMessageForHIDArbitrary` |
@@ -46,6 +47,23 @@ The dispatch fires two consecutive `home` `IndigoHIDMessageForButton`
 messages ~150 ms apart. SpringBoard listens to that event source
 independently of whether the device has home-button hardware, so this recipe
 is rotation-agnostic and works across the iPhone X+ family.
+
+## `software-keyboard` — on-screen keyboard toggle
+
+`IndigoHIDMessageForButton(1008, operation, 0x33)` uses the same down/up chain
+as `home` and `lock`. Xcode 27.1's SimulatorHID maps button `1008` (`0x3f0`)
+to a keyboard event on HID consumer page `12`, usage `184` (`0xb8`). The SDK's
+`IOHIDUsageTables.h` names that usage `kHIDUsage_Csmr_Eject`.
+
+The mapping was inspected in `IOHIDEventFromIndigoHIDData`: the branch at image
+offset `0x67e4` selects the page and usage, then reaches
+`IOHIDEventCreateKeyboardEvent` at `0x6aa8`. The host function copies its three
+arguments into the message without translating the button code.
+
+This action toggles the software keyboard. Hardware-keyboard attachment is a
+separate setting, exposed by CoreSimulator's
+`setHardwareKeyboardEnabled:keyboardType:error:` selector. The toggle does not
+change that setting or provide a keyboard-visibility query.
 
 ## `power` / `volume-*` / `action` → `IndigoHIDMessageForHIDArbitrary`
 

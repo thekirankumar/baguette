@@ -109,6 +109,7 @@ struct DeviceFrameTests {
         given(cover).stop().willReturn()
         given(hinge).angle().willReturn(HingeAngle(degrees: 0))
         given(hinge).watch(onAngle: .any).willReturn(watch)
+        given(hinge).watchSweeps(onSweep: .any).willReturn(MockHingeWatch.unheard())
         given(watch).cancel().willReturn()
         given(scene).update(hingeDegrees: .any).willReturn()
         let placement = DeviceFramePlacement(

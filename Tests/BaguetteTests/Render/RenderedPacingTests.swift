@@ -48,6 +48,7 @@ struct RenderedPacingTests {
         given(cover).stop().willReturn()
         given(hinge).angle().willReturn(HingeAngle(degrees: 180))
         given(hinge).watch(onAngle: .any).willReturn(watch)
+        given(hinge).watchSweeps(onSweep: .any).willReturn(MockHingeWatch.unheard())
         given(watch).cancel().willReturn()
         given(scene).update(hingeDegrees: .any).willReturn()
         given(scene).renderFrame(screens: .any).willProduce { screens in
@@ -118,9 +119,18 @@ private final class RenderSamples: @unchecked Sendable {
 
     func deliver(_ frame: Result<DeviceFrame, any Error>) { lock.withLock { received.append(frame) } }
 
-    func expectPaced() {
+    /// At 20 fps the pump hands over at most one frame per 50 ms, so `n`
+    /// renders span at least `(n - 1) × 50 ms` of hand-overs. What is timed
+    /// here is when each render *starts*, a moment after its hand-over, and a
+    /// loaded host can delay that start by a few milliseconds for one frame
+    /// and not the next. A gap-by-gap check reads that jitter as a pacing
+    /// failure; the rate over the whole run doesn't. Two renders of slack
+    /// absorb a delayed first start; an unpaced pump renders every offered
+    /// frame (~20 in ~170 ms) and is still far over.
+    func expectPaced(fps: Double = 20) {
         let times = renderTimes
         #expect(times.count >= 2)
-        #expect(zip(times, times.dropFirst()).allSatisfy { $1 - $0 >= 0.048 })
+        guard let first = times.first, let last = times.last else { return }
+        #expect(Double(times.count - 1) <= (last - first) * fps + 2)
     }
 }

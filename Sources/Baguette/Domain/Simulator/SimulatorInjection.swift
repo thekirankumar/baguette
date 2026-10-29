@@ -25,4 +25,9 @@ protocol SimulatorInjection: AnyObject, Sendable {
     /// is no longer subject to, since a simulator reboot clears
     /// `DYLD_INSERT_LIBRARIES` and leaves the file behind.
     func armed(dylibPath: String, on simulator: any Simulator) async throws -> Bool
+
+    /// Every library this simulator would load into the next app it
+    /// launches — what a launch that hands an app its own library list
+    /// must carry over, since that list replaces this one.
+    func dylibs(on simulator: any Simulator) async throws -> InjectedDylibs
 }

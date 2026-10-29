@@ -15,6 +15,7 @@ import Foundation
 final class SimDeviceLogStream: LogStream, @unchecked Sendable {
     private let udid: String
     private let host: any DeviceHost
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
 
     private let lock = NSLock()
@@ -27,9 +28,13 @@ final class SimDeviceLogStream: LogStream, @unchecked Sendable {
     /// Production callers default to `HostSubprocess()` (a thin
     /// `Foundation.Process` wrapper). Tests inject `MockSubprocess`
     /// to drive the state machine deterministically.
-    init(udid: String, host: any DeviceHost, subprocess: any Subprocess = HostSubprocess()) {
+    init(
+        udid: String, host: any DeviceHost, deviceSetPath: String? = nil,
+        subprocess: any Subprocess = HostSubprocess()
+    ) {
         self.udid = udid
         self.host = host
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
     }
 
@@ -69,7 +74,7 @@ final class SimDeviceLogStream: LogStream, @unchecked Sendable {
         // (which simctl is and we aren't). simctl is guaranteed
         // installed alongside the device set we're targeting, so
         // the indirection is cheap. Argv: simctl args + filter argv.
-        let argv = ["simctl", "spawn", udid] + filter.argv
+        let argv = ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["spawn", udid] + filter.argv
 
         do {
             try subprocess.run(

@@ -30,6 +30,7 @@ long-press (the page forwards the `mousedown` → `mouseup` time as `duration`).
 | `volume-up`    | Volume up                               |
 | `volume-down`  | Volume down                             |
 | `action`       | iPhone 15 Pro action button             |
+| `software-keyboard` | Toggle the on-screen keyboard; see [Keyboard](../keyboard/README.md#software-keyboard) |
 | `app-switcher` | Multitasking carousel (cards)           |
 
 `app-switcher` is a *virtual* button — there's no physical equivalent on Face

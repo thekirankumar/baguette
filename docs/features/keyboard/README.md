@@ -24,6 +24,22 @@ baguette type --udid <UDID> --text "Hello, world!"
 
 On the `serve` page, click the device screen and type.
 
+## Software keyboard
+
+Focus a text field in the simulator, then toggle its on-screen keyboard:
+
+```bash
+baguette press --udid <UDID> --button software-keyboard
+```
+
+Each press toggles the keyboard. The command does not report keyboard visibility
+or force a keyboard to appear without a focused text field. Host typing uses the
+existing `key` / `type` path. The [button envelope](../../wire.md#button) provides
+the same action over stdin and WebSocket.
+
+Verified on iPhone 17 with iOS 26.5 and Xcode 27.1. The software-keyboard toggle
+has not been verified on iPhone Duo.
+
 ## Supported keys
 
 | Class               | Codes                                         |
@@ -87,6 +103,9 @@ focused farm tile.
 
 ## Gotchas
 
+- **iPhone Duo types through the guest.** Its keys go through
+  `HingeControl` like its hardware keys ([iPhone Duo](../iphone-duo/README.md#gotchas));
+  the first keystroke after a while costs the helper's spawn.
 - **No IME.** Pinyin / Korean / Japanese candidates can't be entered
   through this path.
 - **No emoji or accented characters.** US layout only; `é` / `中` /

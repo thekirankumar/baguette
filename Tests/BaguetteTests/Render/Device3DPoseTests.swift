@@ -17,18 +17,33 @@ struct Device3DPoseTests {
         #expect(picked == .fold(hingeDegrees: 130, duration: nil))
         let dragged = try #require(try Device3DPose.parsing(json: Data(#"{"type":"set_pose","hingeDegrees":72.5,"duration":0}"#.utf8)))
         #expect(dragged == .fold(hingeDegrees: 72.5, duration: 0))
-        #expect(throws: DeviceModelError.invalidRenderOptions) {
+        #expect(throws: HingeCommandError.invalidDuration) {
             _ = try Device3DPose.parsing(json: Data(#"{"type":"set_pose","hingeDegrees":90,"duration":-1}"#.utf8))
         }
     }
 
+    @Test func `should reject a pose swept for longer than a minute`() throws {
+        let slow = try #require(try Device3DPose.parsing(json: Data(#"{"type":"set_pose","hingeDegrees":90,"duration":60}"#.utf8)))
+        #expect(slow == .fold(hingeDegrees: 90, duration: 60))
+        for duration in ["60.1", "1e300"] {
+            #expect(throws: HingeCommandError.invalidDuration) {
+                _ = try Device3DPose.parsing(json: Data(#"{"type":"set_pose","hingeDegrees":90,"duration":\#(duration)}"#.utf8))
+            }
+        }
+    }
+
+    /// A pose the socket cannot play is refused as the hinge route
+    /// refuses it, so the page can be told what was wrong.
     @Test func `should ignore other envelopes and reject angles off the hinge`() throws {
         #expect(try Device3DPose.parsing(json: Data(#"{"type":"set_fps","fps":30}"#.utf8)) == nil)
-        #expect(throws: DeviceModelError.invalidRenderOptions) {
+        #expect(throws: HingeCommandError.angleOutOfRange) {
             _ = try Device3DPose.parsing(json: Data(#"{"type":"set_pose","hingeDegrees":200}"#.utf8))
         }
-        #expect(throws: DeviceModelError.invalidRenderOptions) {
+        #expect(throws: HingeCommandError.angleOutOfRange) {
             _ = try Device3DPose.parsing(json: Data(#"{"type":"set_pose"}"#.utf8))
+        }
+        #expect(throws: DeviceModelError.invalidRenderOptions) {
+            _ = try Device3DPose.parsing(json: Data("not json".utf8))
         }
     }
 }

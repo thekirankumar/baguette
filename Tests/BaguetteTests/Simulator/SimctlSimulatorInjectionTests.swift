@@ -25,6 +25,21 @@ struct SimctlSimulatorInjectionTests {
             ])
     }
 
+    @Test func `should read and write the injected libraries inside the simulator's custom device set when it lives in one`() async throws {
+        let fixture = try SimulatorInjectionFixture(deviceSetPath: "/custom set")
+        defer { fixture.remove() }
+        try fixture.output("")
+        try await fixture.injection.arm(dylibPath: camera, on: fixture.simulator)
+        #expect(
+            try fixture.arguments("getenv") == [
+                "simctl", "--set", "/custom set", "spawn", "U", "launchctl", "getenv", "DYLD_INSERT_LIBRARIES",
+            ])
+        #expect(
+            try fixture.arguments("setenv") == [
+                "simctl", "--set", "/custom set", "spawn", "U", "launchctl", "setenv", "DYLD_INSERT_LIBRARIES", camera,
+            ])
+    }
+
     @Test func `should keep a dylib another feature already armed when arming`() async throws {
         let fixture = try SimulatorInjectionFixture()
         defer { fixture.remove() }
@@ -63,6 +78,20 @@ struct SimctlSimulatorInjectionTests {
         #expect(
             try await fixture.injection.armed(dylibPath: "/builds/x/VirtualNetwork.dylib", on: fixture.simulator)
                 == false)
+    }
+
+    @Test func `should list every library the simulator would load into the next app`() async throws {
+        let fixture = try SimulatorInjectionFixture()
+        defer { fixture.remove() }
+        try fixture.output("\(motion):\(camera)\n")
+        #expect(try await fixture.injection.dylibs(on: fixture.simulator).paths == [motion, camera])
+    }
+
+    @Test func `should list no libraries when launchctl confirms the variable is unset`() async throws {
+        let fixture = try SimulatorInjectionFixture()
+        defer { fixture.remove() }
+        try fixture.output("", status: 1)
+        #expect(try await fixture.injection.dylibs(on: fixture.simulator).isEmpty)
     }
 
     @Test func `should find a dylib armed when an older build of it is injected`() async throws {

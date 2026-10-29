@@ -9,9 +9,10 @@ import RealityKit
 ///
 /// RealityKit is the same engine Quick Look uses for USDZ, so authored
 /// device finishes tone-map identically to `device.usdz` previews. Model
-/// resolution, variant authoring, entity loading, camera, and lighting
-/// happen once. Per simulator frame only the screen drawable and the
-/// render target change.
+/// resolution, variant authoring, camera, and lighting happen once per
+/// connection; the model itself is loaded once per process and cloned
+/// (`DeviceModelPrototypes`). Per simulator frame only the screen
+/// drawable and the render target change.
 ///
 /// RealityKit's renderer is main-actor bound; every entry point hops to
 /// the main queue, mirroring the HID input path's MainActor requirement.
@@ -67,7 +68,8 @@ final class RealityKitDeviceScene: DeviceScene, @unchecked Sendable {
 
     init(
         plan: DeviceRenderPlan,
-        assets: VerifiedDeviceAssets = VerifiedDeviceAssets()
+        assets: VerifiedDeviceAssets = VerifiedDeviceAssets(),
+        prototypes: DeviceModelPrototypes = .shared
     ) throws {
         self.plan = plan
         scratch = FileManager.default.temporaryDirectory
@@ -75,13 +77,24 @@ final class RealityKitDeviceScene: DeviceScene, @unchecked Sendable {
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         do {
             let assetURL = try assets.resolve(plan.model)
-            let sceneURL = try Self.preparedSceneURL(
-                assetURL: assetURL,
-                selections: plan.variants,
-                scratch: scratch
+            let key = DeviceModelPrototypes.Key(
+                asset: assetURL,
+                variants: plan.variants.filter { $0.kind == .usd },
+                scene: plan.model.definition.scene
             )
+            let scratch = scratch
             try Self.onMain {
-                try self.buildStage(sceneURL: sceneURL)
+                let loaded = try prototypes.instance(of: key) {
+                    try Self.loadPrototype(
+                        sceneURL: Self.preparedSceneURL(
+                            assetURL: assetURL,
+                            selections: plan.variants,
+                            scratch: scratch
+                        ),
+                        scene: plan.model.definition.scene
+                    )
+                }
+                try self.buildStage(loaded: loaded)
             }
         } catch {
             try? FileManager.default.removeItem(at: scratch)
@@ -273,60 +286,92 @@ final class RealityKitDeviceScene: DeviceScene, @unchecked Sendable {
 
     // MARK: - stage construction (MainActor)
 
+    /// Load a model and turn its screens' texture coordinates — the one
+    /// change to the meshes, which every clone of the prototype shares.
     @MainActor
-    private func buildStage(sceneURL: URL) throws {
-        let definition = plan.model.definition
+    private static func loadPrototype(sceneURL: URL, scene: DeviceModelScene) throws -> Entity {
         let loaded: Entity
         do {
             loaded = try Entity.loadSynchronously(contentsOf: sceneURL)
         } catch {
             throw DeviceModelError.sceneLoadFailed(sceneURL.path)
         }
-        guard let subject = Self.findEntity(named: definition.scene.rootNode, under: loaded) else {
-            throw DeviceModelError.sceneNodeNotFound(definition.scene.rootNode)
+        let parts = try DeviceParts(of: loaded, scene: scene)
+        try turnTextureCoordinates(
+            of: parts.screen, materialIndex: parts.screenMaterialIndex,
+            by: scene.textureRotation ?? 0
+        )
+        if let fold = scene.fold, let cover = parts.cover {
+            try turnTextureCoordinates(
+                of: cover.entity, materialIndex: cover.materialIndex,
+                by: fold.coverTextureRotation ?? 0
+            )
         }
+        return loaded
+    }
+
+    /// The parts of a loaded model the scene drives: the device itself,
+    /// its screen, and a foldable's cover.
+    private struct DeviceParts {
+        let subject: Entity
+        let screen: ModelEntity
+        let screenMaterialIndex: Int
+        let cover: (entity: ModelEntity, materialIndex: Int)?
+
+        @MainActor
+        init(of loaded: Entity, scene: DeviceModelScene) throws {
+            guard let subject = RealityKitDeviceScene.findEntity(named: scene.rootNode, under: loaded) else {
+                throw DeviceModelError.sceneNodeNotFound(scene.rootNode)
+            }
+            guard let screen = RealityKitDeviceScene.findScreenEntity(
+                under: subject,
+                explicitName: scene.screenNode,
+                materialName: scene.screenMaterial
+            ) else {
+                throw DeviceModelError.sceneNodeNotFound(scene.screenNode ?? scene.screenMaterial)
+            }
+            self.subject = subject
+            self.screen = screen
+            screenMaterialIndex = screen.model?.materials.firstIndex {
+                $0.name == scene.screenMaterial
+            } ?? 0
+            if let fold = scene.fold {
+                guard let cover = RealityKitDeviceScene.findScreenEntity(
+                    under: subject, explicitName: nil, materialName: fold.coverMaterial
+                ) else {
+                    throw DeviceModelError.sceneNodeNotFound(fold.coverMaterial)
+                }
+                self.cover = (cover, cover.model?.materials.firstIndex {
+                    $0.name == fold.coverMaterial
+                } ?? 0)
+            } else {
+                cover = nil
+            }
+        }
+    }
+
+    @MainActor
+    private func buildStage(loaded: Entity) throws {
+        let definition = plan.model.definition
+        let parts = try DeviceParts(of: loaded, scene: definition.scene)
+        let subject = parts.subject
+        let screen = parts.screen
         Self.applyMaterialColors(
             plan.variants.reduce(into: [:]) { colors, selection in
                 colors.merge(selection.materialColors) { _, requested in requested }
             },
             under: subject
         )
-        guard let screen = Self.findScreenEntity(
-            under: subject,
-            explicitName: definition.scene.screenNode,
-            materialName: definition.scene.screenMaterial
-        ) else {
-            throw DeviceModelError.sceneNodeNotFound(
-                definition.scene.screenNode ?? definition.scene.screenMaterial
-            )
-        }
         self.screen = ScreenSlot(
             entity: screen,
-            materialIndex: screen.model?.materials.firstIndex {
-                $0.name == definition.scene.screenMaterial
-            } ?? 0,
+            materialIndex: parts.screenMaterialIndex,
             textureSize: definition.scene.textureSize
         )
-        try Self.turnTextureCoordinates(
-            of: screen, materialIndex: self.screen.materialIndex,
-            by: definition.scene.textureRotation ?? 0
-        )
-        if let fold = definition.scene.fold {
-            guard let cover = Self.findScreenEntity(
-                under: subject, explicitName: nil, materialName: fold.coverMaterial
-            ) else {
-                throw DeviceModelError.sceneNodeNotFound(fold.coverMaterial)
-            }
+        if let fold = definition.scene.fold, let cover = parts.cover {
             coverScreen = ScreenSlot(
-                entity: cover,
-                materialIndex: cover.model?.materials.firstIndex {
-                    $0.name == fold.coverMaterial
-                } ?? 0,
+                entity: cover.entity,
+                materialIndex: cover.materialIndex,
                 textureSize: fold.coverTextureSize
-            )
-            try Self.turnTextureCoordinates(
-                of: cover, materialIndex: coverScreen!.materialIndex,
-                by: fold.coverTextureRotation ?? 0
             )
             guard let clip = subject.availableAnimations.first(where: {
                 $0.name == fold.clip && $0.definition.duration.isFinite

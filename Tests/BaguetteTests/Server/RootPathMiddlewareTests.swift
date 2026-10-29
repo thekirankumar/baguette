@@ -10,6 +10,26 @@ import Mockable
 
 @Suite("RootPath middleware")
 struct RootPathMiddlewareTests {
+    @Test func `should expose notification and defaults routes beneath a configured root path`() async throws {
+        let server = Server(simulators: MockSimulators(), chromes: MockChromes())
+        let router = Router(context: BasicWebSocketRequestContext.self)
+        let mounted = router.group("/subpath")
+        server.registerNotifyRoutes(on: mounted, rejectUntrustedBrowser: { _ in nil })
+        server.registerDefaultsRoutes(on: mounted, rejectUntrustedBrowser: { _ in nil })
+        for path in ["/subpath/simulators/ID/defaults.json", "/subpath/simulators/ID/notify"] {
+            let request = Request(
+                head: HTTPRequest(method: path.hasSuffix("notify") ? .post : .get,
+                                  scheme: nil, authority: "localhost:8421", path: path),
+                body: .init(buffer: ByteBuffer())
+            )
+            let context = BasicWebSocketRequestContext(source: .init(
+                channel: EmbeddedChannel(), logger: Logger(label: "RootPathMiddlewareTests")
+            ))
+            let response = try await router.buildResponder().respond(to: request, context: context)
+            #expect(response.status == .badRequest)
+        }
+    }
+
     @Test(arguments: ["?name=a%2Fb&name=c+d&empty=", "?", ""])
     func `should preserve the request query and body beneath a root path`(_ query: String) async throws {
         let request = Self.request("/team/simulators/ID/input" + query)

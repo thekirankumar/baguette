@@ -101,7 +101,7 @@ Negative `deltaY` scrolls content up, as on macOS. Both deltas default to `0`.
 {"type":"button","button":"action","duration":1.0}
 ```
 
-`home`, `lock`, `power`, `volume-up`, `volume-down`, `action`, `app-switcher`, `swipe-to-app-switcher`, `swipe-to-home`, `pull-down-to-lock-screen`, `pull-down-to-notification-center`; on Apple Watch `digital-crown`, `side-button`, `left-side-button`. `duration` holds the button (`0` = short press). See [buttons](features/buttons/README.md).
+`home`, `lock`, `power`, `volume-up`, `volume-down`, `action`, `software-keyboard`, `app-switcher`, `swipe-to-app-switcher`, `swipe-to-home`, `pull-down-to-lock-screen`, `pull-down-to-notification-center`; on Apple Watch `digital-crown`, `side-button`, `left-side-button`. `duration` holds the button (`0` = short press). `software-keyboard` toggles the on-screen keyboard for a focused text field. See [buttons](features/buttons/README.md).
 
 ### `key`
 

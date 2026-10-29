@@ -247,7 +247,7 @@ final class IndigoHIDInput: Input, @unchecked Sendable {
         guard let c = ensureWarm() else { return false }
         let holdUs = holdMicroseconds(for: duration)
         switch button {
-        case .home, .lock:
+        case .home, .lock, .softwareKeyboard:
             return pressLegacyButton(button, holdUs: holdUs, on: c)
         case .power, .volumeUp, .volumeDown, .action,
             .digitalCrown, .sideButton, .leftSideButton:
@@ -416,14 +416,16 @@ final class IndigoHIDInput: Input, @unchecked Sendable {
         }
     }
 
-    /// `IndigoHIDMessageForButton` arg0 + 3rd arg for the legacy
-    /// home / lock path. The 3rd arg is a routing target on iOS 26.4
+    /// `IndigoHIDMessageForButton` arg0 + 3rd arg for the
+    /// legacy button path. The 3rd arg is a routing target on iOS 26.4
     /// (0x33 = digitizer); not a timestamp despite a `UInt64` slot in
     /// some headers.
     private func buttonCodes(for button: DeviceButton) -> (UInt32, UInt32) {
         switch button {
         case .home: return (0x0, 0x33)
         case .lock: return (0x1, 0x33)
+        // SimulatorHID maps button 1008 to the consumer Eject key.
+        case .softwareKeyboard: return (1008, 0x33)
         case .power, .volumeUp, .volumeDown, .action,
             .digitalCrown, .sideButton, .leftSideButton,
             .appSwitcher, .swipeToAppSwitcher, .swipeToHome,

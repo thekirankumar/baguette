@@ -8,7 +8,7 @@ import Mockable
 /// its framebuffer and digitizer through it. Single-panel devices have
 /// no hinge and never ask.
 ///
-/// Read through `DevicectlHinge`; driven through `HingeMotor`, which
+/// Read through `GuestHinge`; driven through `HingeMotor`, which
 /// runs `HingeControl` in the guest to send the pose events Device Hub
 /// sends. `SharedHinge` composes the two.
 @Mockable
@@ -24,10 +24,23 @@ protocol Hinge: Sendable {
     /// actually at. A device without a hinge delivers nothing.
     func watch(onAngle: @escaping @Sendable (HingeAngle) -> Void) -> any HingeWatch
 
+    /// Every sweep baguette plays on this hinge (`fold`), as it begins and
+    /// as it ends, until the watch is cancelled. A 3D book shows such a
+    /// sweep as commanded (`PosedHinge`): the samples `watch` delivers
+    /// can come back seconds late on a loaded host. Folds made elsewhere
+    /// are heard only through `watch`.
+    func watchSweeps(onSweep: @escaping @Sendable (HingeSweepEvent) -> Void) -> any HingeWatch
+
     /// Move the hinge to `degrees` over `duration` seconds — Device Hub's
     /// pose picker, from baguette. Throws when the device cannot be
     /// driven (no `HingeControl`, or the guest refused).
     func fold(to degrees: Double, over duration: TimeInterval) throws
+}
+
+extension Hinge {
+    /// The panel this hinge lights: no reading means as booted, folded,
+    /// so the cover. The one place that rule lives.
+    var litPanel: IntegratedPanel { angle()?.litPanel ?? .primary }
 }
 
 /// A running watch on a hinge; `cancel` stops the samples.

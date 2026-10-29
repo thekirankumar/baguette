@@ -1,33 +1,42 @@
 import Foundation
 
-/// `Hinge` read through `xcrun devicectl device motion hinge-angle`.
+/// `Hinge` read inside the guest: `xcrun simctl spawn <udid> <HingeControl>
+/// read-angle` prints the current angle and exits, `watch-angle` prints
+/// every sample until stopped. Both read CoreMotion's `CMAngleManager`,
+/// as the runtime's own device-info daemon does.
 ///
-/// The monitor streams samples until its own timeout, but the first one
-/// carries the current angle and arrives in ~0.3 s, before any motion —
-/// so this spawns it, takes that sample, and terminates the child. An
-/// exit before a sample (a device with no hinge makes devicectl print
-/// an error and quit) or a silent child past `deadline` is "no reading".
+/// The first sample carries the current angle and arrives in ~0.6 s with
+/// the spawn, before any motion — so this spawns the reader, takes that
+/// sample, and terminates the child. A failed exit (a device with no
+/// hinge, a silent guest), a missing `HingeControl`, or a child that has
+/// printed nothing by `deadline` is "no reading".
 ///
-/// The orchestration — argv, byte-to-line splitting, first-sample
-/// detection, terminate, deadline — is unit-covered through
+/// The orchestration — tool lookup, argv, byte-to-line splitting,
+/// first-sample detection, terminate, deadline — is unit-covered through
 /// `MockSubprocess`; only `HostSubprocess`'s `Process` plumbing is
 /// integration-only.
-final class DevicectlHinge: Hinge, @unchecked Sendable {
+final class GuestHinge: Hinge, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     /// A fresh child per call: `angle()` and each `watch` own their
-    /// own monitor and terminate only that one.
+    /// own reader and terminate only that one.
     private let subprocess: () -> any Subprocess
+    private let tool: () -> String?
     private let xcrun: URL
     private let deadline: TimeInterval
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: @escaping () -> any Subprocess = { HostSubprocess() },
+        tool: @escaping () -> String? = { InjectedDylibInstaller.installIfNeeded(.hingeControl) },
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun"),
         deadline: TimeInterval = 3
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
+        self.tool = tool
         self.xcrun = xcrun
         self.deadline = deadline
     }
@@ -49,24 +58,27 @@ final class DevicectlHinge: Hinge, @unchecked Sendable {
                 done.signal()
             }
         }
+        guard let arguments = arguments(verb: "read-angle") else { return nil }
         let state = State()
         let child = subprocess()
         do {
             try child.run(
                 executable: xcrun,
-                arguments: Self.arguments(udid: udid, timeout: 5, everyChange: false),
+                arguments: arguments,
                 onBytes: { bytes in
                     state.lock.lock()
                     let lines = state.buffer.append(bytes)
                     state.lock.unlock()
                     for line in lines {
-                        if let angle = HingeAngle.parse(devicectlLine: line) {
+                        if let angle = HingeAngle.parse(hingeControlLine: line) {
                             state.settle(angle)
                             return
                         }
                     }
                 },
-                onExit: { _ in state.settle(nil) }
+                // A clean exit means a sample was printed, and the pipe can
+                // deliver it after the exit; the deadline bounds that wait.
+                onExit: { status in if status != 0 { state.settle(nil) } }
             )
         } catch {
             return nil
@@ -77,20 +89,33 @@ final class DevicectlHinge: Hinge, @unchecked Sendable {
         return state.reading
     }
 
-    /// devicectl only reads; `SharedHinge` drives through its motor.
+    /// This only reads; `SharedHinge` drives through its motor.
     func fold(to degrees: Double, over duration: TimeInterval) throws {
         throw HingeError.toolMissing
     }
 
+    /// Nor does it play sweeps to tell of.
+    func watchSweeps(onSweep: @escaping @Sendable (HingeSweepEvent) -> Void) -> any HingeWatch {
+        Unheard()
+    }
+
+    private struct Unheard: HingeWatch {
+        func cancel() {}
+    }
+
     func watch(onAngle: @escaping @Sendable (HingeAngle) -> Void) -> any HingeWatch {
         let watch = Watch(child: subprocess())
+        guard let arguments = arguments(verb: "watch-angle") else {
+            watch.cancel()
+            return watch
+        }
         do {
             try watch.child.run(
                 executable: xcrun,
-                arguments: Self.arguments(udid: udid, timeout: 86_400, everyChange: true),
+                arguments: arguments,
                 onBytes: { bytes in
                     for line in watch.lines(from: bytes) {
-                        if let angle = HingeAngle.parse(devicectlLine: line) {
+                        if let angle = HingeAngle.parse(hingeControlLine: line) {
                             onAngle(angle)
                         }
                     }
@@ -103,19 +128,10 @@ final class DevicectlHinge: Hinge, @unchecked Sendable {
         return watch
     }
 
-    /// `everyChange` asks for the 60 Hz sweep Device Hub produces
-    /// rather than the monitor's default 1° / 1 s cadence. devicectl
-    /// refuses a `--timeout` under 5.
-    private static func arguments(udid: String, timeout: Int, everyChange: Bool) -> [String] {
-        var args = [
-            "devicectl", "device", "motion", "hinge-angle",
-            "--device", udid,
-            "--timeout", "\(timeout)",
-        ]
-        if everyChange {
-            args += ["--update-interval", "0.01", "--change-threshold", "0.1"]
-        }
-        return args
+    /// `nil` when the build carries no `HingeControl`.
+    private func arguments(verb: String) -> [String]? {
+        guard let tool = tool() else { return nil }
+        return ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["spawn", udid, tool, verb]
     }
 
     private final class Watch: HingeWatch, @unchecked Sendable {

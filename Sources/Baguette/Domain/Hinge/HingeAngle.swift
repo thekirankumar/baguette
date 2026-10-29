@@ -26,18 +26,17 @@ struct HingeAngle: Equatable, Sendable {
         degrees >= Self.openBoundaryDegrees ? .secondary : .primary
     }
 
-    /// One line of `xcrun devicectl device motion hinge-angle` output:
+    /// One line of `HingeControl read-angle` / `watch-angle` output, a
+    /// sample the guest's CoreMotion flagged valid:
     ///
-    ///     • +0.000s : Angle:130.0°  Mech:130.0°  Velocity:+0.0°/s  AngleValid:Y  VelocityValid:N  Range:0-180°
+    ///     angle 130
     ///
     /// The first sample carries the current angle and arrives before any
-    /// motion, so one line is a reading. A sample the device flags
-    /// `AngleValid:N` is not.
-    static func parse(devicectlLine line: String) -> HingeAngle? {
-        guard line.contains("AngleValid:Y") else { return nil }
-        let pattern = #/Angle:\s*(-?[0-9]+(?:\.[0-9]+)?)°/#
-        guard let match = line.firstMatch(of: pattern),
-              let degrees = Double(match.1)
+    /// motion, so one line is a reading.
+    static func parse(hingeControlLine line: String) -> HingeAngle? {
+        let words = line.split(separator: " ", omittingEmptySubsequences: false)
+        guard words.count == 2, words[0] == "angle",
+              let degrees = Double(words[1]), degrees.isFinite
         else { return nil }
         return HingeAngle(degrees: degrees)
     }

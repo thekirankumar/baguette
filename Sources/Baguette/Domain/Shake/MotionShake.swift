@@ -23,8 +23,10 @@ struct MotionShake: Equatable, Sendable {
     /// the guest. `notifyutil -p <name>` fires a one-shot Darwin
     /// notification; running it under `simctl spawn <udid>` lands it in
     /// the simulator's notify namespace rather than the host Mac's.
-    func simctlArguments(udid: String) -> [String] {
-        ["simctl", "spawn", udid, "notifyutil", "-p", Self.notificationName]
+    /// `deviceSetPath` names a custom device set the simulator lives in;
+    /// simctl only looks in the default set without it.
+    func simctlArguments(udid: String, deviceSetPath: String? = nil) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["spawn", udid, "notifyutil", "-p", Self.notificationName]
     }
 }
 

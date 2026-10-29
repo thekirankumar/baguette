@@ -119,6 +119,15 @@ struct HingeDriveRoutesTests {
             == .failed(HingeError.toolMissing))
     }
 
+    /// The 3D socket refuses a `set_pose` it cannot play as `POST /hinge`
+    /// does, rather than as a bad camera.
+    @Test func `should answer a pose the 3D socket cannot play with what was wrong with it`() {
+        #expect(Server.poseErrorFrame(.invalidDuration)
+            == #"{"ok":false,"error":"duration must be a number of seconds from 0 to 60"}"#)
+        #expect(Server.poseErrorFrame(.angleOutOfRange)
+            == #"{"ok":false,"error":"angle must be a number from 0 to 180"}"#)
+    }
+
     @Test func `should leave the hinge move unconfirmed when the helper times out`() {
         let host = MockSimulators(), sim = MockSimulator(), hinge = MockHinge()
         given(host).find(udid: .value("U")).willReturn(sim)

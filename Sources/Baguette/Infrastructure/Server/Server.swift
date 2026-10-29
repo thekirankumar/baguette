@@ -197,6 +197,8 @@ struct Server: Sendable {
         registerInterfaceRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerCompanionScreenRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerDeepLinkRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
+        registerNotifyRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
+        registerDefaultsRoutes(on: router, rejectUntrustedBrowser: rejectUntrustedBrowser)
         registerDeviceTwinRoutes(
             on: router,
             rejectUntrustedBrowser: rejectUntrustedBrowser,
@@ -980,8 +982,10 @@ struct Server: Sendable {
         "carplay-frames",
         "carplay-frames/cupra",
         "carplay-frames/plain",
+        "defaults",
         "sim-list",
         "farm",
+        "handheld",
         "network",
         "screens",
         "toolbar",
@@ -1643,8 +1647,13 @@ struct Server: Sendable {
         case .missingTarget: return "pose=closed|open|flat or angle=<0-180> is required"
         case .unknownPose(let pose): return "unknown pose \(pose): expected closed, open or flat"
         case .angleOutOfRange: return "angle must be a number from 0 to 180"
-        case .invalidDuration: return "duration must be a non-negative number of seconds"
+        case .invalidDuration: return "duration must be a number of seconds from 0 to 60"
         }
+    }
+
+    /// The 3D socket's answer to a `set_pose` it cannot play.
+    static func poseErrorFrame(_ error: HingeCommandError) -> String {
+        #"{"ok":false,"error":"\#(jsonEscape(hingeCommandMessage(error)))"}"#
     }
 
     /// One hinge sample as the stream socket pushes it to the page.
@@ -1835,10 +1844,10 @@ struct Server: Sendable {
             switch error {
             case .extractFailed, .archiveTooLarge, .noAppInArchive:
                 return .badArchive(reason: error.description)
-            // `openFailed` / `listFailed` can't reach an upload, but the
+            // `openFailed` / `listFailed` / the lifecycle cases can't reach an upload, but the
             // switch has to name them: the compiler is the only thing
             // that will notice when a new `AppsError` case does.
-            case .installFailed, .openFailed, .listFailed:
+            case .installFailed, .openFailed, .deliverFailed, .notificationsNotAllowed, .listFailed, .terminateFailed, .launchFailed:
                 return .dispatchFailed
             }
         } catch {
@@ -2855,23 +2864,24 @@ struct Server: Sendable {
             // hinge posing it; taps follow the lit panel as everywhere.
             let unfolded = sim.displays().panel(.secondary)
             let cover = sim.displays().panel(.primary)
-            final class Box: @unchecked Sendable { var book: RenderedFoldable? }
-            let box = Box()
             let book = RenderedFoldable(
                 unfolded: unfolded.screen(), cover: cover.screen(),
                 hinge: sim.hinge(), scene: scene, fps: options.frameMetadata ? options.frameRate : nil,
-                onPose: {
+                onPose: { pose in
                     // The lit screen moved: tell the page where it is.
-                    // Atomic frames carry the placement themselves.
-                    if !options.frameMetadata, let json = screenPlacementJSON(scene, pose: box.book?.pose) {
+                    // Atomic frames carry the placement themselves. The
+                    // pose comes in; holding the book here would keep it,
+                    // the scene and this socket alive after the close.
+                    if !options.frameMetadata, let json = screenPlacementJSON(scene, pose: pose) {
                         Task { try? await outbound.write(.text(json)) }
                     }
                 }
             )
-            box.book = book
             foldable = book
             screen = book
-            input = sim.input()
+            // The socket outlives a fold; its hinge watch keeps the
+            // lit panel each gesture asks for cached.
+            input = sim.litPanelInput()
             refresh = { book.refresh() }
         } else {
             let bound: (screen: any Screen, input: any Input)
@@ -2988,7 +2998,7 @@ struct Server: Sendable {
                     }
                     // The pose picker: the device's own hinge is swept
                     // there (a second or so, off this loop); the book
-                    // follows the hinge samples as it goes.
+                    // plays the sweep as it goes.
                     if foldable != nil, let pose = try Device3DPose.parsing(json: Data(line.utf8)) {
                         if case .fold(let degrees, let duration) = pose {
                             let target = String(degrees)
@@ -3002,6 +3012,9 @@ struct Server: Sendable {
                         }
                         continue
                     }
+                } catch let error as HingeCommandError {
+                    try? await outbound.write(.text(Self.poseErrorFrame(error)))
+                    continue
                 } catch {
                     try? await outbound.write(.text(
                         #"{"ok":false,"error":"invalid 3D camera"}"#

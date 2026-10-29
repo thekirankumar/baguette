@@ -116,6 +116,50 @@ struct RealityKitDeviceSceneTests {
         #expect(lower.blue > lower.red)
     }
 
+    @Test func `should load a device model once however many streams show it`() throws {
+        // RealityKit keeps every load's assets for the life of the
+        // process, so a model loaded per stream grew the server with
+        // each connection; later streams clone the first one's model.
+        let scratch = try Self.makeScratch("load-once")
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let plan = try Self.plan(directory: scratch)
+        let prototypes = DeviceModelPrototypes()
+
+        let first = try RealityKitDeviceScene(plan: plan, prototypes: prototypes)
+        let second = try RealityKitDeviceScene(plan: plan, prototypes: prototypes)
+        _ = (first, second)
+
+        #expect(prototypes.count == 1)
+    }
+
+    @Test func `should turn a model's screen the same way for every stream that shows it`() throws {
+        // Clones share their meshes: turning the screen's texture per
+        // stream would turn it again for every stream after the first.
+        let scratch = try Self.makeScratch("turned")
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let plan = try Self.plan(directory: scratch, rotation: .zero, textureRotation: 90)
+        let prototypes = DeviceModelPrototypes()
+        let split = try #require(Self.verticallySplitSurface(
+            top: (red: 200, green: 30, blue: 30),
+            bottom: (red: 30, green: 30, blue: 200)
+        ))
+
+        // Which quarters of the screen read red, stream by stream.
+        var reds: [[Bool]] = []
+        for _ in 0..<3 {
+            let scene = try RealityKitDeviceScene(plan: plan, prototypes: prototypes)
+            let frame = try scene.render(screen: split)
+            reds.append([(140, 70), (180, 70), (140, 170), (180, 170)].map { x, y in
+                let pixel = Self.pixel(frame, x: x, y: y)
+                return pixel.red > pixel.blue
+            })
+        }
+
+        #expect(Set(reds[0]).count == 2)
+        #expect(reds[1] == reds[0])
+        #expect(reds[2] == reds[0])
+    }
+
     @Test func `should draw the screen content edge with blended coverage at steep poses`() throws {
         let scratch = try Self.makeScratch("edge-aa")
         defer { try? FileManager.default.removeItem(at: scratch) }
@@ -243,6 +287,64 @@ struct RealityKitDeviceSceneTests {
         let plateau = Self.pixel(frame, x: 120, y: 100)
         #expect(plateau.blue >= plateau.red)
     }
+
+    @Test func `should show each stream its own finish when streams of one model ask for different ones`() throws {
+        let repository = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let models = try LiveDeviceModels(rootURLs: [
+            repository.appending(path: "Sources/Baguette/Resources/Models3D")
+        ])
+        let model = try #require(try models.find(id: "iphone-17-pro-max"))
+        let prototypes = DeviceModelPrototypes()
+        let black = try #require(Self.surface(red: 0, green: 0, blue: 0))
+        func plateau(_ finish: String) throws -> (red: UInt8, green: UInt8, blue: UInt8) {
+            let scene = try RealityKitDeviceScene(plan: DeviceRenderPlan.build(
+                model: model,
+                variants: ["finish": finish],
+                rotation: DeviceRotation(x: 0, y: 180, z: 0),
+                outputSize: RenderDimensions(width: 240, height: 480),
+                background: .color("#FFFFFF")
+            ), prototypes: prototypes)
+            return Self.pixel(try scene.render(screen: black), x: 120, y: 100)
+        }
+
+        let blue = try plateau("deep-blue")
+        let orange = try plateau("cosmic-orange")
+        let blueAgain = try plateau("deep-blue")
+
+        #expect(blue.blue >= blue.red)
+        #expect(orange.red > orange.blue)
+        #expect(blueAgain == blue)
+    }
+
+    @Test func `should show a later stream its USD variant after the stream that first loaded it has closed`() throws {
+        let scratch = try Self.makeScratch("usd-variant")
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        try RealityKitRenderFixtures.variantDeviceUSDA.write(
+            to: scratch.appending(path: "device.usda"), atomically: true, encoding: .utf8)
+        let prototypes = DeviceModelPrototypes()
+        let black = try #require(Self.surface(red: 0, green: 0, blue: 0))
+        func back(_ finish: String) throws -> (red: UInt8, green: UInt8, blue: UInt8) {
+            // Each stream closes, and removes its staged variant layer,
+            // before the next one opens.
+            let scene = try RealityKitDeviceScene(
+                plan: Self.plan(directory: scratch, rotation: DeviceRotation(x: 0, y: 180, z: 0),
+                                variants: ["finish": finish]),
+                prototypes: prototypes)
+            return Self.pixel(try scene.render(screen: black), x: 160, y: 120)
+        }
+
+        let red = try back("red")
+        let dark = try back("dark")
+        let redAgain = try back("red")
+
+        #expect(red.red > dark.red + 40)
+        #expect(redAgain == red)
+        #expect(prototypes.count == 2)
+    }
 }
 
 private extension RealityKitDeviceSceneTests {
@@ -261,7 +363,9 @@ private extension RealityKitDeviceSceneTests {
     static func plan(
         directory: URL,
         rotation: DeviceRotation = DeviceRotation(x: -8, y: 18, z: 0),
-        screenGlass: Bool = false
+        screenGlass: Bool = false,
+        textureRotation: Int? = nil,
+        variants: [String: String] = [:]
     ) throws -> DeviceRenderPlan {
         let model = InstalledDeviceModel(
             definition: DeviceModelDefinition(
@@ -276,15 +380,22 @@ private extension RealityKitDeviceSceneTests {
                     screenMaterial: "ScreenMaterial",
                     nativeOrientation: .portrait,
                     textureSize: RenderDimensions(width: 100, height: 200),
-                    usesScreenOverlay: false
+                    usesScreenOverlay: false,
+                    textureRotation: textureRotation
                 ),
-                variantSets: []
+                variantSets: variants.isEmpty ? [] : [DeviceVariantSet(
+                    id: "finish", displayName: "Finish", primPath: "/Device", usdName: "finish",
+                    default: "dark",
+                    choices: ["dark", "red"].map {
+                        DeviceVariantChoice(id: $0, displayName: $0, usdValue: $0, previewColor: nil)
+                    }
+                )]
             ),
             directoryURL: directory
         )
         return try DeviceRenderPlan.build(
             model: model,
-            variants: [:],
+            variants: variants,
             rotation: rotation,
             outputSize: RenderDimensions(width: 320, height: 240),
             background: .color("#eef1f5"),

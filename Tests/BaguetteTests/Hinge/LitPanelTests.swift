@@ -36,7 +36,7 @@ struct LitPanelTests {
         #expect(sim.litPanel(in: chromes) == .primary)
     }
 
-    /// The hinge read is a devicectl round-trip; a phone must not pay it.
+    /// The hinge read is a guest round-trip; a phone must not pay it.
     @Test func `should never ask the hinge of a single-panel device`() {
         let sim = MockSimulator()
         let chromes = MockChromes()
@@ -60,5 +60,42 @@ struct LitPanelTests {
         given(chromes).assets(forDeviceName: .value("iPhone Duo"), panel: .value(.secondary))
             .willReturn(unfolded)
         #expect(sim.chrome(in: chromes)?.chrome.identifier == "phone14")
+    }
+
+    /// The hinge's own answer, for callers that already know the device
+    /// folds: no reading means as booted, folded.
+    @Test func `should take a hinge with no reading as folded`() {
+        let hinge = MockHinge()
+        given(hinge).angle().willReturn(nil)
+        #expect(hinge.litPanel == .primary)
+    }
+
+    @Test func `should light the unfolded panel when the hinge is open`() {
+        let hinge = MockHinge()
+        given(hinge).angle().willReturn(HingeAngle(degrees: 130))
+        #expect(hinge.litPanel == .secondary)
+    }
+
+    /// The page's 3D socket stays open across a fold, so the input it
+    /// is given follows the hinge rather than binding one panel.
+    @Test func `should give a foldable an input that follows the fold`() {
+        let sim = MockSimulator()
+        let displays = MockDisplays()
+        let cover = MockDisplay(), unfolded = MockDisplay()
+        let coverInput = MockInput(), unfoldedInput = MockInput()
+        let hinge = MockHinge()
+        given(sim).displays().willReturn(displays)
+        given(sim).hinge().willReturn(hinge)
+        given(displays).panel(.value(.primary)).willReturn(cover)
+        given(displays).panel(.value(.secondary)).willReturn(unfolded)
+        given(cover).input().willReturn(coverInput)
+        given(unfolded).input().willReturn(unfoldedInput)
+        given(hinge).angle().willReturn(HingeAngle(degrees: 130))
+        given(unfoldedInput).tap(at: .any, size: .any, duration: .any, edge: .any).willReturn(true)
+
+        #expect(sim.litPanelInput().tap(
+            at: Point(x: 1, y: 2), size: Size(width: 669, height: 951), duration: 0.05, edge: nil))
+        verify(unfoldedInput).tap(at: .any, size: .any, duration: .any, edge: .any).called(1)
+        verify(coverInput).tap(at: .any, size: .any, duration: .any, edge: .any).called(0)
     }
 }

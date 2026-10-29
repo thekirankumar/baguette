@@ -42,4 +42,10 @@ struct AppBundleTests {
         let app = AppBundle(path: URL(fileURLWithPath: "/tmp/My App.ipa"))
         #expect(app.installArguments(udid: "U") == ["simctl", "install", "U", "/tmp/My App.ipa"])
     }
+
+    @Test func `should install an app inside the device's custom device set when it lives in one`() {
+        let app = AppBundle(path: URL(fileURLWithPath: "/tmp/My App.ipa"))
+        #expect(app.installArguments(udid: "U", deviceSetPath: "/custom set")
+            == ["simctl", "--set", "/custom set", "install", "U", "/tmp/My App.ipa"])
+    }
 }

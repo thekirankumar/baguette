@@ -16,7 +16,7 @@ struct SimctlAppsTests {
         var ran = false
     }
 
-    private func makeApps(exitCode: Int32 = 0) -> (SimctlApps, Captures) {
+    private func makeApps(exitCode: Int32 = 0, deviceSetPath: String? = nil) -> (SimctlApps, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
         given(sub).run(
@@ -28,7 +28,7 @@ struct SimctlAppsTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlApps(udid: "U", subprocess: sub), captures)
+        return (SimctlApps(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     @Test func `should install an app by running xcrun simctl install with its path`() async throws {
@@ -37,6 +37,17 @@ struct SimctlAppsTests {
 
         #expect(captures.executable == URL(fileURLWithPath: "/usr/bin/xcrun"))
         #expect(captures.arguments == ["simctl", "install", "U", "/tmp/MyApp.ipa"])
+    }
+
+    @Test func `should install, open links and list apps inside the device's custom device set when it lives in one`() async throws {
+        let (apps, captures) = makeApps(deviceSetPath: "/custom set")
+
+        try await apps.install(AppBundle(path: URL(fileURLWithPath: "/tmp/MyApp.ipa")))
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "install", "U", "/tmp/MyApp.ipa"])
+        try await apps.open(DeepLink.from("myapp://profile/42")!)
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "openurl", "U", "myapp://profile/42"])
+        _ = try await apps.installed()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "listapps", "U"])
     }
 
     @Test func `should report an install failure when simctl install exits non-zero`() async {

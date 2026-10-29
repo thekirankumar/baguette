@@ -27,6 +27,17 @@ struct HingeCommandTests {
         }
     }
 
+    /// Device Hub sweeps in under a second. A sweep of more than a minute
+    /// is a slip, and a long enough one stopped `serve`.
+    @Test func `should reject a sweep longer than a minute`() throws {
+        #expect(try HingeCommand.parse(pose: "open", angle: nil, duration: "60").duration == 60)
+        for duration in ["60.1", "1e300"] {
+            #expect(throws: HingeCommandError.invalidDuration) {
+                try HingeCommand.parse(pose: "open", angle: nil, duration: duration)
+            }
+        }
+    }
+
     @Test func `should require a pose or an angle, and reject a pose other than the three`() {
         #expect(throws: HingeCommandError.missingTarget) {
             try HingeCommand.parse(pose: nil, angle: nil, duration: nil)

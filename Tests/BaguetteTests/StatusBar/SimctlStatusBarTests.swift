@@ -16,7 +16,7 @@ struct SimctlStatusBarTests {
         var ran = false
     }
 
-    private func makeStatusBar(exitCode: Int32 = 0) -> (SimctlStatusBar, Captures) {
+    private func makeStatusBar(exitCode: Int32 = 0, deviceSetPath: String? = nil) -> (SimctlStatusBar, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
         given(sub).run(
@@ -28,7 +28,7 @@ struct SimctlStatusBarTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlStatusBar(udid: "U", subprocess: sub), captures)
+        return (SimctlStatusBar(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     @Test func `should override the status bar through xcrun simctl status_bar override with every set flag`() async throws {
@@ -40,6 +40,19 @@ struct SimctlStatusBarTests {
             "simctl", "status_bar", "U", "override",
             "--batteryState", "charged", "--batteryLevel", "68",
         ])
+    }
+
+    @Test func `should override, read and clear the status bar inside the device's custom device set when it lives in one`() async throws {
+        let (statusBar, captures) = makeStatusBar(deviceSetPath: "/custom set")
+
+        try await statusBar.override(StatusBarOverride(batteryLevel: 68))
+        #expect(captures.arguments == [
+            "simctl", "--set", "/custom set", "status_bar", "U", "override", "--batteryLevel", "68",
+        ])
+        _ = try await statusBar.read()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "status_bar", "U", "list"])
+        try await statusBar.clear()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "status_bar", "U", "clear"])
     }
 
     @Test func `should read the current status bar back from simctl status_bar list`() async throws {

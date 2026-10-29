@@ -54,6 +54,7 @@ the **process** of adding features that fit those rules.
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  0. ARCHITECTURE DESIGN (user approval required)             │
+│     place it in CANONICAL_MODEL · think the domain first     │
 │     wire shape · domain types · adapter split · risks        │
 ├──────────────────────────────────────────────────────────────┤
 │  1. DOMAIN TDD                                                │
@@ -81,7 +82,36 @@ the **process** of adding features that fit those rules.
 
 For any feature that crosses a layer boundary or touches the
 SimulatorKit / IndigoHID / AXPTranslator / spawn surface, **stop and
-design before coding**. Briefly produce:
+design before coding**. A bug fix that moves a rule or adds a type goes
+through Steps A and B too.
+
+### Step A: Place it in the canonical model
+
+Read [`docs/CANONICAL_MODEL.md`](../../../docs/CANONICAL_MODEL.md) — the
+tree, the words, every law and its one owner, the contexts — then answer:
+
+| Question | If yes |
+|---|---|
+| Which context owns the question it answers? (CANONICAL §5) | the files go in `Domain/<Context>/`, `Infrastructure/<Context>/`, `Tests/BaguetteTests/<Context>/`; one that fits no context is a missing word — ask before inventing a folder |
+| Which node is told? (CANONICAL §2) | a new verb lands on one node of the tree; the App only parses and calls it |
+| Does it add or change a law? (CANONICAL §3) | it gets **one** owner — the node that holds the data. Grep for the rule first: if it's already written somewhere, that's the owner, or the duplicate to remove |
+| Does it need a new role for the outside world? | a `@Mockable` protocol named for the role, reached from the `Simulator` aggregate (`sim.xxx()`), never built by the App or `Server` |
+| Does what differ between devices become a branch? | make it data: profile, chrome, model, a registration table |
+
+When the doc doesn't cover it, write the change into CANONICAL_MODEL.md first
+(tree lines, a law with its owner, a §6 row) — that diff is part of the
+design you present. Code that disagrees with the doc is behind; don't bend
+the design to it.
+
+### Step B: Think the domain first
+
+Ask the five questions of every type the change touches, check its context
+with the six, and draw now beside proposed →
+[`references/domain-shape.md`](references/domain-shape.md).
+
+### Step C: The shape
+
+Briefly produce:
 
 1. **Wire shape** — the JSON envelope on `baguette serve` WS / `baguette input` stdin. Field names, optional vs required, default values.
 2. **CLI surface** — subcommand + flag names. Match existing patterns (`--udid`, `--width`, `--height`).
@@ -92,8 +122,8 @@ design before coding**. Briefly produce:
    - **Conversational I/O** (start / stream / signal-exit / terminate): introduce one small `@Mockable` collaborator named like a domain noun (`Subprocess`, never `LogProcessPort`). The orchestrator depends on `any Subprocess`; tests inject `MockSubprocess`. The concrete impl (`HostSubprocess` ~30–50 LOC) is integration-only and should be excluded from coverage.
 6. **Frontend** — does the browser need to send / receive this? If yes, which IIFE(s) change.
 
-Present a short ASCII diagram + a "files to touch" list, then **ask
-the user to approve** before writing code. The cost of a wrong
+Present the CANONICAL_MODEL diff (if any), a short ASCII diagram and a
+"files to touch" list, then **ask the user to approve** before writing code. The cost of a wrong
 SimulatorKit signature is a `backboardd` crash, not just a failing test.
 
 ### Architecture diagram templates
@@ -155,9 +185,10 @@ Patterns that already exist — match them:
       }
   }
   ```
-- **Gesture protocol** — wire DTO with `static let wireType` + `static
-  func parse` + `func execute(on input: any Input)`. The body of
-  `execute` should be one line that delegates to a rich-domain method.
+- **Gesture protocol** — a domain value (a tap, a press) that parses
+  itself from the wire: `static let wireType` + `static func parse` +
+  `func execute(on input: any Input)`. The body of `execute` should be
+  one line that delegates to a rich-domain method.
 - **Field extractors** — use `Field.requiredString` / `requiredDouble`
   / `optionalDouble`. Don't open-code `dict["…"] as? Double`.
 
@@ -340,8 +371,9 @@ and end with the docs + PR links:
 Run `make docs`: it regenerates `docs/commands.md`, the `docs/README.md`
 index and the `baguette` skill's references from the binary and the
 docs. Never hand-edit those. Then `make check-docs` must report nothing
-new for the files you touched. Update `skills/baguette/SKILL.md`'s
-"What's wired vs what isn't" list if the CLI or wire surface changed.
+new for the files you touched. If the CLI or wire surface changed, update
+the `skills/baguette` page that covers the verb's job (the agent workflow,
+not the flag table — `make docs` writes that).
 
 ## Anti-patterns to avoid
 
@@ -383,6 +415,12 @@ new for the files you touched. Update `skills/baguette/SKILL.md`'s
   logic into one Infrastructure file.** That's the original sin
   that kept `AXPTranslatorAccessibility` and `SimDeviceLogStream` at
   18% / 33% coverage. Always split per the Phase-2 rule.
+- **A rule at the call site.** `hinge.angle()?.litPanel ?? .primary` in
+  four places is four owners; the rule lives on the node that holds the
+  data (`Hinge.litPanel`) and callers ask it. Grep before you write a rule.
+- **A domain decision in `Server` or a command.** The transport parses and
+  calls; which input follows a fold, or which surface heals, is the
+  `Simulator`'s (`sim.litPanelInput()`), built where it can be tested.
 - **`MOCKING` outside the test target.** It's `.debug`-only by design
   so release builds carry no mock code. Don't reach for `MockXxx`
   from production code.
@@ -397,6 +435,10 @@ new for the files you touched. Update `skills/baguette/SKILL.md`'s
   `HIDArbitrary(target, page, usage, op)` signature.
 - [`docs/features/keyboard/README.md`](../../../docs/features/keyboard/README.md) —
   end-to-end feature with focus-gated browser capture, CLI, and wire.
+- [`docs/CANONICAL_MODEL.md`](../../../docs/CANONICAL_MODEL.md) — the
+  tree, the words, the laws and their owners, the contexts. Read first.
+- [Think the domain first](references/domain-shape.md) — five questions per
+  type, six per context, keeping it in scope.
 - [Architecture diagram patterns](references/architecture-diagrams.md)
 - [Rich domain model patterns](references/domain-models.md)
 - [TDD test patterns](references/tdd-patterns.md)
@@ -404,6 +446,10 @@ new for the files you touched. Update `skills/baguette/SKILL.md`'s
 ## Checklist (use TaskCreate for non-trivial features)
 
 ### Phase 0 — Architecture
+- [ ] Read CANONICAL_MODEL; named the context, the node that is told, and each law's one owner
+- [ ] Grepped for the rule before writing it; no second owner
+- [ ] Five questions asked of touched types, context checked, now/proposed drawn ([domain-shape.md](references/domain-shape.md))
+- [ ] CANONICAL_MODEL updated first when the tree, a law or an owner changes
 - [ ] Wire JSON shape sketched (required vs optional fields)
 - [ ] CLI subcommand + flag names follow existing patterns
 - [ ] Domain types listed (value types + which `@Mockable` abstraction is added/changed)
@@ -438,9 +484,10 @@ new for the files you touched. Update `skills/baguette/SKILL.md`'s
       integration-only — make sure it actually works end-to-end)
 
 ### Phase 4 — Docs + Changelog
+- [ ] CANONICAL_MODEL matches the code (laws, owners; §6 row removed when fixed)
 - [ ] `docs/features/<feature>/README.md` created or updated, with `description:`
 - [ ] `design.md` for any private-API research; one AGENTS.md line if every agent needs it
 - [ ] `docs/wire.md` / `docs/serve.md` updated if the gesture wire or routes changed
 - [ ] One `CHANGELOG.md` [Unreleased] bullet, ≤300 chars, with docs + PR links
 - [ ] `make docs` run; `make check-docs` clean for touched files
-- [ ] `skills/baguette/SKILL.md` "What's wired" list updated (if CLI/wire changed)
+- [ ] `skills/baguette` page for the verb's job updated (if CLI/wire changed)

@@ -54,4 +54,10 @@ struct DeepLinkTests {
         let link = DeepLink.from("myapp://profile/42")
         #expect(link?.openArguments(udid: "U") == ["simctl", "openurl", "U", "myapp://profile/42"])
     }
+
+    @Test func `should open a deep link inside the device's custom device set when it lives in one`() {
+        let link = DeepLink.from("myapp://profile/42")
+        #expect(link?.openArguments(udid: "U", deviceSetPath: "/custom set")
+            == ["simctl", "--set", "/custom set", "openurl", "U", "myapp://profile/42"])
+    }
 }

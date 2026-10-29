@@ -78,6 +78,8 @@ The built-in pages detect it automatically.
 | `GET` `POST` | `/simulators/:udid/interface.json`, `/interface` | appearance, contrast, text size | [interface](features/interface/README.md) |
 | `POST` | `/simulators/:udid/shake` | motion shake | [shake](features/shake/README.md) |
 | `GET` `POST` `DELETE` | `/simulators/:udid/status-bar` | status-bar override | [status-bar](features/status-bar/README.md) |
+| `GET` `POST` `DELETE` | `/simulators/:udid/defaults.json`, `/defaults` | an app's typed UserDefaults, App Group suites | [defaults](features/defaults/README.md) |
+| `GET` `POST` | `/simulators/:udid/apps.json`, `/defaults-groups.json`, `/relaunch` | installed apps, an app's App Groups, quit + launch | [defaults](features/defaults/README.md#http) |
 | `POST` `DELETE` | `/simulators/:udid/location` | simulated GPS | [location](features/location/README.md) |
 | `GET` `POST` `DELETE` | `/simulators/:udid/motion` | injected CoreMotion | [motion](features/motion/README.md) |
 | `GET` `POST` `DELETE` | `/simulators/:udid/network` | injected network conditioning | [network](features/network/README.md) |
@@ -88,6 +90,7 @@ The built-in pages detect it automatically.
 | `POST` | `/simulators/:udid/camera-source?name=` | stage an image / video for the camera | [camera](features/camera/README.md) |
 | `POST` | `/simulators/:udid/openurl?url=` | open a deep link | [deep-links](features/deep-links/README.md) |
 | `GET` | `/simulators/:udid/schemes.json?q=` | URL schemes the device's apps registered | [deep-links](features/deep-links/README.md) |
+| `POST` | `/simulators/:udid/notify?bundleId=` | deliver a remote notification (body: the payload) | [notifications](features/notifications/README.md) |
 | `WS` | `/simulators/:udid/stream?format=mjpeg\|avcc` | live frames + gestures + stream control (`display=carplay`, `panel=`) | [below](#one-websocket-per-stream) |
 | `WS` | `/simulators/:udid/stream.3d.mjpeg`, `.avcc` | live 3D stage | [3d-rendering](features/3d-rendering/README.md) |
 | `WS` | `/simulators/:udid/logs?level=&style=&predicate=&bundleId=` | live unified log | [logs](features/logs/README.md) |

@@ -31,6 +31,12 @@ protocol Simulator: Sendable {
     /// did not populate are `nil`.
     var metadata: SimulatorMetadata { get }
 
+    /// The custom device set this simulator lives in (`--device-set`), or
+    /// `nil` for Xcode's default set. simctl only looks in the default set
+    /// unless told otherwise, so every `simctl` call naming this simulator
+    /// passes it as `--set`.
+    var deviceSetPath: String? { get }
+
     func boot() throws
     func shutdown() throws
 
@@ -113,6 +119,12 @@ protocol Simulator: Sendable {
     /// (`.ipa` / `.app`). Each call returns a fresh handle; the
     /// underlying `simctl install` invocation is stateless.
     func apps() -> any Apps
+
+    /// An installed app's persisted `UserDefaults` on this simulator —
+    /// its standard domain or an App Group suite. Each call returns a
+    /// fresh handle; the underlying `simctl spawn defaults` invocation is
+    /// stateless.
+    func defaults() -> any Defaults
 
     /// This simulator's photo library — import a `MediaItem` (image or
     /// video). Each call returns a fresh handle; the underlying `simctl
@@ -205,13 +217,22 @@ extension Simulator {
     ///
     /// One panel is the only answer on every device but a foldable,
     /// and it is answered from the profile alone. A foldable asks its
-    /// hinge — a devicectl round-trip — and takes no reading as folded,
+    /// hinge — a guest round-trip — and takes no reading as folded,
     /// which is how the device boots.
     func litPanel(in chromes: any Chromes) -> IntegratedPanel {
         guard chromes.panels(forDeviceName: deviceTypeName).contains(.secondary) else {
             return .primary
         }
-        return hinge().angle()?.litPanel ?? .primary
+        return hinge().litPanel
+    }
+
+    /// Input for a foldable's live page, whose socket outlives a fold:
+    /// each gesture goes to the panel the hinge lights when it starts.
+    func litPanelInput() -> any Input {
+        LitPanelInput(
+            cover: displays().panel(.primary).input(),
+            unfolded: displays().panel(.secondary).input(),
+            hinge: hinge())
     }
 
     /// Resolve the installed 3D model for this simulator. Device type

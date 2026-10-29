@@ -33,7 +33,7 @@ GET  /simulators/<udid>/hinge
 
 The `POST` blocks for the sweep and answers `{"ok":true}`; `400` for a
 pose that is not `closed`/`open`/`flat`, an angle off 0–180 or a
-negative duration; `404` for an unknown udid; `500` when the device
+duration off 0–60 s; `404` for an unknown udid; `500` when the device
 could not be driven (no `HingeControl` shipped, guest refused); `504`
 when the guest helper timed out, so the fold may have landed. A phone
 answers the `GET` with `foldable:false` and has nothing to drive.
@@ -44,8 +44,12 @@ On the 3D socket the picker sends:
 {"type":"set_pose","hingeDegrees":130}
 ```
 
-and the book follows the hinge samples as the device folds, panels
-swapping under it exactly as when Device Hub does it.
+and the book plays the sweep as it is commanded, at 60 Hz, then settles
+on the hinge's reading. It lights the panel the pose calls for, as
+SpringBoard does once the device gets there. A `POST` does the same for
+every 3D socket on the device. A fold made anywhere else is drawn from
+the hinge samples. A `set_pose` off the hinge or over 60 s is answered
+`{"ok":false,"error":…}` with the `POST`'s `400` message.
 
 The other way, a foldable's stream socket (`/simulators/<UDID>/stream`)
 sends every sample the hinge sweeps through, so a page can draw the fold
@@ -89,17 +93,18 @@ untouched.
   wins, and Device Hub's picker shows its own last pick, not the
   device's angle, until it next reads the hinge.
 - `HingeControl` needs the iOS 27.1 simulator's private `HID.framework`
-  to accept a virtual service from an unentitled process, which it does;
-  a future runtime may not.
-- The guest's hinge stream (`devicectl`) can go silent after a
-  SpringBoard restart (`baguette heal`); driving still works, reading
-  it back resumes once Device Hub or baguette moves the pose again.
+  to accept a virtual service from an unentitled process, and CoreMotion
+  to hand it the hinge angle, which both do; a future runtime may not.
+- The guest's hinge reading goes silent after a SpringBoard restart
+  (`baguette heal`); driving still works, reading it back resumes once
+  Device Hub or baguette moves the pose again.
 - Sweeps queue behind one another. The first pose spawns the guest
   helper; later ones cost no spawn (~0.9 s round trip for Device Hub's
   0.8 s sweep).
-- `devicectl` cannot see a device in a custom `--device-set`, so there
-  `baguette hinge` reads `null`, and a move goes straight to the angle
-  asked for instead of sweeping from where the hinge was.
+- A `serve` page's 3D book plays only the folds that `serve` itself
+  drives. A fold from Device Hub or from `baguette hinge`, which runs in
+  its own process, reaches the book through the hinge samples, and on a
+  loaded host those can arrive seconds late.
 
 ## See also
 

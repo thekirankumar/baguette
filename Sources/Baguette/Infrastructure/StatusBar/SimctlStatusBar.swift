@@ -10,31 +10,38 @@ import Foundation
 /// is integration-only.
 final class SimctlStatusBar: StatusBar, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
 
     func override(_ override: StatusBarOverride) async throws {
         guard !override.isEmpty else { throw StatusBarError.emptyOverride }
-        try await spawn(["simctl", "status_bar", udid, "override"] + override.overrideArguments)
+        try await spawn(arguments(["override"] + override.overrideArguments))
     }
 
     func clear() async throws {
-        try await spawn(["simctl", "status_bar", udid, "clear"])
+        try await spawn(arguments(["clear"]))
     }
 
     func read() async throws -> StatusBarOverride {
-        let output = try await capture(["simctl", "status_bar", udid, "list"])
+        let output = try await capture(arguments(["list"]))
         return StatusBarOverride.fromListOutput(output)
+    }
+
+    private func arguments(_ verb: [String]) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + ["status_bar", udid] + verb
     }
 
     /// Run a command, accumulate its stdout, and return it as a string

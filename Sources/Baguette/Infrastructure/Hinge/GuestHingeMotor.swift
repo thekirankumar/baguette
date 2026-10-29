@@ -8,7 +8,7 @@ import Foundation
 /// The tool registers a HID service shaped like dtuhidd's `avpCustom`
 /// and dispatches the pose events Device Hub sends (see
 /// `Injected/HingeControl/Sources/HingeControl.m`); the runtime folds,
-/// SpringBoard swaps panels, and `DevicectlHinge` reads the sweep back
+/// SpringBoard swaps panels, and `GuestHinge` reads the sweep back
 /// like any other. Kept rather than spawned per command: a spawn is most
 /// of a second, and the service stays registered between poses. Commands
 /// are played one at a time — a pick during a sweep queues behind it.
@@ -89,8 +89,10 @@ final class GuestHingeMotor: HingeMotor, DeviceKeys, @unchecked Sendable {
         try send("sweep \(Self.number(from)) \(Self.number(to)) \(Self.number(duration * 1000))", playing: duration)
     }
 
-    func press(_ usage: HIDUsage, hold: TimeInterval) throws {
-        try send("button \(usage.page) \(usage.usage) \(Self.number(hold * 1000))", playing: hold)
+    /// Modifiers ride the same line as trailing `<page> <usage>` pairs.
+    func press(_ usage: HIDUsage, holding modifiers: [HIDUsage], hold: TimeInterval) throws {
+        let held = modifiers.map { " \($0.page) \($0.usage)" }.joined()
+        try send("button \(usage.page) \(usage.usage) \(Self.number(hold * 1000))\(held)", playing: hold)
     }
 
     func turn(to orientation: DeviceOrientation) throws {

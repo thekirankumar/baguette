@@ -22,9 +22,9 @@ struct CommandParsingTests {
             "chrome", "screenshot", "record", "render-3d", "describe-ui", "logs", "serve",
             "orientation", "hinge", "shake", "status-bar", "location", "motion", "network",
             "install", "add-media",
-            "openurl", "schemes",
+            "openurl", "schemes", "notify",
             "plugin", "bakery", "diag-digitizer-trackpad", "lifetime", "interface",
-            "heal",
+            "heal", "defaults",
         ])
     }
 
@@ -37,6 +37,34 @@ struct CommandParsingTests {
         #expect(angle.angle == "95" && angle.duration == "1.2")
         let read = try HingeCLICommand.parse(["--udid", "U"])
         #expect(read.pose == nil && read.angle == nil)
+    }
+
+    // MARK: - notify
+
+    @Test func `should notify the app named by --bundle-id with the payload in --file`() throws {
+        let cmd = try NotifyCommand.parse(["--udid", "U", "--bundle-id", "com.example.app", "--file", "n.json"])
+        #expect(cmd.options.udid == "U")
+        #expect(cmd.bundleId == "com.example.app")
+        #expect(cmd.file == "n.json")
+        #expect(cmd.stdin == false)
+        #expect(NotifyCommand.configuration.commandName == "notify")
+    }
+
+    @Test func `should notify with the payload on stdin, reporting as JSON`() throws {
+        let cmd = try NotifyCommand.parse(["--udid", "U", "--stdin", "--json"])
+        #expect(cmd.stdin)
+        #expect(cmd.json)
+        #expect(cmd.bundleId == nil)
+    }
+
+    @Test func `should reject notify when no payload source is given`() {
+        #expect(throws: (any Error).self) { try NotifyCommand.parse(["--udid", "U", "--bundle-id", "a"]) }
+    }
+
+    @Test func `should reject notify when given both a file and stdin`() {
+        #expect(throws: (any Error).self) {
+            try NotifyCommand.parse(["--udid", "U", "--file", "n.json", "--stdin"])
+        }
     }
 
     // MARK: - openurl / schemes

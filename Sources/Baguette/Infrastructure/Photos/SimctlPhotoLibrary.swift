@@ -9,15 +9,18 @@ import Foundation
 /// via `MockSubprocess` — only the real spawn is integration-only.
 final class SimctlPhotoLibrary: PhotoLibrary, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
@@ -27,7 +30,7 @@ final class SimctlPhotoLibrary: PhotoLibrary, @unchecked Sendable {
             do {
                 try subprocess.run(
                     executable: xcrun,
-                    arguments: media.addMediaArguments(udid: udid),
+                    arguments: media.addMediaArguments(udid: udid, deviceSetPath: deviceSetPath),
                     onBytes: { _ in },
                     onExit: { code in
                         if code == 0 {

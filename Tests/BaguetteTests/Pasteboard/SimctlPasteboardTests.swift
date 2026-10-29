@@ -22,7 +22,7 @@ struct SimctlPasteboardTests {
     /// `exitCode` answers every spawn; `devicectlExit` overrides the
     /// Core Device copy so the fallback can be driven.
     private func makePasteboard(
-        exitCode: Int32 = 0, devicectlExit: Int32? = nil, stdout: Data? = nil
+        exitCode: Int32 = 0, devicectlExit: Int32? = nil, stdout: Data? = nil, deviceSetPath: String? = nil
     ) -> (SimctlPasteboard, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
@@ -48,7 +48,7 @@ struct SimctlPasteboardTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlPasteboard(udid: "U", subprocess: sub), captures)
+        return (SimctlPasteboard(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     @Test func `should set the pasteboard through devicectl first with the text on stdin`() async throws {
@@ -73,6 +73,25 @@ struct SimctlPasteboardTests {
             ])
             #expect(captures.stdin == Data("hi".utf8))
         }
+    }
+
+    @Test func `should set the pasteboard with simctl pbcopy inside the custom device set when the device lives in one`() async throws {
+        // Core Device only knows the default device set, so devicectl
+        // can't address a device in a custom one; pbcopy with `--set` can.
+        let (pasteboard, captures) = makePasteboard(deviceSetPath: "/custom set")
+        try await pasteboard.setText("hi")
+        #expect(captures.writes == [["simctl", "--set", "/custom set", "pbcopy", "U"]])
+        #expect(captures.stdin == Data("hi".utf8))
+    }
+
+    @Test func `should read and sync the pasteboard inside the custom device set when the device lives in one`() async throws {
+        let (pasteboard, captures) = makePasteboard(deviceSetPath: "/custom set")
+        _ = try await pasteboard.text()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "pbpaste", "U"])
+        try await pasteboard.syncFromHost()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "pbsync", "host", "U"])
+        try await pasteboard.syncToHost()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "pbsync", "U", "host"])
     }
 
     @Test func `should report the pbcopy status when both pasteboard routes fail`() async throws {

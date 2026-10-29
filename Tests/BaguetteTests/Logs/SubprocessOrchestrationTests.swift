@@ -32,7 +32,7 @@ struct SimDeviceLogStreamOrchestrationTests {
         func record(_ v: T) { values.append(v) }
     }
 
-    private func makeStream() -> (SimDeviceLogStream, MockSubprocess, Captures) {
+    private func makeStream(deviceSetPath: String? = nil) -> (SimDeviceLogStream, MockSubprocess, Captures) {
         let host = MockDeviceHost()
         given(host).resolveDevice(udid: .any).willReturn(FakeSimDevice(state: 3))
         let sub = MockSubprocess()
@@ -47,7 +47,7 @@ struct SimDeviceLogStreamOrchestrationTests {
             captures.onExit     = onExit
         }
         given(sub).terminate().willReturn()
-        let stream = SimDeviceLogStream(udid: "u1", host: host, subprocess: sub)
+        let stream = SimDeviceLogStream(udid: "u1", host: host, deviceSetPath: deviceSetPath, subprocess: sub)
         return (stream, sub, captures)
     }
 
@@ -183,6 +183,13 @@ struct SimDeviceLogStreamOrchestrationTests {
         #expect(argv[safe: 4] == "stream")
         #expect(argv.contains("--level"))
         #expect(argv.contains("debug"))
+    }
+
+    @Test func `should stream logs from inside the device's custom device set when it lives in one`() throws {
+        let (stream, _, captures) = makeStream(deviceSetPath: "/custom set")
+        try stream.start(filter: LogFilter(), onLine: { _ in }, onTerminate: { _ in })
+        #expect(Array(captures.arguments?.prefix(7) ?? [])
+            == ["simctl", "--set", "/custom set", "spawn", "u1", "log", "stream"])
     }
 
     // MARK: - device-resolution gating still applies

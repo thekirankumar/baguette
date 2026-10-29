@@ -85,9 +85,18 @@ struct GuestHingeMotorTests {
 
     @Test func `should press a hardware key as Device Hub presses it, for as long as asked`() throws {
         let (motor, guest) = make()
-        try motor.press(HIDUsage(page: 12, usage: 233), hold: 0.25)
-        try motor.press(HIDUsage(page: 0xFF00, usage: 0x66), hold: 1.5)
+        try motor.press(HIDUsage(page: 12, usage: 233), holding: [], hold: 0.25)
+        try motor.press(HIDUsage(page: 0xFF00, usage: 0x66), holding: [], hold: 1.5)
         #expect(guest.written == ["button 12 233 250\n", "button 65280 102 1500\n"])
+    }
+
+    @Test func `should press a keyboard key in the guest with its modifiers held`() throws {
+        let (motor, guest) = make()
+        try motor.press(
+            HIDUsage(page: 7, usage: 4),
+            holding: [HIDUsage(page: 7, usage: 0xE1), HIDUsage(page: 7, usage: 0xE3)], hold: 0.1)
+        try motor.press(HIDUsage(page: 7, usage: 5), holding: [], hold: 0.1)
+        #expect(guest.written == ["button 7 4 100 7 225 7 227\n", "button 7 5 100\n"])
     }
 
     @Test(arguments: [

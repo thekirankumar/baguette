@@ -68,6 +68,12 @@ struct InjectedDylibInstallPlanTests {
             bytes: Data("hello".utf8), supportDir: "/s", dylib: .network)
         #expect(plan.destPath == "/s/builds/2cf24dba5fb0/VirtualNetwork.dylib")
     }
+
+    @Test func `should ship the library that lets an app say which preferences it looks up`() {
+        #expect(InjectedDylib.defaultsLookups.sourceTreePath
+                    == "Injected/DefaultsLookups/DefaultsLookups.dylib")
+        #expect(InjectedDylib.defaultsLookups.environmentOverride == "BAGUETTE_DEFAULTSLOOKUPS_DYLIB")
+    }
 }
 
 @Suite("InjectedDylibInstaller — applies the plan to disk")

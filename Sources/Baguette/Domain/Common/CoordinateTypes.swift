@@ -59,9 +59,9 @@ public enum DeviceEdge: String, Sendable, Equatable, Hashable, CaseIterable {
     static let allowed = allCases.map(\.rawValue).joined(separator: " | ")
 }
 
-/// Hardware buttons routable via the host-HID path on iOS 26.4.
+/// Physical and virtual buttons routable via the host-HID path.
 ///
-/// `home` / `lock` ride `IndigoHIDMessageForButton`. The iPhone-family
+/// `home`, `lock`, and `softwareKeyboard` use `IndigoHIDMessageForButton`. The iPhone-family
 /// side-buttons (`power` / `volumeUp` / `volumeDown` / `action`) and
 /// the Apple-Watch-family buttons (`digitalCrown` / `sideButton` /
 /// `leftSideButton`) ride `IndigoHIDMessageForHIDArbitrary` keyed by
@@ -90,6 +90,7 @@ enum DeviceButton: String, Sendable, Equatable, Hashable {
     case power, action
     case volumeUp = "volume-up"
     case volumeDown = "volume-down"
+    case softwareKeyboard = "software-keyboard"
     case digitalCrown = "digital-crown"
     case sideButton = "side-button"
     case leftSideButton = "left-side-button"
@@ -102,14 +103,14 @@ enum DeviceButton: String, Sendable, Equatable, Hashable {
 
 extension DeviceButton {
     /// Standard HID (page, usage) for the arbitrary-HID side buttons.
-    /// `home`/`lock` return `nil` — they ride a different SimulatorKit
+    /// `home`, `lock`, and `softwareKeyboard` return `nil` — they use a different SimulatorKit
     /// symbol (`IndigoHIDMessageForButton`) and don't go through the
     /// arbitrary-HID path. Codes match Apple's HID consumer (page 12)
     /// and telephony (page 11) page assignments and agree with every
     /// shipping iPhone's chrome.json.
     var standardHIDUsage: HIDUsage? {
         switch self {
-        case .home, .lock, .appSwitcher, .swipeToAppSwitcher, .swipeToHome,
+        case .home, .lock, .softwareKeyboard, .appSwitcher, .swipeToAppSwitcher, .swipeToHome,
              .pullDownToLockScreen, .pullDownToNotificationCenter: return nil
         case .power:      return HIDUsage(page: 12, usage: 48)
         case .volumeUp:   return HIDUsage(page: 12, usage: 233)

@@ -2,9 +2,11 @@ import Foundation
 
 /// Device Hub's pose picker, on the page: `{"type":"set_pose","hingeDegrees":130}`
 /// on the 3D socket, beside `set_3d_camera`, moves the device's hinge
-/// there (`Hinge.fold`); the book follows the hinge as it sweeps. The
+/// there (`Hinge.fold`); the book plays the sweep as it goes. The
 /// picker leaves `duration` out and gets Device Hub's sweep; the hinge
 /// slider sends `"duration":0` to put the hinge where the thumb is.
+/// A pose off the hinge is refused as `POST /hinge` refuses it
+/// (`HingeCommandError`), so the page can be told what was wrong.
 enum Device3DPose: Equatable, Sendable {
     case fold(hingeDegrees: Double, duration: TimeInterval?)
 
@@ -20,14 +22,14 @@ enum Device3DPose: Equatable, Sendable {
         if let d = object["hingeDegrees"] as? Double { degrees = d }
         else if let i = object["hingeDegrees"] as? Int { degrees = Double(i) }
         else { degrees = nil }
-        guard let degrees, degrees.isFinite, (0...180).contains(degrees) else {
-            throw DeviceModelError.invalidRenderOptions
+        guard let degrees, (0...180).contains(degrees) else {
+            throw HingeCommandError.angleOutOfRange
         }
         var duration: TimeInterval?
         if let raw = object["duration"] {
             guard let seconds = (raw as? Double) ?? (raw as? Int).map(Double.init),
-                  seconds.isFinite, seconds >= 0
-            else { throw DeviceModelError.invalidRenderOptions }
+                  (0...HingeCommand.maximumDuration).contains(seconds)
+            else { throw HingeCommandError.invalidDuration }
             duration = seconds
         }
         return .fold(hingeDegrees: degrees, duration: duration)

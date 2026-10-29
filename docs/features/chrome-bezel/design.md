@@ -108,6 +108,10 @@ offsets specify.
 
 ### At-rest position: `2N − R` on the protrusion axis
 
+> Matched against Simulator.app. Xcode 27's Device Hub rests watch4's side
+> button nearer −33.5 than −35; unconfirmed, see
+> [device-hub-look.md](device-hub-look.md#open-questions).
+
 chrome.json's `normalOffset` is the **hover** position — the cap
 already popped past the rail — not the relaxed at-rest position.
 At-rest mirrors the rollover delta INWARD on the protrusion axis:

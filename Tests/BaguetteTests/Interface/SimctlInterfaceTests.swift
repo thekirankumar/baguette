@@ -17,7 +17,7 @@ struct SimctlInterfaceTests {
     }
 
     private func makeInterface(
-        stdout: String = "", exitCode: Int32 = 0
+        stdout: String = "", exitCode: Int32 = 0, deviceSetPath: String? = nil
     ) -> (SimctlInterface, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
@@ -31,7 +31,7 @@ struct SimctlInterfaceTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlInterface(udid: "U", subprocess: sub), captures)
+        return (SimctlInterface(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     // MARK: - reading
@@ -43,6 +43,15 @@ struct SimctlInterfaceTests {
         #expect(captures.executable == URL(fileURLWithPath: "/usr/bin/xcrun"))
         #expect(captures.arguments == ["simctl", "ui", "U", "appearance"])
         #expect(appearance == .dark)
+    }
+
+    @Test func `should read and set the interface inside the device's custom device set when it lives in one`() async throws {
+        let (interface, captures) = makeInterface(stdout: "dark\n", deviceSetPath: "/custom set")
+
+        _ = try await interface.appearance()
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "ui", "U", "appearance"])
+        try await interface.setAppearance(.light)
+        #expect(captures.arguments == ["simctl", "--set", "/custom set", "ui", "U", "appearance", "light"])
     }
 
     @Test func `should read the contrast setting from simctl's answer`() async throws {

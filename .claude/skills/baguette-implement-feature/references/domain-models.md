@@ -1,47 +1,110 @@
 # Rich domain model patterns (baguette)
 
-baguette's domain layer is a small set of value types + `@Mockable`
-abstractions, organised by bounded context (`Domain/Input/`,
-`Domain/Screen/`, `Domain/Stream/`, `Domain/Chrome/`,
-`Domain/Simulator/`, `Domain/Accessibility/`, `Domain/Logs/`). The
-two recurring patterns: **rich values that own their behaviour** (so
-the adapter stays a dumb wire emitter) and **wire DTOs with a
-one-line `execute(on:)`** (so dispatch logic stays tested at the
-value level). Every `@Mockable protocol` is named for its domain
-role (`Input`, `Screen`, `Subprocess`, `DeviceHost`) — never as
-`XxxPort` / `XxxService` / `XxxManager`. **Aggregate CRUD repositories
-are the one carve-out**: they take the **plural collection noun**
-(`Simulators`, `Chromes`, `Books`), not the suffix `XxxRepository`.
+baguette's domain layer is value types plus `@Mockable` roles, one folder
+per bounded context (`Domain/<Context>/`; the contexts, the tree and every
+law's owner are in [CANONICAL_MODEL.md](../../../../docs/CANONICAL_MODEL.md)).
+Its patterns, each below:
 
-## Rich-value pattern
+1. **The aggregate hands out roles**: `Simulator` is the root; callers ask it.
+2. **A law lives on the node that holds its data**: callers ask, never decide.
+3. **Rich values own their behaviour**, so the adapter stays a wire emitter.
+4. **Every state is a case; invalid input never constructs.**
+5. **A gesture parses itself and acts in one line**: `parse` then `execute(on:)`.
+6. **A Domain decorator may wrap a role** when it owns a rule.
 
-The value owns BOTH its identity AND the behaviour against the abstraction it dispatches into.
-`DeviceButton` and `KeyboardKey` are the canonical examples:
+Every `@Mockable protocol` is named for its domain role (`Input`, `Screen`,
+`Hinge`, `Subprocess`), never `XxxPort` / `XxxService` / `XxxManager`.
+**Aggregate CRUD is the one carve-out**: the plural collection noun
+(`Simulators`, `Chromes`), never the suffix `XxxRepository`.
+
+## 1. The aggregate hands out roles
+
+`Simulator` is the aggregate root: a `@Mockable protocol` whose requirements
+are the device's facts (`udid`, `state`, `deviceTypeName`), its commands
+(`boot`, `shutdown`), and **factories for its roles** (`input()`, `hinge()`,
+`displays()`, `accessibility()`, `defaults()`, …). The one adapter,
+`CoreSimulator`, builds the Infrastructure behind each role.
+
+```swift
+// ✅ The caller asks the aggregate for the role it needs.
+let pose = try sim.hinge().fold(to: 130, over: 0.8)
+let input = sim.litPanelInput()
+
+// ❌ The caller builds an adapter, or composes domain objects itself.
+let surface = SimctlInputSurface()                    // App reaching into Infrastructure
+let input = LitPanelInput(cover: …, unfolded: …, …)   // Server deciding the domain
+```
+
+Rules that need several roles live as **extension methods on the protocol**,
+so they're tested against `MockSimulator` with no device:
+
+```swift
+extension Simulator {
+    var canAcceptInput: Bool { state == .booted }
+
+    func litPanel(in chromes: any Chromes) -> IntegratedPanel {
+        guard chromes.panels(forDeviceName: deviceTypeName).contains(.secondary) else {
+            return .primary       // one panel: never ask the hinge (a guest round trip)
+        }
+        return hinge().litPanel
+    }
+}
+```
+
+A new role is a new factory on `Simulator` and a new `@Mockable` protocol in
+its context. The App layer parses and calls; `Server` transports. Neither
+builds adapters or decides which composition of roles a use needs.
+
+## 2. A law lives on the node that holds its data
+
+If a rule reads one node's data, it is a computed property or method **on that
+node**. Callers ask; they never read the state and decide.
+
+```swift
+extension Hinge {
+    /// No reading means as booted, folded, so the cover. The one place that rule lives.
+    var litPanel: IntegratedPanel { angle()?.litPanel ?? .primary }
+}
+
+// ❌ the same rule at a call site is a second owner, and they drift
+let lit = sim.hinge().angle()?.litPanel ?? .primary
+```
+
+The smell is a `?? default`, an `if x.count > …`, or a `switch` over another
+type's state at a call site. Grep for the rule before writing it: if it's
+already somewhere, that is the owner. Each law and its owner is a row in
+CANONICAL_MODEL §3.
+
+## 3. Rich values own their behaviour
+
+The value owns its identity and its behaviour against the role it dispatches
+into. `DeviceButton` and `KeyboardKey` are the canonical examples:
 
 ```swift
 enum DeviceButton: String, Sendable, Equatable, Hashable {
-    case home, lock
-    case power, action
+    case home, lock, power, action
     case volumeUp = "volume-up"
     case volumeDown = "volume-down"
+    // … the watch buttons and the gesture shortcuts (`app-switcher`, …).
+    // `siri` is absent on purpose: every known path crashes backboardd.
 }
 
 extension DeviceButton {
-    /// Standard HID code for arbitrary-HID side buttons.
-    /// Domain knowledge baked into the type — not in the adapter.
+    /// Domain knowledge on the type, not in the adapter.
     var standardHIDUsage: HIDUsage? {
         switch self {
-        case .home, .lock: return nil
+        case .home, .lock: return nil   // the legacy button path
         case .power:      return HIDUsage(page: 12, usage: 48)
         case .volumeUp:   return HIDUsage(page: 12, usage: 233)
         case .volumeDown: return HIDUsage(page: 12, usage: 234)
         case .action:     return HIDUsage(page: 11, usage: 45)
+        // … the gesture shortcuts return nil; the watch buttons carry their
+        //   chrome.json codes
         }
     }
 
-    /// Tell-don't-ask: the caller doesn't decide whether to route
-    /// through legacy `*ForButton` or `*ForHIDArbitrary`; the adapter
-    /// does, but the API surface stays "press this button."
+    /// Tell, don't ask: the caller says "press this button"; the adapter
+    /// picks the SimulatorKit symbol.
     @discardableResult
     func press(duration: Double = 0, on input: any Input) -> Bool {
         input.button(self, duration: duration)
@@ -49,44 +112,48 @@ extension DeviceButton {
 }
 ```
 
-Why this shape:
+- The adapter (`IndigoHIDInput`) stays SRP-clean: "given a `DeviceButton`,
+  route to the right symbol". No chrome lookups, no per-call resolution.
+- Tests live on the value: every button's usage is covered without a sim.
+- **What differs between devices is data**: a usage table, a profile's
+  panels, a chrome. Never `if deviceTypeName == "iPhone Duo"`, never a
+  subclass per device. A foldable's keys are a table in
+  `FoldableInput.key(for:)`.
 
-- The adapter (`IndigoHIDInput`) remains SRP-clean: it only knows
-  "given a `DeviceButton`, route to the right SimulatorKit symbol."
-  No chrome lookups, no per-call HID resolution at the wire.
-- Tests live on the value, not on the service. `swift test` covers
-  every button's `standardHIDUsage` without a booted sim.
-- Adding a new device-specific code is one switch case, not a new
-  adapter abstraction.
+`KeyboardKey` has the same shape as a struct, because its set is large:
+`from(wireCode:)`, `decompose(character:)`, `press(modifiers:duration:on:)`.
 
-`KeyboardKey` follows the same shape with a value-typed struct
-because the supported set is much larger:
+## 4. Every state is a case; invalid input never constructs
+
+Each state a user can meet is a case carrying its data, and one value never
+means two things. Asking a value for a `Bool` and then guessing what `false`
+meant is the smell.
+
+| Value | Its cases | Why it isn't a `Bool` or an optional |
+|---|---|---|
+| `PoseDelivery` | `delivered` · `rejected` · `unconfirmed` | a timed-out fold may have landed, so exit 3, not 1 |
+| `InterfaceReading` / `ContentSize` | a value · `unknown` · `unsupported` | not booted and not supported are answers, not errors |
+| `Relaunch` | `never` · `always` · `whenNeeded` | a running app may not see a write; the user picks |
+
+A value that can be invalid refuses at construction, so nothing downstream
+re-checks it: a failable `init?` when there's one way to be wrong, a throwing
+`parse` with a named reason when there are several.
 
 ```swift
-struct KeyboardKey: Equatable, Hashable, Sendable {
-    let hidUsage: HIDUsage
-
-    static func from(wireCode: String) -> KeyboardKey? { … }
-    static func decompose(character: Character) -> (key: KeyboardKey, modifiers: Set<KeyModifier>)? { … }
-
-    @discardableResult
-    func press(modifiers: Set<KeyModifier> = [], duration: Double = 0, on input: any Input) -> Bool {
-        input.key(self, modifiers: modifiers, duration: duration)
-    }
-}
+Coordinate(latitude: 91, longitude: 0)          // nil: out of range
+LocationRoute(waypoints: [one], …)              // nil: a route needs two points
+try HingeCommand.parse(pose: "ajar", angle: nil, duration: nil)   // throws HingeCommandError
 ```
 
-## Gesture (wire DTO) pattern
+## 5. A gesture parses itself and acts in one line
 
-Gestures parse from JSON and delegate execution one line deep to the
-rich-value method. They are NOT where domain logic lives — they're
-just the wire envelope.
+baguette has no DTOs: a `Tap` or a `Press` *is* the domain concept, and it
+reads itself from the wire (`parse`) and acts on the role (`execute(on:)`).
+Its rules live on the rich value it carries, so `execute` stays one line.
 
 ```swift
 struct Press: Gesture, Equatable {
     static let wireType = "button"
-    static let allowed = "home | lock | power | volume-up | volume-down | action"
-
     let button: DeviceButton
     let duration: Double
 
@@ -95,10 +162,7 @@ struct Press: Gesture, Equatable {
         guard let button = DeviceButton(rawValue: raw) else {
             throw GestureError.invalidValue("button", expected: allowed)
         }
-        return Press(
-            button: button,
-            duration: Field.optionalDouble(dict, "duration", default: 0)
-        )
+        return Press(button: button, duration: Field.optionalDouble(dict, "duration", default: 0))
     }
 
     func execute(on input: any Input) -> Bool {
@@ -107,206 +171,94 @@ struct Press: Gesture, Equatable {
 }
 ```
 
-Watch the seams:
-
-- `wireType` is the JSON `"type"` value the registry routes on.
-- `parse` uses `Field.required*` / `optional*` extractors — never
+- `parse` uses the `Field.required*` / `optional*` extractors; never
   open-code `dict["…"] as? Double`.
-- Errors are `GestureError.missingField` / `.invalidValue(_, expected:)`
-  with a human-readable hint. Don't silently drop bad input.
-- `execute` does not contain dispatch logic. If you find yourself
-  writing `if/else` inside it, the rule is missing on the rich value.
+- An unknown value is a `GestureError` with the allowed set, never a silent
+  fallback.
+- An `if` inside `execute` means a rule is missing on the rich value.
 
-## Domain-named `@Mockable` abstractions
+## 6. A Domain decorator may wrap a role
 
-The adapter boundary is a `@Mockable` protocol named for **what it
-does in the domain** — `Input`, `Screen`, `Accessibility`,
-`LogStream`, `DeviceHost`, `Subprocess`, `Chromes`. **Never
-`XxxPort` / `XxxService` / `XxxManager`, and never the suffix
-`XxxRepository`.** When the protocol genuinely *is* an aggregate
-repository (collection-like CRUD over an aggregate root), use the
-**plural collection noun** — `Simulators`, `Chromes`, `Books`,
-`Orders` — exactly as the existing aggregates already do:
+`IndigoHIDInput` is the only Infrastructure `Input`; tests use `MockInput`.
+Don't add a parallel hierarchy for testability. But a **Domain** type that
+wraps `Input` to own a rule is the right shape, composed by the aggregate:
 
-```swift
-@Mockable
-protocol Books: Sendable {
-    func find(id: BookID) -> Book?
-    func all() -> [Book]
-    func save(_ book: Book) throws
-    func delete(id: BookID) throws
-}
-```
+| Decorator | The rule it owns |
+|---|---|
+| `FoldableInput` | a foldable's keys, hardware and keyboard, go through the guest (`DeviceKeys`), not Indigo |
+| `LitPanelInput` | on a socket that outlives a fold, each gesture goes to the lit panel; a touch stays on its digitizer until it lifts |
 
-Methods return `Bool` synchronously where the wire is request/ack —
-there are no async actors in the input path. The existing example:
+A decorator forwards everything else unchanged, holds roles not adapters
+(`any Input`, `any Hinge`), and is built by a `Simulator` factory, not by
+`Server`.
 
-```swift
-@Mockable
-protocol Input: Sendable {
-    func tap(at point: Point, size: Size, duration: Double) -> Bool
-    func swipe(from start: Point, to end: Point, size: Size, duration: Double) -> Bool
-    func touch1(phase: GesturePhase, at point: Point, size: Size) -> Bool
-    func touch2(phase: GesturePhase, first: Point, second: Point, size: Size) -> Bool
-    func button(_ button: DeviceButton, duration: Double) -> Bool
-    func key(_ key: KeyboardKey, modifiers: Set<KeyModifier>, duration: Double) -> Bool
-    func scroll(deltaX: Double, deltaY: Double) -> Bool
-    func twoFingerPath(start1: Point, end1: Point, start2: Point, end2: Point,
-                       size: Size, duration: Double) -> Bool
-}
-```
+## struct vs class
 
-Notice:
+A type is a `final class` when it owns **at least one** of these; otherwise
+it's a `struct` or an `enum`:
 
-- Each method is **one verb** the rich domain calls. No "perform"
-  / "dispatch" / "do" generic methods — the verb names ARE the API.
-- One concrete implementation: `IndigoHIDInput`. Don't introduce
-  parallel hierarchies for testability — `MockInput` (auto-generated
-  by `@Mockable`) is the test seam.
-- All methods sync + `Bool`-returning. The async / actor patterns
-  in other Swift codebases don't apply here; SimulatorKit's HID API
-  is synchronous and the wire is request/ack.
+1. **A resource released exactly once**: a `dlopen` handle, lock, file
+   descriptor, socket, ObjC instance, VideoToolbox session.
+2. **Mutable state several owners must see**: a cache, a connection table,
+   a subscriber list.
+3. **Identity that matters** (`===`): "the shared motor for this device".
+4. **State that changes across calls behind a role whose methods aren't
+   `mutating`**: `LitPanelInput` remembers the panel a touch went down on;
+   `InputScreenGuard` its last observation. Keep that state small, behind a
+   lock, and the type's surface the role's verbs.
 
-## struct vs class — three-condition rule
+| Type | Why it's a class |
+|---|---|
+| `Server` | NIO event loop and router state (1, 2) |
+| `IndigoHIDInput` | `dlopen`'d functions, HID client, lock, warm-up cache (1, 2) |
+| `CoreSimulators` · `CoreSimulator` | resolved device handles, lazy framework load (1, 2) |
+| `SharedHinge` · `GuestHingeMotor` | one per device, shared by every caller (2, 3) |
+| `LitPanelInput` | a touch's panel across calls (4) |
 
-A type should be a `final class` when it owns **at least one** of
-these. Otherwise it's a `struct` (or `enum`).
+Domain **values** fail all four (`DeviceButton`, `KeyboardKey`, `HIDUsage`,
+the gestures, `HingeAngle`, `DeviceChrome`) and stay structs and enums:
+declare `Equatable` and the compiler writes `==`; `Sendable` is checked from
+the stored properties instead of `@unchecked`; mutation is visible
+(`mutating`, `var`); and there's no subclassing temptation. Before reaching for `final class` on a
+domain type, name the resource, the second owner, the `===` test, or the
+state that changes across calls. If you can't, it's a struct.
 
-1. **Non-trivial deinit responsibility** — a resource that must be
-   released exactly once: `dlopen` handle, lock, file descriptor,
-   socket, NIO event loop, ObjC instance, VideoToolbox session.
-2. **Mutable state observed from multiple owners simultaneously** —
-   when A holds a reference and mutates, B (also holding it) must
-   see the change. Caches, connection tables, request queues.
-3. **Identity tested with `===`** — "is this *the same instance*"
-   is a domain question, not just "are these values equal."
-
-baguette's class boundaries each satisfy at least one condition:
-
-| Type             | Why it's a class                                  |
-|------------------|---------------------------------------------------|
-| `Server`         | NIO event loop + router state (1, 2)              |
-| `IndigoHIDInput` | dlopen'd fns + SimDeviceLegacyHIDClient + lock + warmup cache (1, 2) |
-| `CoreSimulators` | resolved-device cache, lazy framework load (2)    |
-| `LiveChromes`    | chrome cache + lock (1, 2)                        |
-| `H264Encoder`    | VTCompressionSession + frame queue + lock (1, 2)  |
-
-baguette's domain values fail all three:
-
-| Type           | Resource? | Multi-owner mutation? | Identity? | Verdict |
-|----------------|-----------|-----------------------|-----------|---------|
-| `DeviceButton` | no        | no                    | no        | enum    |
-| `KeyboardKey`  | no        | no                    | no        | struct  |
-| `HIDUsage`     | no        | no                    | no        | struct  |
-| `Press` / `Tap` / `Swipe` / … | no | no            | no        | struct  |
-| `DeviceChrome` / `ChromeButton` | no | no            | no        | struct  |
-| `Simulator`    | no        | no (snapshot value)   | UDID is a field, not `===` | struct |
-
-### The "but DDD says entities are classes" objection
-
-The classical DDD argument: *"`Simulator` has a UDID, two with the
-same UDID are the same → identity → class."*
-
-Look at what `Simulator` actually IS in baguette. It's a **snapshot**:
-when `simulators.find(udid:)` returns a `Simulator`, you have a value
-reflecting the device's state at that moment. Boot the device, then
-re-read your local value — `state` still says `.shutdown`. Fresh
-state requires re-querying the host (`CoreSimulators`, which IS a
-class because it owns the live cache).
-
-That's the right factoring: **the live entity is the host (class);
-the value type is the snapshot (struct).** Same separation SwiftUI
-uses (`@Observable class` for live state, plain structs for view
-data) for the same reason. Making `Simulator` a class would force
-you to answer "who keeps it fresh?" — either build a live-proxy
-class with subscriptions / invalidation / threading, or accept a
-stale class with all the class downsides and none of the upsides.
-
-### Why structs are *also* the better default
-
-Even where the rule is genuinely a coin-flip, structs win on
-secondary criteria:
-
-- **Sendable is free.** Pure-let structs of `Sendable` fields are
-  automatically `Sendable`. Classes need explicit `final class … :
-  Sendable` with all-immutable storage, or `@unchecked Sendable`
-  annotations that the compiler can't verify.
-- **Equality is unambiguous.** Structs use structural `==`; classes
-  force a choice (identity? structural? mixed?) at every comparison
-  site, adding cognitive load.
-- **Mutation is visible.** A struct method that mutates must be
-  `mutating`, and the caller must use `var`. Classes hide mutation
-  behind ordinary calls — you can't tell `obj.foo()` mutates from
-  the call site alone.
-- **No subclassing temptation.** Open class hierarchies invite "I'll
-  subclass to add a feature," which is almost always wrong in a
-  domain layer (favour composition + protocols).
-
-### Concrete contrast
-
-```swift
-// ✅ Right — struct, none of the three conditions met.
-struct KeyboardKey: Equatable, Hashable, Sendable {
-    let hidUsage: HIDUsage
-    @discardableResult
-    func press(modifiers: Set<KeyModifier> = [], duration: Double = 0,
-               on input: any Input) -> Bool {
-        input.key(self, modifiers: modifiers, duration: duration)
-    }
-}
-
-// ❌ Wrong — final class with no reference-semantics need. Adds:
-//   - explicit Sendable maintenance
-//   - identity-vs-structural-equality choice at every == site
-//   - heap allocation per parse + ARC retain/release per pass
-//   - subclass temptation (even with `final`, defaulting to class
-//     normalises class as the go-to)
-//   …and gives back NOTHING the rich-domain pattern needs.
-final class KeyboardKey: Sendable {
-    let hidUsage: HIDUsage
-    init(hidUsage: HIDUsage) { self.hidUsage = hidUsage }
-    func press(modifiers: Set<KeyModifier> = [], duration: Double = 0,
-               on input: any Input) -> Bool { … }
-}
-```
-
-### The decision question
-
-Before reaching for `final class` on a domain value, answer one of:
-
-- "Which resource does it own that has a non-trivial deinit?"
-- "Where in the system do two owners need to see the same mutations?"
-- "Where in the codebase do we test `===` on it?"
-
-If you can't answer any of them concretely, the type is a struct.
+`Simulator` is a protocol, so the question is its adapter's: the live device
+handle makes `CoreSimulator` a class, while the values it answers (`state`,
+`metadata`, `SimulatorDefinition`) are structs.
 
 ## Anti-patterns
 
-- **Service objects with no state.** `OrderService.cancel(order)` is a
-  smell — the operation belongs on the value (`order.cancel()`).
-- **Domain types that are pure data bags.** If your `struct` has no
-  methods, you're missing the rich-domain pattern; revisit which
-  behaviour belongs to it.
-- **`Press.execute` doing more than calling a rich method.** Means
-  the dispatch decision should have moved up to the value. (The
-  buttons feature evolved exactly this way: chrome-driven HID
-  resolution lived briefly on the gesture, then moved to
-  `DeviceButton.standardHIDUsage` where it belonged.)
-- **Async/await in the input path.** None of the existing input
-  surface is async. Don't introduce it; the wire is request/ack.
+- **A rule at the call site**: `?? .primary`, a count check, a `switch` on
+  another type's state. Move it to the node that holds the data.
+- **The App or `Server` building adapters or composing roles**: ask the
+  `Simulator` for a role; add a factory if there isn't one.
+- **Domain reaching outward**: a Domain type importing an Infrastructure
+  type (`MJPEGStream`, `FrameSink`) or calling the App's `log(…)`. Domain
+  depends only on Foundation and IOSurface; a failure is its return value.
+- **A `Bool` flag the caller decides, or an optional meaning two things**:
+  name the cases.
+- **Service objects with no state**: `OrderService.cancel(order)` belongs
+  on the value (`order.cancel()`).
+- **Pure data bags**: a domain `struct` with no methods is missing its
+  behaviour.
+- **A device-name branch**: make the difference data.
+- **Async/await in the input path**: the HID API is synchronous and the wire
+  is request/ack. The only hop is `Server`'s to the `MainActor`.
 
-## Adding a value type — checklist
+## Adding a domain type — checklist
 
-1. Create the type in `Domain/<Context>/<Name>.swift`. Make it
-   `Equatable, Sendable`. Add `Hashable` only if a Set/Dict needs it.
-2. Decide where domain knowledge lives — almost always on the value
-   itself as computed properties or extension methods.
-3. Add a `press` / `dispatch` / `apply` method (whichever verb fits)
-   that takes `on input: any Input` and returns `Bool`. One line:
-   forward to the matching `Input` method.
-4. If it parses from the wire, add a sibling `<Name>: Gesture` that
-   wraps it with `parse` + `execute`. Register on
-   `GestureRegistry.standard`.
-5. Tests in `Tests/BaguetteTests/<Context>/`. Use Swift Testing
-   `@Suite`/`@Test`/`#expect` (never XCTest). Test every branch of
-   computed-property behaviour without booting a sim.
+1. Name its context (CANONICAL §5) and create it in `Domain/<Context>/`.
+2. Name the laws it owns (CANONICAL §3). Grep for each: if it already lives
+   elsewhere, that's the owner, or the duplicate to remove.
+3. A value: `struct` or `enum`, `Equatable, Sendable`, invalid input refused
+   in `init` / `parse`, every user-visible state a case.
+4. Behaviour on the value: computed properties, and a verb
+   (`press` · `apply` · `deliver`) that takes the role it acts on and
+   forwards in one line.
+5. A role for the outside world: a `@Mockable` protocol named for the role,
+   handed out by a `Simulator` factory, implemented in `Infrastructure/<Context>/`.
+6. A wire envelope: a sibling `Gesture` (or `parse(json:)`) with `parse`
+   plus a one-line `execute`, registered on `GestureRegistry.standard`.
+7. Tests in `Tests/BaguetteTests/<Context>/`, named `should <outcome> [when
+   <situation>]`, Swift Testing only, every branch covered without a sim.

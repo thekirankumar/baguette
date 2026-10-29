@@ -59,6 +59,10 @@ let package = Package(
                 // URLSession traffic from the condition baguette publishes.
                 // Same build-and-stage path, same installer.
                 .copy("Resources/VirtualNetwork"),
+                // Lets an app baguette launches say which preferences it
+                // looks up. Same build-and-stage path, same installer, but
+                // handed to one launch rather than armed device-wide.
+                .copy("Resources/DefaultsLookups"),
                 // HingeControl — not a dylib but an executable spawned in
                 // the guest (`simctl spawn`) to drive iPhone Duo's hinge.
                 // Same build-and-stage path, same installer.

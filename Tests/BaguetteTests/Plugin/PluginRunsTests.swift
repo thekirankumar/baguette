@@ -308,6 +308,9 @@ struct PluginRunsTests {
         func finish() { waiter?.resume(); waiter = nil }
         func install(archive: AppArchive) async throws { try await apps.install(archive: archive) }
         func open(_ link: DeepLink) async throws { try await apps.open(link) }
+        func deliver(_ notification: RemoteNotification) async throws { try await apps.deliver(notification) }
+        func terminate(bundleID: String) async throws { try await apps.terminate(bundleID: bundleID) }
+        func launch(bundleID: String) async throws { try await apps.launch(bundleID: bundleID) }
         func installed() async throws -> [InstalledApp] { try await apps.installed() }
     }
 

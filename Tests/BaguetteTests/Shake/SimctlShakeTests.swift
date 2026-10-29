@@ -16,7 +16,7 @@ struct SimctlShakeTests {
         var ran = false
     }
 
-    private func makeShake(exitCode: Int32 = 0) -> (SimctlShake, Captures) {
+    private func makeShake(exitCode: Int32 = 0, deviceSetPath: String? = nil) -> (SimctlShake, Captures) {
         let sub = MockSubprocess()
         let captures = Captures()
         given(sub).run(
@@ -28,7 +28,7 @@ struct SimctlShakeTests {
             onExit(exitCode)
         }
         given(sub).terminate().willReturn()
-        return (SimctlShake(udid: "U", subprocess: sub), captures)
+        return (SimctlShake(udid: "U", deviceSetPath: deviceSetPath, subprocess: sub), captures)
     }
 
     @Test func `should shake the device by running xcrun simctl spawn notifyutil with the UIKit shake notification`() async throws {
@@ -38,6 +38,16 @@ struct SimctlShakeTests {
         #expect(captures.executable == URL(fileURLWithPath: "/usr/bin/xcrun"))
         #expect(captures.arguments == [
             "simctl", "spawn", "U", "notifyutil", "-p",
+            "com.apple.UIKit.SimulatorShake",
+        ])
+    }
+
+    @Test func `should shake the device inside its custom device set when it lives in one`() async throws {
+        let (shake, captures) = makeShake(deviceSetPath: "/custom set")
+        try await shake.shake()
+
+        #expect(captures.arguments == [
+            "simctl", "--set", "/custom set", "spawn", "U", "notifyutil", "-p",
             "com.apple.UIKit.SimulatorShake",
         ])
     }

@@ -9,7 +9,8 @@ import Foundation
 /// first and falls back to `pbcopy` when it exits non-zero — an Xcode
 /// without the subcommand (usage error, 64), or one that does not know
 /// the device. No version check: an Xcode 26 host keeps the route that
-/// works there.
+/// works there. Core Device only sees the default device set, so a
+/// device in a custom set (`--device-set`) goes straight to `pbcopy`.
 ///
 /// The orchestration here is pure: argv assembly + the `Subprocess`
 /// exit handshake, with the paste text riding the child's stdin
@@ -20,25 +21,29 @@ import Foundation
 /// `MockSubprocess` — only the real spawn is integration-only.
 final class SimctlPasteboard: Pasteboard, @unchecked Sendable {
     private let udid: String
+    private let deviceSetPath: String?
     private let subprocess: any Subprocess
     private let xcrun: URL
 
     init(
         udid: String,
+        deviceSetPath: String? = nil,
         subprocess: any Subprocess = HostSubprocess(),
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun")
     ) {
         self.udid = udid
+        self.deviceSetPath = deviceSetPath
         self.subprocess = subprocess
         self.xcrun = xcrun
     }
 
     func setText(_ text: String) async throws {
         let payload = Data(text.utf8)
-        if try await write(["devicectl", "device", "pasteboard", "copy", "--device", udid], stdin: payload) == 0 {
+        if deviceSetPath == nil,
+           try await write(["devicectl", "device", "pasteboard", "copy", "--device", udid], stdin: payload) == 0 {
             return
         }
-        let status = try await write(["simctl", "pbcopy", udid], stdin: payload)
+        let status = try await write(simctl(["pbcopy", udid]), stdin: payload)
         guard status == 0 else { throw PasteboardError.simctlFailed(status: status) }
     }
 
@@ -62,15 +67,19 @@ final class SimctlPasteboard: Pasteboard, @unchecked Sendable {
     }
 
     func text() async throws -> String {
-        try await capture(["simctl", "pbpaste", udid])
+        try await capture(simctl(["pbpaste", udid]))
     }
 
     func syncFromHost() async throws {
-        _ = try await capture(["simctl", "pbsync", "host", udid])
+        _ = try await capture(simctl(["pbsync", "host", udid]))
     }
 
     func syncToHost() async throws {
-        _ = try await capture(["simctl", "pbsync", udid, "host"])
+        _ = try await capture(simctl(["pbsync", udid, "host"]))
+    }
+
+    private func simctl(_ verb: [String]) -> [String] {
+        ["simctl"] + (deviceSetPath.map { ["--set", $0] } ?? []) + verb
     }
 
     /// Run `xcrun` collecting stdout; resolve with the collected
