@@ -14,6 +14,7 @@ For releases prior to this changelog, see the
 - `gitlab-artifacts:install` reports missing `glab`, GitLab stderr, exit status, preparation errors and traceback excerpts instead of generic failures, with credential redaction and explicit truncation within the existing status limit. → [docs](docs/features/plugin-runs/gitlab-diagnostics.md)
 
 ### Added
+- `gitlab-artifacts:install` accepts project IDs, namespace/project paths and unique exact names, resolving names/paths before numeric allowlist checks and reporting ambiguous candidates. → [docs](docs/features/plugin-runs/gitlab-projects.md)
 - `url-download:install` downloads from approved URLs with per-call headers, extracts ZIP apps or hands IPAs directly to the installer, with progress, cancellation and redacted diagnostics. Background app output now accepts regular IPA files. → [docs](docs/features/url-download/README.md)
 
 ---

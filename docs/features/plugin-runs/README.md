@@ -72,8 +72,8 @@ curl "$BASE/runs/<id>.json"
 
 Start accepts only an optional `args` object in a JSON body of at most 64 KiB;
 an empty body is also valid. The GitLab example requires exactly `projectId`
-and `jobId`, each a positive integer or numeric string. Host, token, executable,
-archive limits and app selection are host policy, not request overrides.
+and `jobId`. Projects accept an ID, path or unique name; jobs remain numeric.
+See [GitLab project references](gitlab-projects.md); host policy is not request-overridable.
 
 The `202` body is run JSON, initially `state: "queued"`, with `id`, `command`,
 optional `udid` and `createdAt`. Follow its `Location` and poll. Status reads

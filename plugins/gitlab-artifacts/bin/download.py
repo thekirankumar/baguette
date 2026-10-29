@@ -15,6 +15,7 @@ import tempfile
 import time
 import traceback
 import unicodedata
+from urllib.parse import quote
 import zipfile
 
 
@@ -24,6 +25,9 @@ EXPANDED_LIMIT = 16 * 1024**3
 DISK_RESERVE = 64 * 1024**2
 CHUNK_SIZE = 1024 * 1024
 MESSAGE_LIMIT = 4096  # The host's retained run-message budget, in UTF-8 bytes.
+METADATA_LIMIT = 4 * 1024**2
+METADATA_TIMEOUT = 30
+SEARCH_PAGE_LIMIT = 100
 FAILURE = {"ok": False, "message": "Invalid artifact request or host configuration"}
 
 
@@ -111,6 +115,19 @@ def positive_integer(value):
     raise ValueError("Invalid identifier")
 
 
+def project_reference(value):
+    if type(value) is int or isinstance(value, str) and re.fullmatch(r"[0-9]+", value):
+        return positive_integer(value)
+    if not isinstance(value, str) or not value or len(value) > 1024 or value != value.strip():
+        raise ValueError("Project must be a positive numeric ID, namespace/project path or exact project name")
+    if "/" in value:
+        if not all(re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", part) for part in value.split("/")):
+            raise ValueError("Invalid project path; supply an unencoded namespace/project path, not a URL")
+    elif not re.fullmatch(r"[\w .-]+", value) or not any(char.isalpha() or char == "_" for char in value):
+        raise ValueError("Invalid project name; supply its numeric ID or full project path")
+    return value
+
+
 def relative_parts(name):
     if not isinstance(name, str) or not name or "\\" in name or ":" in name:
         raise ValueError(f"Invalid archive path: {name!r}")
@@ -132,14 +149,16 @@ def policy(request, config, env, workspace):
     args = request.get("args")
     if not isinstance(args, dict) or set(args) != {"projectId", "jobId"}:
         raise ValueError("Invalid arguments")
-    project, job = positive_integer(args["projectId"]), positive_integer(args["jobId"])
+    project, job = project_reference(args["projectId"]), positive_integer(args["jobId"])
     host = config.get("host")
     if not isinstance(host, str) or len(host) > 253 or not re.fullmatch(
         r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*", host
     ):
         raise ValueError("Invalid configured host")
     projects = config.get("projectIds")
-    if projects != "*" and (not isinstance(projects, list) or any(type(item) is not int or item <= 0 for item in projects) or project not in projects):
+    if projects != "*" and (not isinstance(projects, list) or not projects
+            or any(type(item) is not int or item <= 0 for item in projects)
+            or type(project) is int and project not in projects):
         raise ValueError("Unapproved project")
     if not env.get("GITLAB_HOST"):
         raise ValueError("Missing GITLAB_HOST in the plugin environment")
@@ -158,6 +177,86 @@ def policy(request, config, env, workspace):
         if not parts[-1].endswith(".app"):
             raise ValueError("Invalid configured app")
     return host, project, job, archive_limit, expanded_limit, entry_limit, app_path
+
+
+def stderr_excerpt(file, env):
+    length = file.seek(0, os.SEEK_END)
+    file.seek(0)
+    if length > MESSAGE_LIMIT:
+        first = file.read(MESSAGE_LIMIT).decode("utf-8", errors="ignore")
+        file.seek(-MESSAGE_LIMIT, os.SEEK_END)
+        last = file.read(MESSAGE_LIMIT).decode("utf-8", errors="ignore")
+        output = first + f"\n[... stderr truncated; original {length} bytes ...]\n" + last
+    else:
+        output = file.read().decode("utf-8", errors="replace")
+    return excerpt(redact(output, env), 1500) or "(empty; the process may not have started)"
+
+
+def gitlab_json(workspace, host, endpoint, env):
+    argv = ["glab", "api", "--method", "GET", "--hostname", host, endpoint]
+    free = shutil.disk_usage(workspace).free
+    if free < 2 * METADATA_LIMIT + DISK_RESERVE:
+        raise ValueError(f"Insufficient disk space for project lookup: free bytes: {free}; response limit: {METADATA_LIMIT}; reserve: {DISK_RESERVE}")
+    # File-backed output avoids pipe deadlocks; the child inherits the host-owned
+    # process group and cannot grow either response file beyond this bound.
+    with tempfile.TemporaryFile(dir=workspace) as output, tempfile.TemporaryFile(dir=workspace) as stderr:
+        process = None
+        try:
+            def cap_file_size():
+                resource.setrlimit(resource.RLIMIT_FSIZE, (METADATA_LIMIT, METADATA_LIMIT))
+
+            process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=output, stderr=stderr,
+                                       cwd=workspace, env=dict(env), preexec_fn=cap_file_size)
+            try:
+                status = process.wait(timeout=METADATA_TIMEOUT)
+            except BaseException:
+                process.kill()
+                process.wait()
+                raise
+            size = output.seek(0, os.SEEK_END)
+            if status != 0:
+                raise ValueError(f"GitLab project API failed; exit status: {status}; response bytes: {size}; limit: {METADATA_LIMIT}")
+            if size > METADATA_LIMIT:
+                raise ValueError(f"GitLab project metadata exceeds {METADATA_LIMIT} bytes")
+            output.seek(0)
+            return json.load(output)
+        except Exception as error:
+            raise RuntimeError(f"Command: {shlex.join(argv)}\nPATH: {env.get('PATH', os.defpath)}\n"
+                               f"Project API timeout: {METADATA_TIMEOUT} seconds; response limit: {METADATA_LIMIT} bytes\n"
+                               f"glab stderr:\n{stderr_excerpt(stderr, env)}") from error
+
+
+def project_metadata(value):
+    if (not isinstance(value, dict) or type(value.get("id")) is not int or value["id"] <= 0
+            or any(not isinstance(value.get(key), str) or not value[key] for key in ("name", "path", "path_with_namespace"))
+            or "/" not in value["path_with_namespace"]):
+        raise ValueError("Invalid GitLab project metadata; expected positive integer id, name, path and path_with_namespace")
+    project_reference(value["path_with_namespace"])
+    return value
+
+
+def resolve_project(workspace, host, reference, env):
+    atomic_json(workspace / "progress.json", {"phase": "resolving"})
+    if "/" in reference:
+        return project_metadata(gitlab_json(workspace, host, "projects/" + quote(reference, safe=""), env))["id"]
+    matches = {}
+    for page in range(1, SEARCH_PAGE_LIMIT + 1):
+        endpoint = f"projects?search={quote(reference, safe='')}&simple=true&per_page=100&page={page}&order_by=id&sort=asc"
+        projects = gitlab_json(workspace, host, endpoint, env)
+        if not isinstance(projects, list) or len(projects) > 100:
+            raise ValueError("Invalid GitLab project search response; expected a page of at most 100 projects")
+        for value in projects:
+            project = project_metadata(value)
+            if reference.casefold() in (project["name"].casefold(), project["path"].casefold()):
+                matches[project["id"]] = project["path_with_namespace"]
+        if len(matches) > 1:
+            candidates = ", ".join(f"{path} (ID {identifier})" for identifier, path in sorted(matches.items()))
+            raise ValueError(f"Project name {reference!r} is ambiguous: {candidates}. Supply the full project path.")
+        if len(projects) < 100:
+            if not matches:
+                raise ValueError(f"No exact project named {reference!r} is accessible on {host}; supply the full project path or numeric ID")
+            return next(iter(matches))
+    raise ValueError(f"Project search exceeded {SEARCH_PAGE_LIMIT} pages; uniqueness could not be established. Supply the full project path.")
 
 
 def download_archive(workspace, host, project, job, limit, env):
@@ -209,24 +308,12 @@ def download_archive(workspace, host, project, job, limit, env):
                         process.wait()
                     raise
         except Exception as error:
-            stderr.seek(0)
-            length = stderr.seek(0, os.SEEK_END)
-            stderr.seek(0)
-            if length > MESSAGE_LIMIT:
-                # Read both ends without loading an unbounded stderr file.
-                first = stderr.read(MESSAGE_LIMIT).decode("utf-8", errors="ignore")
-                stderr.seek(-MESSAGE_LIMIT, os.SEEK_END)
-                last = stderr.read(MESSAGE_LIMIT).decode("utf-8", errors="ignore")
-                output = first + f"\n[... stderr truncated; original {length} bytes ...]\n" + last
-            else:
-                output = stderr.read().decode("utf-8", errors="replace")
-            output = excerpt(redact(output, env), 1500)
             size = path.stat().st_size if path.exists() else 0
             raise RuntimeError(
                 f"Command: {shlex.join(argv)}\n"
                 f"PATH: {env.get('PATH', os.defpath)}\n"
                 f"Archive: {path}\ndownloaded bytes: {size}; archive limit: {limit}\n"
-                f"glab stderr:\n{output or '(empty; the process may not have started)'}"
+                f"glab stderr:\n{stderr_excerpt(stderr, env)}"
             ) from error
     return path
 
@@ -326,6 +413,11 @@ def run(request, config, env):
         if not workspace.is_absolute() or workspace.is_symlink() or not workspace.is_dir():
             raise ValueError("Invalid workspace")
         host, project, job, archive_limit, expanded_limit, entry_limit, app_path = policy(request, config, env, workspace)
+        if isinstance(project, str):
+            message = "GitLab project resolution failed. Check project name/path, access permissions and host configuration."
+            project = resolve_project(workspace, host, project, env)
+            if config["projectIds"] != "*" and project not in config["projectIds"]:
+                raise ValueError(f"Unapproved project: resolved numeric project ID {project} is not in the host allowlist")
         message = "GitLab artifact download failed. Check credentials, job artifacts, download limits, and disk space."
         archive = download_archive(workspace, host, project, job, archive_limit, env)
         message = "Artifact extraction failed. Check archive contents, extraction limits, and disk space."

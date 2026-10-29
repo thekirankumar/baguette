@@ -16,6 +16,8 @@ should display that field, not replace it with a generic download failure.
   explanations appear when `glab` emits them.
 - **Host setup:** missing `GITLAB_TOKEN` or `GITLAB_HOST`, a host mismatch,
   malformed input/configuration, missing config files and other Python errors.
+- **Project resolution:** missing/ambiguous names, path lookup failures, denied
+  resolved IDs and bounded metadata lookup errors. See [project references](gitlab-projects.md).
 - **Preparation:** free/required disk bytes, unsafe archive entry names,
   size/count limits, missing configured apps and ambiguous app candidates.
 - **Debugging context:** workspace/config paths, configured limits, identifiers,

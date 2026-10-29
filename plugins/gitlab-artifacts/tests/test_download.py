@@ -216,9 +216,10 @@ class DownloadTests(unittest.TestCase):
                 self.assert_failure(download.run(self.request, self.config, self.env))
                 popen.assert_not_called()
 
-    def test_should_refuse_non_positive_or_non_integer_identifiers(self):
+    def test_should_refuse_invalid_project_references_and_non_integer_jobs(self):
         for field in ("projectId", "jobId"):
-            for value in (0, -1, True, 1.0, None, "", "01", "+1", " 1", "1/2", "https://x", "1;id"):
+            invalid = (0, -1, True, 1.0, None, "", "01", "+1", " 1", "https://x", "1;id")
+            for value in invalid + (("1/2",) if field == "jobId" else ("../escape", "/project", "group//project")):
                 with self.subTest(field=field, value=value):
                     self.request["args"] = {"projectId": 123, "jobId": 456, field: value}
                     result, popen, _ = self.run_download()

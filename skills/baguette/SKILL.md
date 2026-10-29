@@ -90,6 +90,9 @@ screen reacted: verify with a screenshot.
   URLs. See [URL downloads](../../docs/features/url-download/README.md) and
   [background runs](../../docs/features/plugin-runs/README.md)
   for host configuration, mounted URLs, polling, cleanup and limits.
+- GitLab `args.projectId` accepts a numeric ID, unencoded namespace/project path,
+  or unique exact name. Ambiguous names fail with candidates; choose a full path,
+  never guess. `jobId` remains numeric. See [project references](../../docs/features/plugin-runs/gitlab-projects.md).
 - Live 3D MJPEG and AVCC accept `frameMetadata=1`, which binds hit geometry
   to the exact rendered frame. See [atomic frames](../../docs/features/3d-rendering/frames.md).
 - `screenshot --metadata-output` writes capture geometry to a JSON sidecar;
