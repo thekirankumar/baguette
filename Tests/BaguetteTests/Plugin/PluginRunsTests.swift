@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Mockable
 import Testing
@@ -290,6 +291,57 @@ struct PluginRunsTests {
         f.child.finish()
         #expect(try await Self.finished(f, run).state == .succeeded)
         try await f.clean()
+    }
+
+    @Test func `should install a contained IPA after background preparation`() async throws {
+        for name in ["Build.ipa", "Build.IPA"] {
+            let answer = "{\"ok\":true,\"output\":{\"kind\":\"simulator-app\",\"path\":\"\(name)\"}}"
+            let f = try Fixture(answer: answer, immediate: false, capabilities: [.apps])
+            let apps = MockApps()
+            given(apps).install(.any).willProduce { app in
+                #expect(app.path.lastPathComponent == name)
+                #expect((try? Data(contentsOf: app.path)) == Data("ipa bytes".utf8))
+                #expect(f.grants.capabilities(for: f.child.environment["BAGUETTE_TOKEN"] ?? "missing") == nil)
+            }
+            let run = try await f.start(apps: apps)
+            try await Self.eventually { f.child.launched }
+            let workspace = try #require(f.child.workspace)
+            try Data("ipa bytes".utf8).write(to: workspace.appendingPathComponent(name))
+            f.child.finish()
+            #expect(try await Self.finished(f, run).state == .succeeded)
+            #expect(!FileManager.default.fileExists(atPath: workspace.path))
+            try await f.clean()
+        }
+    }
+
+    @Test func `should refuse an IPA output when it is not a contained regular file`() async throws {
+        for kind in ["directory", "escaping-symlink", "contained-symlink", "fifo", "missing"] {
+            let f = try Fixture(answer: #"{"ok":true,"output":{"kind":"simulator-app","path":"Build.ipa"}}"#,
+                immediate: false, capabilities: [.apps])
+            let apps = MockApps()
+            let run = try await f.start(apps: apps)
+            try await Self.eventually { f.child.launched }
+            let workspace = try #require(f.child.workspace)
+            let output = workspace.appendingPathComponent("Build.ipa")
+            let outside = f.root.appendingPathComponent("outside.ipa")
+            try Data("private".utf8).write(to: outside)
+            if kind == "escaping-symlink" {
+                try FileManager.default.createSymbolicLink(at: output, withDestinationURL: outside)
+            } else if kind == "contained-symlink" {
+                let contained = workspace.appendingPathComponent("original.ipa")
+                try Data("ipa bytes".utf8).write(to: contained)
+                try FileManager.default.createSymbolicLink(at: output, withDestinationURL: contained)
+            } else if kind == "fifo" {
+                #expect(mkfifo(output.path, 0o600) == 0)
+            } else if kind == "directory" {
+                try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            }
+            f.child.finish()
+            #expect(try await Self.finished(f, run).state == .failed)
+            #expect(try Data(contentsOf: outside) == Data("private".utf8))
+            verify(apps).install(.any).called(0)
+            try await f.clean()
+        }
     }
 
     actor Installation: Apps {

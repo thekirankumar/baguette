@@ -7,6 +7,7 @@ description: Start, poll and cancel server-owned background plugin runs, includi
 Background commands outlive the HTTP request that starts them. The server owns
 their process, workspace, optional app installation and final status. Short
 panel commands keep the [synchronous contract](../plugins/authoring.md#the-command-contract).
+For URL downloads with per-call headers, use [url-download](../url-download/README.md).
 
 ## Configure the GitLab Example
 
@@ -86,7 +87,7 @@ success. A failed run after cleanup can look like:
   "udid": "<UDID>",
   "createdAt": 0,
   "state": "failed",
-  "message": "Artifact extraction failed. Check archive contents, extraction limits, and disk space."
+  "message": "Artifact extraction failed. Check archive contents, extraction limits, and disk space.\nCauses:\nBadZipFile: File is not a zip file\n..."
 }
 ```
 
@@ -96,6 +97,9 @@ a state. Messages are bounded and known request/environment secrets redacted;
 authors must still avoid putting secrets in reports. Run responses use
 `Cache-Control: no-store`. There are no webhooks, push transports or actual
 push failure callbacks; an outer integration must poll and notify its users.
+
+The GitLab plugin includes the actual cause, command and stderr in failed-run
+messages. See [GitLab failure diagnostics](gitlab-diagnostics.md) for examples and truncation limits.
 
 ## CLI Workflow
 
@@ -146,9 +150,9 @@ The final contract is `{ "ok": true, "output": ... }` with optional `output`.
 A generic non-app run succeeds with `{ "ok": true }`; app-capable runs require output.
 Output is supported
 only for plugins declaring `apps` and started with a target `udid`; it must be
-`kind: "simulator-app"` with an existing `.app` directory at a workspace-relative
-path. Absolute paths, empty/dot/traversal segments and paths escaping the
-workspace through symlinks are refused. Baguette installs the app, not the plugin.
+`kind: "simulator-app"` with an existing `.app` directory or regular `.ipa` file
+at a workspace-relative path. Absolute/dot/traversal paths and escaping symlinks
+are refused; IPA symlinks are refused. Baguette installs the app, not the plugin.
 
 For a handled failure, atomically publish `{ "ok": false, "message": "..." }`
 with either exit 0 or nonzero; a valid failure message is preserved. Nonzero

@@ -85,7 +85,10 @@ screen reacted: verify with a screenshot.
 ## Fork extensions
 
 - `baguette plugin start/status/wait/cancel` manages server-owned background
-  commands such as `gitlab-artifacts:install`. See [background runs](../../docs/features/plugin-runs/README.md)
+  commands such as `gitlab-artifacts:install` and `url-download:install`. URL downloads
+  take `args.url` and optional `args.headers`; never print header credentials or signed
+  URLs. See [URL downloads](../../docs/features/url-download/README.md) and
+  [background runs](../../docs/features/plugin-runs/README.md)
   for host configuration, mounted URLs, polling, cleanup and limits.
 - Live 3D MJPEG and AVCC accept `frameMetadata=1`, which binds hit geometry
   to the exact rendered frame. See [atomic frames](../../docs/features/3d-rendering/frames.md).

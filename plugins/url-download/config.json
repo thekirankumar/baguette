@@ -1,0 +1,10 @@
+{
+  "_configuration": "Set allowedHosts to exact hostnames before use, or explicitly to * to allow any host. Private hosts are allowed when approved; do not expose this command to untrusted callers. Headers are invocation parameters, never stored here.",
+  "allowedHosts": [],
+  "allowHTTP": false,
+  "maxArchiveBytes": 3221225472,
+  "maxExpandedBytes": 17179869184,
+  "maxEntries": 50000,
+  "requestTimeoutSeconds": 30,
+  "maxRedirects": 5
+}

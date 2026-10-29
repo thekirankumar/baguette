@@ -42,5 +42,6 @@ New here? Start with the [README](../README.md). For every flag, see the [comman
 | [status-bar](features/status-bar/README.md) | Override the simulator's status bar (time, carrier, network, signal bars, battery) or clear it back to live values, from the CLI, HTTP or the focus-mode panel. Use when preparing clean demo screenshots or App Store captures. |
 | [stream](features/stream/README.md) | Stream a simulator's framebuffer to stdout as MJPEG or H.264 (AVCC), retuned live over stdin. Use when a host process or plugin consumes frames without a browser. |
 | [touches](features/touches/README.md) | Tap, swipe and stream single-finger touches on a simulator, including the home-indicator and top-edge system gestures (home, app switcher, lock screen, Notification Center). Use when a flow needs coordinate input or an edge swipe. |
+| [url-download](features/url-download/README.md) | Download an app from an HTTP(S) URL with optional per-call headers, extract a ZIP or hand an IPA directly to the simulator installer, and poll progress and detailed errors. Use for authenticated build links and signed download URLs. |
 
 **Guides:** [Wire protocol](wire.md) · [`baguette serve` routes](serve.md) · [Architecture](ARCHITECTURE.md) · [How these docs are organised](documentation-design/README.md)

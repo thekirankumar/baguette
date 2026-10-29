@@ -45,13 +45,16 @@ class DownloadTests(unittest.TestCase):
                     file.write(content)
         return data.getvalue()
 
-    def run_download(self, data=None, code=0, running=False):
+    def run_download(self, data=None, code=0, running=False, stderr=b""):
         process = mock.Mock()
         process.poll.side_effect = [None, code] if running else [code]
         process.wait.return_value = code
         def spawn(argv, **kwargs):
             kwargs["stdout"].write(self.archive() if data is None else data)
             kwargs["stdout"].flush()
+            if stderr:
+                kwargs["stderr"].write(stderr)
+                kwargs["stderr"].flush()
             return process
         with mock.patch.object(download.subprocess, "Popen", side_effect=spawn) as popen:
             result = download.run(self.request, self.config, self.env)
@@ -61,7 +64,6 @@ class DownloadTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIsInstance(result["message"], str)
         self.assertNotIn("secret-token", json.dumps(result))
-        self.assertNotIn(str(self.workspace), json.dumps(result))
         self.assertEqual(json.loads((self.workspace / "result.json").read_text()), result)
 
     def test_should_prepare_a_relative_simulator_app_and_preserve_executable_modes(self):
@@ -81,7 +83,114 @@ class DownloadTests(unittest.TestCase):
         self.assertFalse(kwargs.get("shell", False))
         self.assertFalse(kwargs.get("start_new_session", False))
         self.assertNotIn("process_group", kwargs)
-        self.assertEqual(kwargs["stderr"], download.subprocess.DEVNULL)
+        self.assertNotEqual(kwargs["stderr"], download.subprocess.DEVNULL)
+
+    def test_should_explain_a_missing_gitlab_executable(self):
+        self.env["PATH"] = "/missing/bin"
+        with mock.patch.object(download.subprocess, "Popen", side_effect=FileNotFoundError(2, "No such file or directory", "glab")):
+            result = download.run(self.request, self.config, self.env)
+        self.assert_failure(result)
+        for detail in ("GitLab artifact download failed", "FileNotFoundError", "glab", "/missing/bin",
+                       "projects/123/jobs/456/artifacts", "Traceback", str(self.workspace)):
+            self.assertIn(detail, result["message"])
+
+    def test_should_explain_an_executable_that_cannot_be_started(self):
+        with mock.patch.object(download.subprocess, "Popen", side_effect=PermissionError(13, "Permission denied", "glab")):
+            result = download.run(self.request, self.config, self.env)
+        self.assert_failure(result)
+        for detail in ("PermissionError", "Permission denied", "Command: glab", "glab stderr:"):
+            self.assertIn(detail, result["message"])
+
+    def test_should_explain_gitlab_rejections_with_stderr_and_exit_status(self):
+        result, _, _ = self.run_download(code=1, stderr=b"glab: HTTP 403 Forbidden\nPermission denied for job 456\n")
+        self.assert_failure(result)
+        for detail in ("HTTP 403 Forbidden", "Permission denied for job 456", "exit status: 1",
+                       "gitlab.example.com", "projects/123/jobs/456/artifacts", "downloaded bytes:"):
+            self.assertIn(detail, result["message"])
+
+    def test_should_explain_a_terminated_download_with_its_signal_and_size_limit(self):
+        self.config["maxArchiveBytes"] = 8
+        result, _, _ = self.run_download(data=b"x" * 8, code=-25)
+        self.assert_failure(result)
+        for detail in ("exit status: -25", "SIGXFSZ", "size limit: 8", "glab stderr:", "empty"):
+            self.assertIn(detail, result["message"])
+
+    def test_should_preserve_stderr_when_download_monitoring_fails(self):
+        with mock.patch.object(download.time, "sleep", side_effect=OSError("monitoring failed")):
+            result, _, process = self.run_download(running=True, stderr=b"TLS certificate verification failed")
+        self.assert_failure(result)
+        self.assertIn("OSError: monitoring failed", result["message"])
+        self.assertIn("TLS certificate verification failed", result["message"])
+        process.kill.assert_called_once()
+        process.wait.assert_called_once()
+
+    def test_should_redact_credentials_without_hiding_gitlab_diagnostics(self):
+        self.env["OTHER_PASSWORD"] = "private-password"
+        result, _, _ = self.run_download(code=1, stderr=(
+            b"HTTP 401 Unauthorized secret-token private-password\n"
+            b"Authorization: Bearer unknown-bearer\nPRIVATE-TOKEN: unknown-private\n"
+            b"https://user:url-password@gitlab.example.com/api?private_token=query-token\n"))
+        self.assert_failure(result)
+        for secret in ("private-password", "unknown-bearer", "unknown-private", "url-password", "query-token"):
+            self.assertNotIn(secret, result["message"])
+        self.assertIn("HTTP 401 Unauthorized", result["message"])
+        self.assertIn("[REDACTED]", result["message"])
+
+    def test_should_explain_disk_and_archive_limits_with_actual_values(self):
+        with mock.patch.object(download.shutil, "disk_usage", return_value=mock.Mock(free=17)):
+            result, _, _ = self.run_download()
+        self.assert_failure(result)
+        for detail in ("Insufficient disk space", "17", str(self.config["maxArchiveBytes"]), str(download.DISK_RESERVE)):
+            self.assertIn(detail, result["message"])
+
+    def test_should_name_ambiguous_simulator_apps(self):
+        result, _, _ = self.run_download(data=self.archive([
+            (name, b"x", stat.S_IFREG) for name in ("One.app/file", "build/Two.app/file")]))
+        self.assert_failure(result)
+        for detail in ("One.app", "build/Two.app", "found 2"):
+            self.assertIn(detail, result["message"])
+
+    def test_should_explain_failures_from_a_real_child_without_stderr_pipe_deadlock(self):
+        spawn = subprocess.Popen
+        def child(argv, **kwargs):
+            return spawn([sys.executable, "-B", "-c",
+                          "import os; os.write(2, b'x' * 100000 + b' HTTP 404 artifact expired'); raise SystemExit(7)"], **kwargs)
+        with mock.patch.object(download.subprocess, "Popen", side_effect=child):
+            result = download.run(self.request, self.config, self.env)
+        self.assert_failure(result)
+        self.assertIn("HTTP 404 artifact expired", result["message"])
+        self.assertIn("exit status: 7", result["message"])
+
+    def test_should_fit_verbose_unicode_diagnostics_into_the_unchanged_host_limit(self):
+        result, _, _ = self.run_download(code=1, stderr=("HTTP 403 start " + "🚀" * 20000 + " artifact expired").encode())
+        self.assert_failure(result)
+        self.assertLessEqual(len(result["message"].encode()), 4096)
+        self.assertLessEqual((self.workspace / "result.json").stat().st_size, 65536)
+        for detail in ("HTTP 403 start", "artifact expired", "truncated", "exit status: 1", "Command: glab"):
+            self.assertIn(detail, result["message"])
+        self.assertNotIn("\ufffd", result["message"])
+
+    def test_should_explain_invalid_archive_entries_with_the_offending_path(self):
+        result, _, _ = self.run_download(data=self.archive([("../escape", b"x", stat.S_IFREG)]))
+        self.assert_failure(result)
+        self.assertIn("../escape", result["message"])
+
+    def test_should_explain_missing_glab_from_the_real_script(self):
+        self.env["PATH"] = str(self.workspace / "missing-bin")
+        plugin = self.workspace / "plugin"
+        (plugin / "bin").mkdir(parents=True)
+        shutil.copyfile(ROOT / "bin/download.py", plugin / "bin/download.py")
+        (plugin / "config.json").write_text(json.dumps(self.config))
+        completed = subprocess.run([sys.executable, "-B", str(plugin / "bin/download.py")],
+                                   input=json.dumps(self.request), text=True, capture_output=True,
+                                   env=self.env, timeout=10)
+        self.assertEqual(completed.returncode, 0)
+        self.assertEqual(completed.stderr, "")
+        result = json.loads((self.workspace / "result.json").read_text())
+        self.assert_failure(result)
+        self.assertIn("FileNotFoundError", result["message"])
+        self.assertIn("glab", result["message"])
+        self.assertIn(self.env["PATH"], result["message"])
 
     def test_should_report_each_progress_phase(self):
         with mock.patch.object(download, "atomic_json", wraps=download.atomic_json) as write:
@@ -355,7 +464,7 @@ class DownloadTests(unittest.TestCase):
                 self.config["projectIds"] = projects
                 result, popen, _ = self.run_download()
                 self.assert_failure(result)
-                self.assertEqual(result["message"], "Invalid artifact request or host configuration")
+                self.assertIn("Invalid artifact request or host configuration", result["message"])
                 popen.assert_not_called()
 
     def test_should_keep_identifiers_and_host_restricted_when_all_projects_are_allowed(self):
@@ -376,10 +485,10 @@ class DownloadTests(unittest.TestCase):
         self.request["command"] = "install"
         result, popen, _ = self.run_download()
         self.assert_failure(result)
-        self.assertEqual(result["message"], "Invalid artifact request or host configuration")
+        self.assertIn("Invalid artifact request or host configuration", result["message"])
         popen.assert_not_called()
 
-    def test_should_report_only_sanitized_failure_stages(self):
+    def test_should_explain_each_failure_stage_without_exposing_credentials(self):
         stages = [("policy", "Invalid artifact request or host configuration"),
                   ("download_archive", "GitLab artifact download failed. Check credentials, job artifacts, download limits, and disk space."),
                   ("extract_archive", "Artifact extraction failed. Check archive contents, extraction limits, and disk space."),
@@ -387,7 +496,11 @@ class DownloadTests(unittest.TestCase):
         for function, message in stages:
             with self.subTest(function=function), \
                  mock.patch.object(download, function, side_effect=ValueError("secret-token " + str(self.workspace))):
-                self.assertEqual(self.run_download()[0], {"ok": False, "message": message})
+                result = self.run_download()[0]
+                self.assert_failure(result)
+                self.assertIn(message, result["message"])
+                self.assertIn("ValueError:", result["message"])
+                self.assertIn("Traceback", result["message"])
             if (self.workspace / "extracted").exists():
                 shutil.rmtree(self.workspace / "extracted")
 
@@ -401,8 +514,10 @@ class DownloadTests(unittest.TestCase):
 
     def test_should_exit_nonzero_when_no_result_can_be_published(self):
         with mock.patch.object(download.sys, "stdin", io.StringIO("not JSON")), \
-             mock.patch.dict(os.environ, {}, clear=True):
+             mock.patch.dict(os.environ, {}, clear=True), \
+             contextlib.redirect_stderr(io.StringIO()) as stderr:
             self.assertEqual(download.main(), 1)
+        self.assertIn("JSONDecodeError", stderr.getvalue())
         self.assertFalse((self.workspace / "result.json").exists())
 
     def test_should_exit_nonzero_when_result_publication_is_unwritable(self):
@@ -413,7 +528,8 @@ class DownloadTests(unittest.TestCase):
              mock.patch.object(download.subprocess, "Popen") as popen, \
              contextlib.redirect_stderr(io.StringIO()) as stderr:
             self.assertEqual(download.main(), 1)
-        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn("OSError", stderr.getvalue())
+        self.assertNotIn("secret-token", stderr.getvalue())
         self.assertFalse((self.workspace / "result.json").exists())
         popen.assert_not_called()
 
@@ -431,16 +547,19 @@ class DownloadTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 0)
                 self.assertEqual(completed.stdout, "")
                 self.assertEqual(completed.stderr, "")
-                self.assertEqual(json.loads((self.workspace / "result.json").read_text()),
-                                 {"ok": False, "message": "Invalid artifact request or host configuration"})
+                result = json.loads((self.workspace / "result.json").read_text())
+                self.assert_failure(result)
+                self.assertIn(missing, result["message"])
                 self.assertFalse((self.workspace / "artifacts.zip").exists())
         (plugin / "config.json").unlink()
         completed = subprocess.run([sys.executable, "-B", str(plugin / "bin/download.py")],
                                    input=json.dumps(self.request), text=True, capture_output=True,
                                    env=self.env, timeout=10)
         self.assertEqual(completed.returncode, 0)
-        self.assertEqual(json.loads((self.workspace / "result.json").read_text()),
-                         {"ok": False, "message": "Invalid artifact request or host configuration"})
+        result = json.loads((self.workspace / "result.json").read_text())
+        self.assert_failure(result)
+        self.assertIn("FileNotFoundError", result["message"])
+        self.assertIn("config.json", result["message"])
 
     def test_should_refuse_excessive_zip_entries_before_extraction(self):
         self.config["maxEntries"] = 1
@@ -467,7 +586,7 @@ class DownloadTests(unittest.TestCase):
                 self.config["maxEntries"] = limit
                 result, popen, _ = self.run_download()
                 self.assert_failure(result)
-                self.assertEqual(result["message"], "Invalid artifact request or host configuration")
+                self.assertIn("Invalid artifact request or host configuration", result["message"])
                 popen.assert_not_called()
 
 

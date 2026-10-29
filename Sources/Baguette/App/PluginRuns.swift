@@ -379,8 +379,16 @@ actor PluginRuns {
         guard !path.hasPrefix("/"), !components.contains(".."), !components.contains("."),
               !components.contains(""), !path.contains("\0") else { throw Failure.storage }
         let url = workspace.appendingPathComponent(path)
+        guard contains(url, in: workspace) else { throw Failure.storage }
+        if url.pathExtension.lowercased() == "ipa" {
+            var info = stat()
+            guard lstat(url.path, &info) == 0, info.st_mode & S_IFMT == S_IFREG else {
+                throw Failure.storage
+            }
+            return url.resolvingSymlinksInPath()
+        }
         var directory: ObjCBool = false
-        guard url.pathExtension == "app", contains(url, in: workspace),
+        guard url.pathExtension == "app",
               FileManager.default.fileExists(atPath: url.path, isDirectory: &directory), directory.boolValue else {
             throw Failure.storage
         }

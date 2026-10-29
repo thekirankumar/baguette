@@ -1,0 +1,17 @@
+{
+  "name": "url-download",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Download a ZIP or IPA from an approved URL for simulator installation",
+  "capabilities": ["apps"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "install",
+        "title": "Install app from URL",
+        "run": ["python3", "bin/download.py"],
+        "background": {"timeoutSeconds": 3600}
+      }
+    ]
+  }
+}

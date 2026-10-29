@@ -10,6 +10,12 @@ For releases prior to this changelog, see the
 
 ## [Unreleased]
 
+### Fixed
+- `gitlab-artifacts:install` reports missing `glab`, GitLab stderr, exit status, preparation errors and traceback excerpts instead of generic failures, with credential redaction and explicit truncation within the existing status limit. → [docs](docs/features/plugin-runs/gitlab-diagnostics.md)
+
+### Added
+- `url-download:install` downloads from approved URLs with per-call headers, extracts ZIP apps or hands IPAs directly to the installer, with progress, cancellation and redacted diagnostics. Background app output now accepts regular IPA files. → [docs](docs/features/url-download/README.md)
+
 ---
 
 ## [0.0.4] - 2026-10-29
