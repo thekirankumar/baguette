@@ -22,6 +22,7 @@ struct SimctlInputSurfaceTests {
         var springBoardPids: [Int32?] = []
         /// Notify state reported by each successive `notifyutil -g`.
         var states: [String?] = []
+        var onExit: (@Sendable (Int32) -> Void)?
     }
 
     private func guestListing(springBoard: Int32?) -> String {
@@ -77,7 +78,7 @@ struct SimctlInputSurfaceTests {
         }
         given(sub).terminate().willReturn()
         let surface = SimctlInputSurface(
-            subprocess: sub,
+            subprocess: { sub },
             deviceHubRunning: { deviceHubRunning },
             sleep: { captures.sleeps.append($0) }
         )
@@ -168,6 +169,139 @@ struct SimctlInputSurfaceTests {
     }
 
     // MARK: - reclaim
+
+    @Test func `should stop waiting for a boot when its command deadline expires`() async {
+        let sub = MockSubprocess()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any).willReturn()
+        given(sub).kill().willReturn()
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(subprocess: { sub }, bootTimeout: .milliseconds(20))
+
+        await #expect(throws: InputSurfaceError.timedOut) {
+            try await surface.ready(on: sim)
+        }
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should stop waiting for a boot when preparation is cancelled`() async {
+        let sub = MockSubprocess()
+        let started = AsyncStream<Void>.makeStream()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any)
+            .willProduce { _, _, _, _ in started.continuation.yield(()) }
+        given(sub).kill().willReturn()
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(subprocess: { sub })
+        let task = Task { try await surface.ready(on: sim) }
+        for await _ in started.stream { break }
+        task.cancel()
+
+        await #expect(throws: CancellationError.self) { try await task.value }
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should stop waiting for a guest command when its deadline expires`() async {
+        let sub = MockSubprocess()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any).willReturn()
+        given(sub).kill().willReturn()
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(subprocess: { sub }, commandTimeout: .milliseconds(20))
+
+        #expect(await surface.shadowed(on: sim) == false)
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should stop preparing the input surface when its total deadline expires`() async {
+        let sub = MockSubprocess()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any).willReturn()
+        given(sub).kill().willReturn()
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(subprocess: { sub }, preparationTimeout: .milliseconds(20))
+
+        await #expect(throws: InputSurfaceError.timedOut) {
+            try await surface.healAfterBoot(on: sim)
+        }
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should reclaim the input surface after boot when Device Hub has shadowed it`() async throws {
+        let (surface, sim, _) = makeSurface(state: "com.apple.coredevice.dtuhidd.active 1\n")
+
+        #expect(try await surface.healAfterBoot(on: sim) == .reclaimed)
+    }
+
+    @Test func `should leave the input surface alone after boot when Device Hub has not shadowed it`() async throws {
+        let (surface, sim, _) = makeSurface(state: "com.apple.coredevice.dtuhidd.active 0\n")
+
+        #expect(try await surface.healAfterBoot(on: sim) == .unshadowed)
+    }
+
+    @Test func `should stop preparing the input surface when healing exceeds the total deadline`() async {
+        let sub = MockSubprocess()
+        let captures = Captures()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any)
+            .willProduce { _, args, onBytes, onExit in
+                captures.spawns.append(args)
+                if args.contains("kickstart") { return }
+                if args.contains("-g") { onBytes(Data("com.apple.coredevice.dtuhidd.active 1\n".utf8)) }
+                if args.contains("list") { onBytes(Data(self.guestListing(springBoard: 100).utf8)) }
+                onExit(0)
+            }
+        given(sub).kill().willReturn()
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(
+            subprocess: { sub }, deviceHubRunning: { false }, preparationTimeout: .milliseconds(50))
+
+        await #expect(throws: InputSurfaceError.timedOut) {
+            try await surface.healAfterBoot(on: sim)
+        }
+        #expect(captures.spawns.last?.contains("kickstart") == true)
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should keep the timeout outcome when the stopped boot reports a late exit`() async {
+        let sub = MockSubprocess()
+        let captures = Captures()
+        given(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any)
+            .willProduce { _, _, _, onExit in captures.onExit = onExit }
+        given(sub).kill().willProduce {
+            captures.onExit?(0)
+            captures.onExit?(1)
+        }
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let surface = SimctlInputSurface(subprocess: { sub }, bootTimeout: .milliseconds(20))
+
+        await #expect(throws: InputSurfaceError.timedOut) {
+            try await surface.ready(on: sim)
+        }
+        verify(sub).kill().called(1)
+    }
+
+    @Test func `should avoid starting a boot wait when preparation is already cancelled`() async {
+        let sub = MockSubprocess()
+        let surface = SimctlInputSurface(subprocess: { sub })
+        let sim = MockSimulator()
+        given(sim).udid.willReturn("U")
+        given(sim).deviceSetPath.willReturn(nil)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await surface.ready(on: sim)
+        }
+
+        await #expect(throws: CancellationError.self) { try await task.value }
+        verify(sub).run(executable: .any, arguments: .any, onBytes: .any, onExit: .any).called(0)
+    }
 
     @Test func `should clear Device Hub's state before restarting backboardd when reclaiming`() async throws {
         let (surface, sim, captures) = makeSurface()

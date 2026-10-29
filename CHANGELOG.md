@@ -11,6 +11,7 @@ For releases prior to this changelog, see the
 ## [Unreleased]
 
 ### Fixed
+- `baguette boot` and `POST /simulators/:udid/boot` no longer wait indefinitely for post-boot readiness or input healing; timed-out and cancelled waits stop their active command. → [docs](docs/features/device-hub/design.md#detection)
 - `gitlab-artifacts:install` reports missing `glab`, GitLab stderr, exit status, preparation errors and traceback excerpts instead of generic failures, with credential redaction and explicit truncation within the existing status limit. → [docs](docs/features/plugin-runs/gitlab-diagnostics.md)
 
 ### Added

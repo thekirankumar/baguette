@@ -35,10 +35,13 @@ import Foundation
 final class SimctlInputSurface: InputSurface, @unchecked Sendable {
     typealias Sleep = @Sendable (Duration) async -> Void
 
-    private let subprocess: any Subprocess
+    private let subprocess: @Sendable () -> any Subprocess
     private let xcrun: URL
     private let deviceHubRunning: @Sendable () -> Bool
     private let sleep: Sleep
+    private let bootTimeout: Duration
+    private let commandTimeout: Duration
+    private let preparationTimeout: Duration
 
     private static let springBoard = "com.apple.SpringBoard"
     private static let backboardd = "system/com.apple.backboardd"
@@ -59,15 +62,40 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
     ///   host right now. Defaults to asking the workspace for its bundle;
     ///   tests inject the answer.
     init(
-        subprocess: any Subprocess = HostSubprocess(),
+        subprocess: @escaping @Sendable () -> any Subprocess = { HostSubprocess() },
         xcrun: URL = URL(fileURLWithPath: "/usr/bin/xcrun"),
         deviceHubRunning: @escaping @Sendable () -> Bool = { DeviceHubApp.isRunning },
-        sleep: @escaping Sleep = { try? await Task.sleep(for: $0) }
+        sleep: @escaping Sleep = { try? await Task.sleep(for: $0) },
+        bootTimeout: Duration = .seconds(180),
+        commandTimeout: Duration = .seconds(5),
+        preparationTimeout: Duration = .seconds(240)
     ) {
         self.subprocess = subprocess
         self.xcrun = xcrun
         self.deviceHubRunning = deviceHubRunning
         self.sleep = sleep
+        self.bootTimeout = bootTimeout
+        self.commandTimeout = commandTimeout
+        self.preparationTimeout = preparationTimeout
+    }
+
+    /// Keep the entire post-boot wait bounded, including guest probes and
+    /// SpringBoard recovery. Cancellation kills the active child and
+    /// prevents this sequence from issuing further heal commands.
+    func healAfterBoot(on simulator: any Simulator) async throws -> HealOutcome {
+        try await withThrowingTaskGroup(of: HealOutcome.self) { group in
+            group.addTask {
+                try await self.ready(on: simulator)
+                try Task.checkCancellation()
+                return try await self.heal(on: simulator)
+            }
+            group.addTask {
+                try await Task.sleep(for: self.preparationTimeout)
+                throw InputSurfaceError.timedOut
+            }
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
     }
 
     func shadowed(on simulator: any Simulator) async -> Bool {
@@ -83,12 +111,13 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
         // backboardd have pids within a second of `boot()` returning, and
         // Device Hub's daemon publishes its state a second after that —
         // a pid poll would answer long before the surface is settled.
-        try await run(simctl(on: simulator, ["bootstatus", simulator.udid, "-b"]))
+        try await run(simctl(on: simulator, ["bootstatus", simulator.udid, "-b"]), timeout: bootTimeout)
         // Only worth waiting for when there is a Device Hub to attach;
         // a headless host would just pay the full timeout every boot.
         guard deviceHubRunning() else { return }
         for attempt in 0..<Self.attachAttempts {
             if attempt > 0 { await sleep(Self.pollInterval) }
+            try Task.checkCancellation()
             if await shadowed(on: simulator) { return }
         }
     }
@@ -111,6 +140,7 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
     ) async throws -> Int32 {
         for attempt in 0..<attempts {
             if attempt > 0 { await sleep(Self.pollInterval) }
+            try Task.checkCancellation()
             if let now = await springBoardPid(on: simulator), now != old { return now }
         }
         throw InputSurfaceError.springBoardMissing
@@ -134,30 +164,96 @@ final class SimctlInputSurface: InputSurface, @unchecked Sendable {
 
     /// Runs one `xcrun` invocation, returning its stdout.
     @discardableResult
-    private func run(_ arguments: [String]) async throws -> String {
-        final class Output: @unchecked Sendable {
-            var data = Data()
+    private func run(_ arguments: [String], timeout: Duration? = nil) async throws -> String {
+        try Task.checkCancellation()
+        let command = Command(subprocess: subprocess())
+        let limit = timeout ?? commandTimeout
+        let watchdog = Task {
+            do {
+                try await Task.sleep(for: limit)
+                command.stop(throwing: InputSurfaceError.timedOut)
+            } catch { /* The command finished before its deadline. */ }
         }
-        let output = Output()
-        return try await withCheckedThrowingContinuation { continuation in
+        defer { watchdog.cancel() }
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                command.start(executable: xcrun, arguments: arguments, continuation: continuation)
+            }
+        } onCancel: {
+            command.stop(throwing: CancellationError())
+        }
+    }
+
+    /// Exit, timeout and cancellation race to finish exactly once. A fresh
+    /// child per invocation prevents a late exit from touching the next
+    /// command. The recursive lock also supports synchronous callbacks.
+    private final class Command: @unchecked Sendable {
+        private let lock = NSRecursiveLock()
+        private let subprocess: any Subprocess
+        private var continuation: CheckedContinuation<String, any Error>?
+        private var result: Result<String, any Error>?
+        private var output = Data()
+        private var started = false
+
+        init(subprocess: any Subprocess) { self.subprocess = subprocess }
+
+        func start(
+            executable: URL, arguments: [String],
+            continuation: CheckedContinuation<String, any Error>
+        ) {
+            lock.lock()
+            defer { lock.unlock() }
+            if let result {
+                continuation.resume(with: result)
+                return
+            }
+            self.continuation = continuation
+            started = true
             do {
                 try subprocess.run(
-                    executable: xcrun,
-                    arguments: arguments,
-                    onBytes: { output.data.append($0) },
-                    onExit: { code in
-                        if code == 0 {
-                            continuation.resume(
-                                returning: String(decoding: output.data, as: UTF8.self))
-                        } else {
-                            continuation.resume(
-                                throwing: InputSurfaceError.simctlFailed(status: code))
-                        }
-                    }
+                    executable: executable, arguments: arguments,
+                    onBytes: { [weak self] in self?.append($0) },
+                    onExit: { [weak self] in self?.exited($0) }
                 )
             } catch {
-                continuation.resume(throwing: error)
+                finish(.failure(error))
             }
+        }
+
+        private func append(_ bytes: Data) {
+            lock.lock()
+            defer { lock.unlock() }
+            guard result == nil else { return }
+            output.append(bytes)
+        }
+
+        private func exited(_ code: Int32) {
+            lock.lock()
+            defer { lock.unlock() }
+            finish(code == 0 ? .success(String(decoding: output, as: UTF8.self))
+                : .failure(InputSurfaceError.simctlFailed(status: code)))
+        }
+
+        func stop(throwing error: any Error) {
+            lock.lock()
+            guard result == nil else { lock.unlock(); return }
+            result = .failure(error)
+            let pending = continuation
+            continuation = nil
+            let shouldKill = started
+            lock.unlock()
+            // Stopping I/O can invoke exit callbacks; do not hold our
+            // state lock while the subprocess closes its pipes.
+            if shouldKill { subprocess.kill() }
+            pending?.resume(throwing: error)
+        }
+
+        private func finish(_ result: Result<String, any Error>) {
+            guard self.result == nil else { return }
+            self.result = result
+            let pending = continuation
+            continuation = nil
+            pending?.resume(with: result)
         }
     }
 }

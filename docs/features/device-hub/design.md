@@ -108,6 +108,15 @@ seconds for the state to appear before deciding there is nothing to
 heal. On a warm boot `bootstatus` returns ~1.3 s after `boot`, which is
 too close to dtuhidd's ~2 s to trust on its own.
 
+Post-boot preparation must not hold an HTTP boot response forever: a wedged
+`bootstatus` or guest command otherwise consumes an upstream lease's entire
+preparation budget. The adapter bounds bootstatus to 180 s, each guest command
+to 5 s, and the complete boot-wait/heal sequence to 240 s. Timeout or task
+cancellation kills the active child and completes its waiter once, even if an
+exit callback arrives later. Each command owns a fresh child so cleanup cannot
+signal the next command. Healing remains advisory after the CoreSimulator boot
+call succeeds; a timeout is logged by the boot caller rather than undoing boot.
+
 Ground truth when investigating, rather than the reporter's
 "did Settings launch" probe (which is confounded by whatever icon sits
 at the tapped point):

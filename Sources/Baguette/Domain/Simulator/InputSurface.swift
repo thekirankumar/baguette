@@ -71,12 +71,15 @@ enum HealOutcome: Equatable, Sendable {
 
 enum InputSurfaceError: Error, Equatable, CustomStringConvertible {
     case simctlFailed(status: Int32)
+    case timedOut
     /// backboardd was restarted but SpringBoard never came back — the
     /// device is in an unknown state and a reboot is the honest advice.
     case springBoardMissing
 
     var description: String {
         switch self {
+        case .timedOut:
+            return "Timed out waiting for the simulator input surface — check the simulator's boot state"
         case .simctlFailed(let status):
             return "xcrun simctl exited \(status) while reclaiming the input surface"
         case .springBoardMissing:
