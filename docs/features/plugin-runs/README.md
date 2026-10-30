@@ -55,8 +55,8 @@ baguette serve --plugin-dir plugins
 
 `--plugin-dir` names the root containing plugin directories, not
 `plugins/gitlab-artifacts` itself. It is an existing repeatable authoring flag
-that shadows installed plugins of the same name. The example contributes a
-command, not a browser panel.
+that shadows installed plugins of the same name. The example contributes an
+install command and a [browser panel](browser.md).
 
 ## Start and Poll
 
@@ -71,8 +71,8 @@ curl "$BASE/runs/<id>.json"
 ```
 
 Start accepts only an optional `args` object in a JSON body of at most 64 KiB;
-an empty body is also valid. The GitLab example requires exactly `projectId`
-and `jobId`. Projects accept an ID, path or unique name; jobs remain numeric.
+an empty body is also valid. GitLab accepts `url` or `projectId` and `jobId`.
+Projects accept an ID, path or unique name; jobs remain numeric.
 See [GitLab project references](gitlab-projects.md); host policy is not request-overridable.
 
 The `202` body is run JSON, initially `state: "queued"`, with `id`, `command`,

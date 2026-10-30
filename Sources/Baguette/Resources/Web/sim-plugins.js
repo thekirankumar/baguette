@@ -105,6 +105,11 @@
       this.log = log || (() => {});
       this.plugins = [];
       this.openPanelID = null;
+      // Only status is retained, never URL/header args. Closing a panel
+      // stops browser polling, not the server-owned job.
+      this.backgroundRuns = new Map();
+      this.runPollTimer = null;
+      this.panelGeneration = 0;
       // What's typed in the open panel's prompt, if it has one. Held
       // here rather than read off the DOM because every command answer
       // re-renders the card — losing what you typed on the round trip
@@ -193,6 +198,7 @@
     /// Tear the rail down and re-fetch — used after an install so the
     /// new plugin's button appears without a page reload.
     async reload() {
+      this.stopRunPolling();
       this.closeFlyout();
       if (this.rail) this.rail.remove();
       if (this.host) this.host.remove();
@@ -393,6 +399,7 @@
     }
 
     close() {
+      this.stopRunPolling();
       this.openPanelID = null;
       this.openPluginName = null;
       this.promptValue = '';
@@ -413,6 +420,7 @@
     }
 
     async open(pluginName, panel) {
+      this.stopRunPolling();
       this.openPanelID = panel.id;
       this.openPluginName = pluginName;
       this.host.hidden = false;
@@ -432,6 +440,13 @@
       const body = panel.body || {};
       if (body.kind !== 'list') {
         this.renderShell(pluginName, panel, '<div class="plugin-status">Unsupported panel</div>');
+        return;
+      }
+
+      if (this.backgroundCommand(panel)) {
+        this.renderBackground(pluginName, panel);
+        const run = this.backgroundRuns.get(panel.body.source);
+        if (run?.id && !this.runFinished(run)) await this.pollBackground(pluginName, panel);
         return;
       }
 
@@ -577,6 +592,7 @@
       const prompt = this.promptFor(panel);
       const args = prompt.args(this.promptValue);
       if (!args) return;   // nothing typed; don't spend a subprocess
+      if (this.backgroundCommand(panel)) return this.startBackground(pluginName, panel, args);
       // Remembered on submit rather than on success: you typed it and
       // meant it, and a link that failed is exactly the one you want to
       // arrow back to and fix.
@@ -588,6 +604,122 @@
       const [id, cmd] = String((panel.body || {}).source || '').split(':');
       this.renderShell(pluginName, panel, '<div class="plugin-status">Running…</div>');
       this.invoke(pluginName, panel, id, cmd, args);
+    }
+
+    // Background eligibility comes from the existing command catalog;
+    // manifests still own the prompt and all argument interpretation.
+    backgroundCommand(panel) {
+      const source = panel.body?.source;
+      return this.plugins.flatMap(plugin => plugin.commands || [])
+        .find(command => command.id === source && command.background === true);
+    }
+
+    runFinished(run) {
+      return ['succeeded', 'failed', 'cancelled'].includes(run.state);
+    }
+
+    backgroundBusy(panel) {
+      const run = this.backgroundRuns.get(panel.body?.source);
+      return !!run && !this.runFinished(run);
+    }
+
+    stopRunPolling() {
+      window.clearTimeout(this.runPollTimer);
+      this.runPollTimer = null;
+      // In-flight status responses from a previous view are ignored.
+      this.panelGeneration++;
+    }
+
+    async startBackground(pluginName, panel, args) {
+      if (this.backgroundBusy(panel)) return;
+      const source = panel.body.source;
+      const [id, cmd] = source.split(':');
+      const run = { starting: true };
+      this.backgroundRuns.set(source, run);
+      this.renderBackground(pluginName, panel);
+      try {
+        const res = await fetch(appURL('/plugins/' + encodeURIComponent(id) + '/commands/'
+          + encodeURIComponent(cmd) + '/runs?udid=' + encodeURIComponent(this.udid)), {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ args }), cache: 'no-store',
+        });
+        // A 4xx is an explicit refusal. Network/5xx/invalid responses
+        // cannot prove the server didn't accept; never retry a start.
+        if (res.status >= 400 && res.status < 500) {
+          const error = await res.json();
+          Object.assign(run, { state: 'failed', message: error.error || error.message || 'Start refused (' + res.status + ')' });
+        } else {
+          const payload = await res.json();
+          if (res.status !== 202 || !this.validRun(payload, source)) throw new Error('Unconfirmed start');
+          Object.assign(run, payload);
+        }
+      } catch (_) {
+        run.unconfirmed = true;
+      }
+      run.starting = false;
+      if (this.openPanelID !== panel.id || this.openPluginName !== pluginName) return;
+      this.renderBackground(pluginName, panel);
+      this.scheduleRunPoll(pluginName, panel, run);
+    }
+
+    validRun(run, source, id) {
+      return run && typeof run.id === 'string' && /^[A-Za-z0-9_-]+$/.test(run.id)
+        && (!id || run.id === id) && run.command === source && run.udid === this.udid
+        && ['queued', 'running', 'succeeded', 'failed', 'cancelled'].includes(run.state);
+    }
+
+    scheduleRunPoll(pluginName, panel, run) {
+      if (!run.id || this.runFinished(run)) return;
+      window.clearTimeout(this.runPollTimer);
+      this.runPollTimer = window.setTimeout(() => this.pollBackground(pluginName, panel), 1000);
+    }
+
+    async pollBackground(pluginName, panel) {
+      const source = panel.body.source;
+      const run = this.backgroundRuns.get(source);
+      if (!run?.id || this.runFinished(run)) return;
+      const generation = this.panelGeneration;
+      try {
+        const res = await fetch(appURL('/runs/' + encodeURIComponent(run.id) + '.json'), {
+          method: 'GET', cache: 'no-store',
+        });
+        if (!res.ok) throw new Error('Status unavailable');
+        const payload = await res.json();
+        if (!this.validRun(payload, source, run.id)) throw new Error('Invalid run status');
+        if (generation !== this.panelGeneration) return;
+        Object.assign(run, payload, { statusUnavailable: false });
+      } catch (_) {
+        if (generation !== this.panelGeneration) return;
+        run.statusUnavailable = true;
+      }
+      if (generation !== this.panelGeneration) return;
+      this.renderBackground(pluginName, panel);
+      this.scheduleRunPoll(pluginName, panel, run);
+    }
+
+    renderBackground(pluginName, panel) {
+      const run = this.backgroundRuns.get(panel.body.source);
+      const labels = { queued: 'Queued', running: 'Running', succeeded: 'Succeeded', failed: 'Failed', cancelled: 'Cancelled' };
+      const label = !run ? 'Ready'
+        : run.unconfirmed ? 'Start not confirmed. The job may still be running; do not resubmit. Check the server before trying again.'
+        : run.starting ? 'Starting…' : labels[run.state];
+      let html = '<div class="plugin-status plugin-run-status" role="status" aria-live="polite">'
+        + '<strong>' + escapeHTML(label) + '</strong>';
+      if (run) {
+        if (!run.unconfirmed) html += '<progress class="plugin-run-progress" max="1"'
+          + (this.runFinished(run) ? ' value="' + (run.state === 'succeeded' ? '1' : '0') + '"' : '')
+          + ' aria-label="Background command progress"></progress>';
+        if (run.phase && !this.runFinished(run)) html += '<div>' + escapeHTML(run.phase) + '</div>';
+        if (Number.isSafeInteger(run.downloadedBytes) && run.downloadedBytes >= 0) {
+          const bytes = run.downloadedBytes;
+          html += '<div>' + (bytes < 1024 ? bytes + ' B' : bytes < 1048576
+            ? (bytes / 1024).toFixed(1) + ' KiB' : (bytes / 1048576).toFixed(1) + ' MiB') + ' downloaded</div>';
+        }
+        if (run.id) html += '<div class="plugin-run-id">Run: ' + escapeHTML(run.id) + '</div>';
+        if (run.statusUnavailable) html += '<div>Status temporarily unavailable; retrying. The job has not been restarted.</div>';
+        if (run.message) html += '<div class="plugin-run-message">' + escapeHTML(run.message) + '</div>';
+      }
+      this.renderShell(pluginName, panel, html + '</div>');
     }
 
     /**
@@ -778,6 +910,12 @@
       const go = document.createElement('button');
       go.className = 'plugin-btn plugin-prompt-go';
       go.textContent = prompt.submitLabel;
+      if (this.backgroundCommand(panel)) {
+        input.readOnly = this.backgroundBusy(panel);
+        go.disabled = this.backgroundBusy(panel);
+        // Signed URLs must not become browser autocomplete/history.
+        input.setAttribute('autocomplete', 'off');
+      }
 
       field.appendChild(ghost);
       field.appendChild(input);

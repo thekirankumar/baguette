@@ -7,7 +7,7 @@ description: Download an app from an HTTP(S) URL with optional per-call headers,
 `url-download:install` is a background plugin. It streams a download on the
 server host, prepares the app, and hands it to baguette for installation and
 workspace cleanup. It requires `python3`, not `curl`, `glab` or extra Python
-packages. It contributes a command, not a browser panel.
+packages. It contributes an install command and a [browser panel](../plugin-runs/browser.md).
 
 ## Configure and start
 
@@ -40,6 +40,10 @@ baguette serve --plugin-dir plugins
 The plugin directory is independently installable; it does not depend on the
 GitLab plugin being present. IPA handoff requires the updated host that accepts
 `.ipa` background output, not an older `.app`-only host.
+
+For browser use, focus a simulator, open **URL Install** in the plugin rail,
+paste a direct download or signed URL, then click **Install**. The minimal
+panel accepts only a URL; use the API/CLI below for per-call headers.
 
 ## URL and headers are invocation parameters
 

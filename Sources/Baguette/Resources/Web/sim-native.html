@@ -2546,6 +2546,10 @@
   #simNativeView .plugin-prompt-typed { color: transparent; }
   #simNativeView .plugin-prompt-rest { color: var(--nv-text-muted); opacity: 0.75; }
   #simNativeView .plugin-prompt-go { flex: 0 0 auto; padding: 6px 12px; }
+  #simNativeView .plugin-prompt-go:disabled { opacity: 0.5; cursor: default; }
+  #simNativeView .plugin-run-progress { display: block; width: 100%; margin: 12px 0; accent-color: var(--nv-accent); }
+  #simNativeView .plugin-run-id { margin-top: 8px; overflow-wrap: anywhere; font-size: 11px; }
+  #simNativeView .plugin-run-message { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
   /* Tickable rows. The glyph family is chosen by the manifest but drawn
      entirely here — a plugin names `switch` / `checkbox` / `radio` and

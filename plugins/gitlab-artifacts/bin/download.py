@@ -15,7 +15,7 @@ import tempfile
 import time
 import traceback
 import unicodedata
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 import zipfile
 
 
@@ -128,6 +128,27 @@ def project_reference(value):
     return value
 
 
+def job_reference(args, host):
+    if isinstance(args, dict) and set(args) == {"projectId", "jobId"}:
+        return project_reference(args["projectId"]), positive_integer(args["jobId"])
+    if not isinstance(args, dict) or set(args) != {"url"} or not isinstance(args["url"], str):
+        raise ValueError("Supply a GitLab job URL or projectId and jobId")
+    value = args["url"].strip()
+    if len(value) > 8192 or any(ord(char) < 32 or ord(char) == 127 for char in value):
+        raise ValueError("Invalid GitLab job URL")
+    parsed = urlsplit(value)
+    if (parsed.scheme != "https" or parsed.hostname != host.lower()
+            or parsed.username is not None or parsed.password is not None or parsed.port not in (None, 443)):
+        raise ValueError("GitLab job URL must use HTTPS on the configured host, without credentials or a custom port")
+    match = re.fullmatch(r"/(.+)/-/jobs/([1-9][0-9]{0,19})(?:/artifacts/(?:browse|download)(?:/.*)?)?/?", parsed.path)
+    if not match:
+        raise ValueError("Expected a GitLab job URL: https://<host>/<namespace>/<project>/-/jobs/<id>")
+    project = project_reference(match[1])
+    if not isinstance(project, str) or "/" not in project or any(part in (".", "..") for part in project.split("/")):
+        raise ValueError("Invalid project path in GitLab job URL")
+    return project, positive_integer(match[2])
+
+
 def relative_parts(name):
     if not isinstance(name, str) or not name or "\\" in name or ":" in name:
         raise ValueError(f"Invalid archive path: {name!r}")
@@ -146,15 +167,12 @@ def policy(request, config, env, workspace):
         raise ValueError("Invalid request")
     if request.get("workspace") != str(workspace):
         raise ValueError("Invalid workspace")
-    args = request.get("args")
-    if not isinstance(args, dict) or set(args) != {"projectId", "jobId"}:
-        raise ValueError("Invalid arguments")
-    project, job = project_reference(args["projectId"]), positive_integer(args["jobId"])
     host = config.get("host")
     if not isinstance(host, str) or len(host) > 253 or not re.fullmatch(
         r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*", host
     ):
         raise ValueError("Invalid configured host")
+    project, job = job_reference(request.get("args"), host)
     projects = config.get("projectIds")
     if projects != "*" and (not isinstance(projects, list) or not projects
             or any(type(item) is not int or item <= 0 for item in projects)

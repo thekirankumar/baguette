@@ -270,6 +270,26 @@ predates it ignores the key and renders the plain list. For a well-written
 plugin that's a working panel with one affordance missing, not a broken one —
 so keep the rows useful on their own.
 
+## Background command prompts
+
+A list panel can name a [background command](../plugin-runs/README.md#background-author-contract)
+as its `source` and declare the same `body.prompt` as above. Opening it draws
+the prompt without executing the command; submitting starts a server-owned run
+instead of invoking the synchronous command endpoint. No new manifest fields,
+custom HTML, scripts or styles are required:
+
+```json
+{"id":"install","title":"Install build","icon":"globe","when":"simulator.booted",
+ "body":{"kind":"list","source":"install",
+         "prompt":{"arg":"url","placeholder":"https://builds.example.com/app.zip","submit":"Install"}}}
+```
+
+The host discovers background eligibility from the command catalog, polls status
+and draws progress. The plugin interprets the prompt argument and reports its
+ordinary progress/result files. Keep `history` off for sensitive inputs such as
+signed URLs. Background prompts do not use synchronous row/control results.
+See [browser lifecycle and limits](../plugin-runs/browser.md).
+
 ## Panels you can tick — `body.control`
 
 A settings list needs rows that are *on* or *off*. The row says what's on,

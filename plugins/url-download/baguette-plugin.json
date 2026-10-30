@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "description": "Download a ZIP or IPA from an approved URL for simulator installation",
+  "icon": "globe",
   "capabilities": ["apps"],
   "contributes": {
     "commands": [
@@ -11,6 +12,23 @@
         "title": "Install app from URL",
         "run": ["python3", "bin/download.py"],
         "background": {"timeoutSeconds": 3600}
+      }
+    ],
+    "panels": [
+      {
+        "id": "install",
+        "title": "URL Install",
+        "icon": "globe",
+        "when": "simulator.booted",
+        "body": {
+          "kind": "list",
+          "source": "install",
+          "prompt": {
+            "arg": "url",
+            "placeholder": "https://builds.example.com/MyApp.zip",
+            "submit": "Install"
+          }
+        }
       }
     ]
   }

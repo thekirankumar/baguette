@@ -15,6 +15,21 @@ full namespace/project path, or a unique exact project name:
 strings or full GitLab URLs. The plugin URL-encodes paths internally and never
 takes a different host from a project reference.
 
+## GitLab job URLs
+
+Alternatively, supply exactly one `url` argument, as the **GitLab Install**
+[browser panel](browser.md) does:
+
+```json
+{"args":{"url":"https://gitlab.example.com/group/project/-/jobs/456/artifacts/browse"}}
+```
+
+The plugin accepts job pages and artifact browse/download links on its configured
+HTTPS host (default port or 443), including nested namespaces. Userinfo and other
+hosts/ports are refused. Query strings and fragments are ignored, never used for
+authentication; the existing host token is used. Do not mix `url` with ID arguments.
+The project path is resolved and checked against the numeric allowlist as below.
+
 ## Resolution and authorization
 
 - **Numeric ID:** use the existing direct download path; no project metadata
