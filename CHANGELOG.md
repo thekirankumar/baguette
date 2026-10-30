@@ -10,17 +10,21 @@ For releases prior to this changelog, see the
 
 ## [Unreleased]
 
+### Fixed
+- Background install panels show the HTTP status of HTML proxy refusals instead of mislabeling them as unconfirmed starts; server errors remain unconfirmed to prevent duplicate jobs. → [docs](docs/features/plugin-runs/browser.md)
+
+### Added
+- **GitLab Install** uses the official GitLab fox icon, bundled locally in its brand colours. → [docs](docs/features/plugin-runs/browser.md)
+
 ---
 
 ## [0.0.5] - 2026-10-30
 
 ### Fixed
-- Background install panels show the HTTP status of HTML proxy refusals instead of mislabeling them as unconfirmed starts; server errors remain unconfirmed to prevent duplicate jobs. → [docs](docs/features/plugin-runs/browser.md)
 - `baguette boot` and `POST /simulators/:udid/boot` no longer wait indefinitely for post-boot readiness or input healing; timed-out and cancelled waits stop their active command. → [docs](docs/features/device-hub/design.md#detection)
 - `gitlab-artifacts:install` reports missing `glab`, GitLab stderr, exit status, preparation errors and traceback excerpts instead of generic failures, with credential redaction and explicit truncation within the existing status limit. → [docs](docs/features/plugin-runs/gitlab-diagnostics.md)
 
 ### Added
-- **GitLab Install** uses the official GitLab fox icon, bundled locally in its brand colours. → [docs](docs/features/plugin-runs/browser.md)
 - **GitLab Install** and **URL Install** plugin panels accept build links and show background progress, downloaded bytes and final status on the focused simulator. Plugin-specific URL parsing stays in the GitLab plugin. → [docs](docs/features/plugin-runs/browser.md)
 - `gitlab-artifacts:install` accepts project IDs, namespace/project paths and unique exact names, resolving names/paths before numeric allowlist checks and reporting ambiguous candidates. → [docs](docs/features/plugin-runs/gitlab-projects.md)
 - `url-download:install` downloads from approved URLs with per-call headers, extracts ZIP apps or hands IPAs directly to the installer, with progress, cancellation and redacted diagnostics. Background app output now accepts regular IPA files. → [docs](docs/features/url-download/README.md)
