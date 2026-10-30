@@ -11,6 +11,8 @@ right-hand plugin rail. Paste a [GitLab job link](gitlab-projects.md#gitlab-job-
 or direct ZIP/IPA URL, respectively, and click **Install** (or press Enter).
 The focused simulator is the target. Each plugin appears only when installed or
 discovered through `--plugin-dir`; neither is bundled into the binary.
+GitLab Install uses the official [GitLab fox artwork](https://about.gitlab.com/images/press/gitlab-logo-500-rgb.svg),
+bundled locally in its brand colours; loading the panel makes no logo request.
 
 ## Progress and status
 
@@ -30,6 +32,8 @@ A temporary polling failure retains the run and retries status, never starts a
 second job. A lost, invalid or server-error start response is **unconfirmed**:
 the job may have started, so the panel blocks resubmission. Check the host before
 trying again. Explicit client-error refusals such as busy (`409`) allow a retry.
+An HTML proxy refusal is shown by its HTTP status, not as an unconfirmed start;
+check proxy route/query policy and authorization. Raw HTML is never rendered.
 
 URL prompt history is disabled, including for signed URLs. The URL-only panel
 does not collect headers or GitLab credentials. Use the existing URL-download

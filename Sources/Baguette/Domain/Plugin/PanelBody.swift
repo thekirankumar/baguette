@@ -354,6 +354,7 @@ enum PluginIcon: String, Equatable, Sendable, CaseIterable {
     case clock
     case document
     case play
+    case gitlab
     /// The plugin system's own emblem, and what an unrecognised or
     /// missing name resolves to. The rail already wears it for a plugin
     /// that names no icon at all, so a fallback looks deliberate rather

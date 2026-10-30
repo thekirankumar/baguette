@@ -156,6 +156,31 @@ test('should allow another attempt when the server explicitly rejects a start', 
   assert.equal(f.requests.length, 2);
 });
 
+test('should describe an HTML proxy refusal by HTTP status instead of an unconfirmed start', async t => {
+  const f = fixture(t);
+  await f.ui.open('build', panel);
+  t.mock.method(global, 'fetch', async () => ({ status: 400,
+    json: async () => { throw new SyntaxError('Unexpected token <'); },
+  }));
+  await f.ui.startBackground('build', panel, { url: 'https://builds.example.com/app.zip' });
+  assert.match(f.ui.host.innerHTML, /HTTP 400/);
+  assert.doesNotMatch(f.ui.host.innerHTML, /not confirmed/i);
+  assert.equal(f.ui.backgroundBusy(panel), false);
+  assert.equal(f.timers.size, 0);
+});
+
+test('should retain uncertainty and describe the HTTP status when the proxy fails with HTML', async t => {
+  const f = fixture(t);
+  await f.ui.open('build', panel);
+  t.mock.method(global, 'fetch', async () => ({ status: 502,
+    json: async () => { throw new SyntaxError('Unexpected token <'); },
+  }));
+  await f.ui.startBackground('build', panel, { url: 'https://builds.example.com/app.zip' });
+  assert.match(f.ui.host.innerHTML, /not confirmed/i);
+  assert.match(f.ui.host.innerHTML, /HTTP 502/);
+  assert.equal(f.ui.backgroundBusy(panel), true);
+});
+
 test('should block automatic resubmission when a start response is lost', async t => {
   const f = fixture(t);
   await f.ui.open('build', panel);

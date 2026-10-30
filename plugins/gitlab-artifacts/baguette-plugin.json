@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "apiVersion": 1,
   "description": "Prepare an approved GitLab job artifact for simulator installation",
-  "icon": "document",
+  "icon": "gitlab",
   "capabilities": ["apps"],
   "contributes": {
     "commands": [
@@ -21,7 +21,7 @@
       {
         "id": "install",
         "title": "GitLab Install",
-        "icon": "document",
+        "icon": "gitlab",
         "when": "simulator.booted",
         "body": {
           "kind": "list",

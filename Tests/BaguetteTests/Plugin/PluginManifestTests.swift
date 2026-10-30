@@ -34,6 +34,18 @@ struct PluginManifestTests {
 
     // MARK: - the plugin's own icon
 
+    @Test func `should show the GitLab icon when a plugin and its panel select it`() throws {
+        let manifest = try PluginManifest.parsing(json: Data("""
+        {"name":"gitlab","version":"1.0.0","icon":"gitlab",
+         "contributes":{"commands":[{"id":"install","run":["python3","install.py"]}],
+         "panels":[{"id":"install","title":"GitLab Install","icon":"gitlab",
+                    "body":{"kind":"list","source":"install"}}]}}
+        """.utf8))
+        #expect(manifest.icon?.rawValue == "gitlab")
+        #expect(manifest.panels.first?.icon.rawValue == "gitlab")
+        #expect(manifest.warnings.isEmpty)
+    }
+
     @Test func `should read the icon that stands for the whole plugin`() throws {
         // A plugin with several panels collapses to one rail entry, so
         // it needs a glyph of its own rather than borrowing whichever

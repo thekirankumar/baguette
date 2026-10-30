@@ -51,7 +51,7 @@ A plugin is a directory containing `baguette-plugin.json`:
   one baguette finds via `PATH` (`["node", "bin/x.js"]`).
 - **`icon`** names one baguette ships: `accessibility`, `reload`,
   `link`, `list`, `bell`, `wrench`, `lock`, `globe`, `camera`, `clock`,
-  `document`, `play`, `puzzle`. Arbitrary markup never renders — a
+  `document`, `play`, `gitlab`, `puzzle`. Arbitrary markup never renders — a
   manifest is untrusted text destined for a protected page, so the name
   is resolved against this list and nothing else survives.
 
