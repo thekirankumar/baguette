@@ -10,6 +10,10 @@ For releases prior to this changelog, see the
 
 ## [Unreleased]
 
+---
+
+## [0.0.5] - 2026-10-30
+
 ### Fixed
 - Background install panels show the HTTP status of HTML proxy refusals instead of mislabeling them as unconfirmed starts; server errors remain unconfirmed to prevent duplicate jobs. → [docs](docs/features/plugin-runs/browser.md)
 - `baguette boot` and `POST /simulators/:udid/boot` no longer wait indefinitely for post-boot readiness or input healing; timed-out and cancelled waits stop their active command. → [docs](docs/features/device-hub/design.md#detection)
@@ -25,10 +29,10 @@ For releases prior to this changelog, see the
 
 ## [0.0.4] - 2026-10-29
 
-
 ## Older releases
 
 [0.2](docs/changelog/0.2.md) · [0.1](docs/changelog/0.1.md) · [0.0](docs/changelog/0.0.md)
 
-[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/tddworks/baguette/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/tddworks/baguette/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/tddworks/baguette/compare/v0.2.12...v0.0.4
